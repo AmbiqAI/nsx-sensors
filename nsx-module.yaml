@@ -1,0 +1,60 @@
+schema_version: 1
+
+module:
+  name: nsx-sensors
+  type: runtime
+  version: "0.1.0"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Reusable external sensor and accessory drivers built on NSX transport modules.
+
+capabilities:
+  - sensors
+  - i2c_devices
+  - measurement_devices
+  - accessories
+
+use_cases:
+  - imu bring-up
+  - bio-sensor capture
+  - current and voltage monitoring
+  - simple i2c accessory control
+
+agent_keywords:
+  - sensor
+  - imu
+  - max86150
+  - mpu6050
+  - ina228
+  - ledstick
+
+build:
+  cmake:
+    package: nsx_sensors
+    targets:
+      - nsx::sensors
+
+depends:
+  required:
+    - nsx-core
+    - nsx-i2c
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo3
+    - apollo3P
+    - apollo4l
+    - apollo4p
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
