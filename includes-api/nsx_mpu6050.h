@@ -104,8 +104,7 @@ typedef struct {
 /**
  * @brief Set sample rate divider
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param divider Sample rate divider
  * @return uint32_t status
  */
@@ -114,8 +113,7 @@ uint32_t mpu6050_set_sample_rate_divider(mpu6050_context_t *ctx, uint8_t divider
 /**
  * @brief Set target sample rate
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param rate Target rate in Hz
  * @return uint32_t status
  */
@@ -124,8 +122,7 @@ uint32_t mpu6050_set_sample_rate(mpu6050_context_t *ctx, uint16_t rate);
 /**
  * @brief Set digital lowpass filter
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param value Filter selection
  * @return uint32_t status
  */
@@ -135,8 +132,7 @@ mpu6050_set_lowpass_filter(mpu6050_context_t *ctx, mpu6050_dlpf_cfg_t value);
 /**
  * @brief Set gyro full scale range
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param fsr Full scale range selection
  * @return uint32_t status
  */
@@ -145,8 +141,7 @@ uint32_t mpu6050_set_gyro_full_scale(mpu6050_context_t *ctx, mpu6050_gyro_fs_t f
 /**
  * @brief Set accel full scale range
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param fsr Full scale range selection
  * @return uint32_t
  */
@@ -156,8 +151,7 @@ mpu6050_set_accel_full_scale(mpu6050_context_t *ctx, mpu6050_accel_fs_t fsr);
 /**
  * @brief Configure FIFO
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param fifoConfig FIFO configuration
  * @return uint32_t status
  */
@@ -167,8 +161,7 @@ mpu6050_configure_fifo(mpu6050_context_t *ctx, mpu6050_fifo_config_t *fifoConfig
 /**
  * @brief Enable FIFO
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param enable Enable FIFO flag
  * @return uint32_t status
  */
@@ -177,8 +170,7 @@ uint32_t mpu6050_set_fifo_enable(mpu6050_context_t *ctx, uint8_t enable);
 /**
  * @brief Reset FIFO
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @return uint32_t
  */
 uint32_t mpu6050_reset_fifo(mpu6050_context_t *ctx);
@@ -186,8 +178,7 @@ uint32_t mpu6050_reset_fifo(mpu6050_context_t *ctx);
 /**
  * @brief Get FIFO count
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param count Pointer to store count
  * @return uint32_t status
  */
@@ -196,8 +187,7 @@ uint32_t mpu6050_get_fifo_count(mpu6050_context_t *ctx, uint16_t *count);
 /**
  * @brief Pop next value from FIFO
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param value Pointer to FIFO value
  * @return uint32_t status
  */
@@ -206,8 +196,7 @@ uint32_t mpu6050_fifo_pop(mpu6050_context_t *ctx, int16_t *value);
 /**
  * @brief Configure interrupts
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param intConfig Interrupt configuration
  * @return uint32_t status
  */
@@ -217,8 +206,7 @@ uint32_t mpu6050_configure_interrupt(
 /**
  * @brief Enable/disable interrupts
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param overflowEnable Overflow triggers interrupt
  * @param dataReadyEnable Data ready triggers interrupt
  * @return uint32_t status
@@ -229,8 +217,7 @@ uint32_t mpu6050_set_interrupt_enable(
 /**
  * @brief Get interrupt status register
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param status Pointer to store status register
  * @return uint32_t
  */
@@ -239,8 +226,7 @@ uint32_t mpu6050_get_interrupt_status(mpu6050_context_t *ctx, uint8_t *status);
 /**
  * @brief Reset signal paths
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @return uint32_t status
  */
 uint32_t mpu6050_reset_signal_paths(mpu6050_context_t *ctx);
@@ -248,8 +234,7 @@ uint32_t mpu6050_reset_signal_paths(mpu6050_context_t *ctx);
 /**
  * @brief Reset signal conditions
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @return uint32_t status
  */
 uint32_t mpu6050_reset_signal_conds(mpu6050_context_t *ctx);
@@ -257,8 +242,7 @@ uint32_t mpu6050_reset_signal_conds(mpu6050_context_t *ctx);
 /**
  * @brief Get current acceleration values
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param x Pointer to store x axis
  * @param y Pointer to store y axis
  * @param z Pointer to store z axis
@@ -270,8 +254,7 @@ uint32_t mpu6050_get_accel_values(
 /**
  * @brief Get current gyro values
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param x Pointer to store x axis
  * @param y Pointer to store y axis
  * @param z Pointer to store z axis
@@ -283,8 +266,7 @@ mpu6050_get_gyro_values(mpu6050_context_t *ctx, int16_t *x, int16_t *y, int16_t 
 /**
  * @brief Get current temperature value
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param t Pointer to store Temperature
  * @return uint32_t status
  */
@@ -293,8 +275,7 @@ uint32_t mpu6050_get_temperature(mpu6050_context_t *ctx, int16_t *t);
 /**
  * @brief Enable/disable sleep mode
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param sleep Sleep flag
  * @return uint32_t status
  */
@@ -303,8 +284,7 @@ uint32_t mpu6050_set_sleep(mpu6050_context_t *ctx, uint8_t sleep);
 /**
  * @brief Disable temperature readings
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param disable Disable temperature flag
  * @return uint32_t status
  */
@@ -313,8 +293,7 @@ uint32_t mpu6050_set_temperature_disable(mpu6050_context_t *ctx, uint8_t disable
 /**
  * @brief Verify device by reading WHO_AM_I register
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @return uint32_t status
  */
 uint32_t mpu6050_test_connection(mpu6050_context_t *ctx);
@@ -322,8 +301,7 @@ uint32_t mpu6050_test_connection(mpu6050_context_t *ctx);
 /**
  * @brief Put device into low-power acceleration-only mode
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param wakeFreq Wake-up frequency 0=1.25Hz, 1=5Hz 2=20Hz 3=40Hz
  * @return uint32_t status
  */
@@ -332,8 +310,7 @@ uint32_t mpu6050_set_lowpower_accel_mode(mpu6050_context_t *ctx, uint8_t wakeFre
 /**
  * @brief Hard reset device
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @return uint32_t status
  */
 uint32_t mpu6050_device_reset(mpu6050_context_t *ctx);
@@ -341,8 +318,7 @@ uint32_t mpu6050_device_reset(mpu6050_context_t *ctx);
 /**
  * @brief Set clock source
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param sel Clock selection
  * @return uint32_t status
  */
@@ -351,8 +327,7 @@ uint32_t mpu6050_set_clock_source(mpu6050_context_t *ctx, mpu6050_clock_src_t se
 /**
  * @brief Reads MPU sensor values (3-axis accel, 1 temp, 3-axis gyro)
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param buffer 14-byte buffer to store values
  * @return uint32_t status
  */
@@ -419,8 +394,7 @@ float mpu6050_gyro_to_deg_per_sec(int val, mpu6050_gyro_fs_t range);
 /**
  * @brief Set acceleration offset for axis
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param axis x=0, y=1, z=2
  * @param offset Offset value
  * @return uint32_t status
@@ -430,8 +404,7 @@ uint32_t mpu6050_set_accel_offset(mpu6050_context_t *ctx, uint8_t axis, int offs
 /**
  * @brief Set gyroscope offset for axis
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param axis x=0, y=1, z=2
  * @param offset Offset value
  * @return uint32_t status
@@ -441,8 +414,7 @@ uint32_t mpu6050_set_gyro_offset(mpu6050_context_t *ctx, uint8_t axis, int offse
 /**
  * @brief Get average sensor values
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @param meanAX Pointer to store mean X accel
  * @param meanAY Pointer to store mean Y accel
  * @param meanAZ Pointer to store mean Z accel
@@ -458,8 +430,7 @@ uint32_t mpu6050_mean_sensors(
 /**
  * @brief Calibrate device offsets. Device must be still on a flat surface.
  *
- * @param cfg I2C configuration
- * @param devAddr Device I2C address
+ * @param ctx Device context
  * @return uint32_t status
  */
 uint32_t mpu6050_calibrate(mpu6050_context_t *ctx);
