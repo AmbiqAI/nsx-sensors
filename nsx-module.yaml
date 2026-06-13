@@ -48,7 +48,7 @@ compatibility:
     - "*"
   socs:
     - apollo3
-    - apollo3P
+    - apollo3p
     - apollo4l
     - apollo4p
     - apollo330P
