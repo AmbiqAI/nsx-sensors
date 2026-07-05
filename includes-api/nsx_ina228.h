@@ -19,7 +19,6 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-#include "arm_math.h"
 #include "nsx_i2c.h"
 
 typedef struct {
@@ -193,7 +192,7 @@ uint32_t
 ina228_read_energy(ina228_context_t *ctx, float *energy);
 
 uint32_t
-ina228_read_charge(ina228_context_t *ctx, float32_t *charge);
+ina228_read_charge(ina228_context_t *ctx, float *charge);
 
 uint32_t
 ina228_set_mode(ina228_context_t *ctx, ina228_meas_mode_t mode);
