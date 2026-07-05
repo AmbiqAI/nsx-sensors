@@ -7,6 +7,7 @@ Current drivers:
 
 - MAX86150 ECG/PPG sensor
 - MPU6050 IMU
+- ICM-45605 6-axis IMU (SPI)
 - INA228 power and current monitor
 - SparkFun Qwiic LED Stick
 

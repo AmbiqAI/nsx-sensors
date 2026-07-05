@@ -14,14 +14,18 @@ summary: Reusable external sensor and accessory drivers built on NSX transport m
 capabilities:
   - sensors
   - i2c_devices
+  - spi_devices
   - measurement_devices
   - accessories
+  - icm45605
+  - 6dof
 
 use_cases:
   - imu bring-up
   - bio-sensor capture
   - current and voltage monitoring
   - simple i2c accessory control
+  - 6dof imu bring-up
 
 agent_keywords:
   - sensor
@@ -30,6 +34,8 @@ agent_keywords:
   - mpu6050
   - ina228
   - ledstick
+  - icm45605
+  - 6dof
 
 build:
   cmake:
@@ -41,6 +47,7 @@ depends:
   required:
     - nsx-core
     - nsx-i2c
+    - nsx-spi
   optional: []
 
 compatibility:
