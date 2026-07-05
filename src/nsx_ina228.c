@@ -9,7 +9,6 @@
  *
  */
 
-#include "arm_math.h"
 #include "nsx_ina228.h"
 
 #define INA228_I2CADDR_DEFAULT 0x40 ///< INA228 default i2c address
@@ -155,15 +154,15 @@ ina228_reset_accumulators(ina228_context_t *ctx)
 }
 
 uint32_t
-ina228_set_shunt(ina228_context_t *ctx,  float32_t shunt_res, float32_t max_current)
+ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current)
 {
     uint16_t scale;
     ina228_get_adc_range(ctx, &scale);
 
     ctx->_shunt_res = shunt_res;
-    ctx->_current_lsb = max_current / (float32_t)(1UL << 19);
+    ctx->_current_lsb = max_current / (float)(1UL << 19);
 
-    float32_t shunt_cal = 13107.2 * 1000000.0 * ctx->_shunt_res * ctx->_current_lsb * scale;
+    float shunt_cal = 13107.2 * 1000000.0 * ctx->_shunt_res * ctx->_current_lsb * scale;
     return ina228_write_register(ctx, INA228_REG_SHUNTCAL, (uint16_t)shunt_cal, 0x7FFF);
 }
 
@@ -180,7 +179,7 @@ ina228_get_adc_range(ina228_context_t *ctx, uint16_t *adc_range)
 }
 
 uint32_t
-ina228_read_die_temp(ina228_context_t *ctx, float32_t *temp)
+ina228_read_die_temp(ina228_context_t *ctx, float *temp)
 {
     uint16_t uvalue;
     int16_t value;
@@ -188,12 +187,12 @@ ina228_read_die_temp(ina228_context_t *ctx, float32_t *temp)
     rst = ina228_read_register(ctx, INA228_REG_DIETEMP, &uvalue, 0xFFFF);
     // Coerce to signed, 7.8125 m°C/LSB, convert to °C
     value = (int16_t)uvalue;
-    *temp = (float32_t)value * 7.8125 / 1000.0;
+    *temp = (float)value * 7.8125 / 1000.0;
     return rst;
 }
 
 uint32_t
-ina228_read_current(ina228_context_t *ctx, float32_t *current)
+ina228_read_current(ina228_context_t *ctx, float *current)
 {
 
     uint32_t rst;
@@ -205,31 +204,31 @@ ina228_read_current(ina228_context_t *ctx, float32_t *current)
         value |= 0xFF000000;
     }
     // /16 is because last 4 bits are dont care, convert to mA
-    *current = (float32_t)value / 16.0 * ctx->_current_lsb * 1000.0;
+    *current = (float)value / 16.0 * ctx->_current_lsb * 1000.0;
     return rst;
 }
 
 
 uint32_t
-ina228_read_bus_voltage(ina228_context_t *ctx, float32_t *bus_voltage)
+ina228_read_bus_voltage(ina228_context_t *ctx, float *bus_voltage)
 {
     uint32_t rst;
     uint32_t value;
     rst = ina228_read_register_24(ctx, INA228_REG_VBUS, &value);
     // Never negative, 195.3125 µV/LSB, convert to mV
-    *bus_voltage = (float32_t)((uint32_t)value >> 4) * 195.3125 / 1000.0;
+    *bus_voltage = (float)((uint32_t)value >> 4) * 195.3125 / 1000.0;
     return rst;
 }
 
 uint32_t
-ina228_read_shunt_voltage(ina228_context_t *ctx, float32_t *shunt_voltage)
+ina228_read_shunt_voltage(ina228_context_t *ctx, float *shunt_voltage)
 {
     uint32_t rst;
     uint16_t value16;
     int32_t value;
 
     rst = ina228_get_adc_range(ctx, &value16);
-    float32_t scale = value16 ? 78.125 : 312.5;
+    float scale = value16 ? 78.125 : 312.5;
 
     rst = ina228_read_register_24(ctx, INA228_REG_VSHUNT, &value);
     if (value & 0x800000) {
@@ -238,28 +237,28 @@ ina228_read_shunt_voltage(ina228_context_t *ctx, float32_t *shunt_voltage)
     // 78.125 nV/LSB if adc is 1 else 312.5 nV/LSB
     // /16 is because last 4 bits are dont care
     // Convert to mV
-    *shunt_voltage = (float32_t)value / 16.0 * scale / 1000000.0;
+    *shunt_voltage = (float)value / 16.0 * scale / 1000000.0;
     return rst;
 }
 
 uint32_t
-ina228_read_power(ina228_context_t *ctx, float32_t *power)
+ina228_read_power(ina228_context_t *ctx, float *power)
 {
     uint32_t rst;
     uint32_t value;
     rst = ina228_read_register_24(ctx, INA228_REG_POWER, &value);
     // Never negative, 3.2*current_lsb convert to mW
-    *power = (float32_t)value * 3.2 * ctx->_current_lsb * 1000;
+    *power = (float)value * 3.2 * ctx->_current_lsb * 1000;
     return rst;
 }
 
 uint32_t
-ina228_read_energy(ina228_context_t *ctx, float32_t *energy) {
+ina228_read_energy(ina228_context_t *ctx, float *energy) {
     uint32_t rst;
     uint8_t buff[5];
     buff[0] = INA228_REG_ENERGY;
     rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, buff, 1, buff, 5);
-    float32_t e = 0;
+    float e = 0;
     for (int i = 0; i < 5; i++) {
         e *= 256;
         e += buff[i];
@@ -269,13 +268,13 @@ ina228_read_energy(ina228_context_t *ctx, float32_t *energy) {
 }
 
 uint32_t
-ina228_read_charge(ina228_context_t *ctx, float32_t *charge)
+ina228_read_charge(ina228_context_t *ctx, float *charge)
 {
     uint32_t rst;
     uint8_t buff[5];
     buff[0] = INA228_REG_CHARGE;
     rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, buff, 1, buff, 5);
-    float32_t e = 0;
+    float e = 0;
     for (int i = 0; i < 5; i++) {
         e *= 256;
         e += buff[i];
