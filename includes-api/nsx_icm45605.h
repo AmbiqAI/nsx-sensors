@@ -24,9 +24,6 @@ extern "C" {
 
 typedef enum { ICM45605_STATUS_SUCCESS = 0, ICM45605_STATUS_ERROR = 1 } icm45605_status_e;
 
-// Define the callback function type
-typedef void (*icm45605_frame_available_cb)(void *arg); // arg is the icm45605_context_t struct
-
 /*! 6DOF sensor sample in natural units (g, dps, degC) */
 typedef struct {
     float accel_g[3];
@@ -34,7 +31,19 @@ typedef struct {
     float temp_degc;
 } icm45605_sensor_data_t;
 
-/*! ICM-45605 device context */
+/*!
+ * ICM-45605 device context.
+ *
+ * Single-instance contract: this driver keeps the TDK `inv_imu_device_t`
+ * instance and its SPI transport binding in file-static storage, so exactly
+ * one ICM-45605 may be active per firmware image. `icm45605_init()` rebinds
+ * that shared state to the supplied context, and the most recent successful
+ * `icm45605_init()` wins. Initializing a second context is not supported in
+ * `v0.1.0`.
+ *
+ * This driver does not buffer samples. Callers own sample storage, framing,
+ * and any batching policy.
+ */
 typedef struct {
     nsx_spi_config_t *spi_config; // Pre-configured SPI bus (caller owns init)
     uint32_t cs_pin;              // Chip-select pin used for SPI transactions
@@ -46,13 +55,8 @@ typedef struct {
     uint32_t gyro_odr;
     uint32_t accel_ln_bw;
     uint32_t gyro_ln_bw;
-    uint32_t calibrate; // true to calibrate the IMU during init
-
-    // Frame mode configuration - set callback to enable, NULL to disable
-    icm45605_frame_available_cb
-        frame_available_cb; // Called when frame_size samples have been collected
-    uint32_t frame_size;
-    icm45605_sensor_data_t *frame_buffer;
+    uint32_t calibrate;              // true to calibrate the IMU during init
+    uint32_t enable_drdy_interrupt;  // true to configure the INT2 data-ready interrupt in init
 
     // Internal state
     void *imu_dev_handle; // TDK inv_imu_device_t handle
@@ -66,6 +70,9 @@ typedef struct {
  *        optional calibration and interrupt setup). Caller must have already initialized
  *        ctx->spi_config via nsx_spi_interface_init() and configured any GPIO/interrupt
  *        pin wiring.
+ *
+ * @note Binds the shared single-instance device state to @p ctx. See
+ *       ::icm45605_context_t for the single-instance contract.
  *
  * @param ctx Device context
  * @return uint32_t status
@@ -100,7 +107,11 @@ uint32_t icm45605_get_raw_data(icm45605_context_t *ctx, icm45605_sensor_data_t *
 uint32_t icm45605_configure_interrupts(icm45605_context_t *ctx);
 
 /**
- * @brief Check and clear the data-ready interrupt status
+ * @brief Check and clear the data-ready interrupt status.
+ *
+ * Context-free by design so it can be called directly from an ISR. It always
+ * targets the single active device bound by the most recent successful
+ * ::icm45605_init call; see ::icm45605_context_t.
  *
  * @return uint32_t 1 if data-ready interrupt is set, 0 otherwise
  */
