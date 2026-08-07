@@ -83,11 +83,37 @@ vendored TDK subset compiles cleanly as C11 with warnings enabled.
 
 | Driver | Bus | Declared | Build-verified | Runtime validated |
 | --- | --- | --- | --- | --- |
-| MAX86150 | I2C | all declared SoCs | opt-in consumer smoke | **no** |
-| MPU6050 | I2C | all declared SoCs | opt-in consumer smoke | **no** |
-| INA228 | I2C | all declared SoCs | opt-in consumer smoke | **no** |
-| Qwiic LED Stick | I2C | all declared SoCs | opt-in consumer smoke | **no** |
-| ICM-45605 | SPI | all declared SoCs | opt-in consumer smoke | **no** |
+| MAX86150 | I2C | all declared SoCs | yes, all 8 x 3 | **no** |
+| MPU6050 | I2C | all declared SoCs | yes, all 8 x 3 | **no** |
+| INA228 | I2C | all declared SoCs | yes, all 8 x 3 | **no** |
+| Qwiic LED Stick | I2C | all declared SoCs | yes, all 8 x 3 | **no** |
+| ICM-45605 | SPI | all declared SoCs | yes, all 8 x 3 | **no** |
+
+"Build-verified" above means `tests/module_compile_smoke.sh` compiled all seven
+translation units, including the vendored TDK subset, against the real
+`nsx-core`, `nsx-i2c`, `nsx-spi`, and AmbiqSuite headers from `nsx-ambiq-sdk`
+at `2eba24ad776096784764cbe91c8176b434dd3bdf`. Every declared SoC was verified
+against every declared toolchain:
+
+| SoC | Core | `arm-none-eabi-gcc` | `armclang` | ATfE |
+| --- | --- | --- | --- | --- |
+| `apollo3` | cortex-m4 | pass | pass | pass |
+| `apollo3p` | cortex-m4 | pass | pass | pass |
+| `apollo4l` | cortex-m4 | pass | pass | pass |
+| `apollo4p` | cortex-m4 | pass | pass | pass |
+| `apollo330P` | cortex-m55 | pass | pass | pass |
+| `apollo510` | cortex-m55 | pass | pass | pass |
+| `apollo510b` | cortex-m55 | pass | pass | pass |
+| `apollo510L` | cortex-m55 | pass | pass | pass |
+
+Toolchain versions used: Arm GNU `15.2.rel1`, Arm Compiler `6.24Rel19`, and
+Arm Toolchain for Embedded `22.1.0`. The script derives each SoC's compile
+definitions, core, and MCU payload directory from the SDK's own descriptors, so
+it cannot drift from the SDK's single source of truth.
+
+Running the same script for `apollo5b` fails with "SoC 'apollo5b' maps to
+mcu/apollo5b, which is not staged", which is the direct, reproducible evidence
+behind the exclusion above.
 
 **No driver in this release is hardware-in-the-loop qualified.** No board was
 flashed and no sensor part was exercised while preparing `v0.1.0`. Sensor
@@ -95,12 +121,23 @@ functionality is explicitly unqualified for this release. Do not read a declared
 SoC, a green CI run, or a successful consumer build as evidence that a driver
 talks correctly to real silicon.
 
-Build verification is produced by `tests/configure_target_smoke.sh`, which
-configures and builds a real NSX consumer for a requested toolchain and board.
-It is opt-in because it needs an NSX workspace and a cross toolchain that a
-default CI runner does not have. It never passes silently: a missing `cmake`, a
-missing `arm-none-eabi-gcc`, a missing `armclang`, or a missing ATfE `clang` is
-a hard failure, not a skip.
+Three smoke levels back these claims, in increasing fidelity:
+
+| Script | Scope | Needs |
+| --- | --- | --- |
+| `tests/vendor_compile_smoke.sh` | vendored TDK subset only, no NSX headers | any C compiler |
+| `tests/module_compile_smoke.sh` | all module sources against real NSX and AmbiqSuite headers | an `nsx-ambiq-sdk` checkout plus a cross toolchain |
+| `tests/configure_target_smoke.sh` | full NSX consumer configure, build, and link | an NSX consumer workspace plus a cross toolchain |
+
+The latter two are opt-in because they need dependencies a default CI runner
+does not have. Neither ever passes silently: a missing workspace, a missing
+`cmake`, a missing `arm-none-eabi-gcc`, a missing `armclang`, or a missing ATfE
+`clang` is a hard failure, not a skip. An ATfE request is additionally checked
+against the compiler's version banner and target list, so a host `clang` cannot
+be mistaken for ATfE.
+
+None of the three links a firmware image against real hardware, and none of them
+exercises a sensor.
 
 `tests/vendor_compile_smoke.sh` runs unconditionally in CI and compiles the
 vendored TDK subset standalone as C11 with `-Wall -Wextra`. That proves the

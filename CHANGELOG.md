@@ -20,9 +20,14 @@ a change is called out against the audited `main` baseline
   modifications, in `PROVENANCE.md`.
 - Explicit `nsx::core`, `nsx::i2c`, and `nsx::spi` target guards with a named
   diagnostic instead of an unresolved-link failure.
-- Host contract tests (`tests/test_release_foundation.py`), a vendor standalone
-  compile smoke (`tests/vendor_compile_smoke.sh`), and an NSX consumer
-  configure/build smoke (`tests/configure_target_smoke.sh`).
+- Host contract tests (`tests/test_release_foundation.py`), a nested-CMake
+  consumer harness (`tests/nested_contract/`), a vendored-subset standalone
+  compile smoke (`tests/vendor_compile_smoke.sh`), a module compile smoke
+  against real NSX and AmbiqSuite headers (`tests/module_compile_smoke.sh`),
+  and a full NSX consumer configure/build smoke
+  (`tests/configure_target_smoke.sh`).
+- Build verification for all eight declared SoCs against all three declared
+  toolchains; see `docs/compatibility.md`.
 - Pinned CI and manual immutable-release workflows.
 
 ### Changed

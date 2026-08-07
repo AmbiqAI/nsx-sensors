@@ -337,14 +337,29 @@ class CompatibilityDeclarationTests(unittest.TestCase):
         self.assertIn("Runtime validated", self.compatibility)
         self.assertIn("release status", (ROOT / "README.md").read_text().lower())
 
-    def test_target_smoke_never_skips_a_missing_toolchain(self) -> None:
-        smoke = (ROOT / "tests/configure_target_smoke.sh").read_text()
-        self.assertIn("set -euo pipefail", smoke)
-        for tool in ("arm-none-eabi-gcc", "armclang", "atfe"):
-            self.assertIn(tool, smoke, tool)
-        # A missing toolchain must be a hard failure, never a silent pass.
-        self.assertNotRegex(smoke, r"(?m)^\s*exit 0\s*(#.*)?$")
-        self.assertIn("exit 1", smoke)
+    def test_smokes_never_skip_a_missing_toolchain(self) -> None:
+        for name in ("configure_target_smoke.sh", "module_compile_smoke.sh"):
+            smoke = (ROOT / "tests" / name).read_text()
+            self.assertIn("set -euo pipefail", smoke, name)
+            for tool in ("arm-none-eabi-gcc", "armclang", "atfe"):
+                self.assertIn(tool, smoke, f"{name}: {tool}")
+            # A missing toolchain must be a hard failure, never a silent pass.
+            self.assertNotRegex(smoke, r"(?m)^\s*exit 0\s*(#.*)?$", name)
+            self.assertIn("exit 1", smoke, name)
+            # An ATfE request must be verified, not assumed.
+            self.assertIn("Arm Toolchain ID:", smoke, name)
+            self.assertIn("InstalledDir", smoke, name)
+
+    def test_build_verification_table_matches_the_declared_socs(self) -> None:
+        block = re.search(
+            r"(?ms)^compatibility:\n(?:.*?)^  socs:\n((?:    - [^\n]*\n)+)", self.metadata
+        )
+        assert block is not None
+        declared = {line.strip("- \n").strip('"') for line in block.group(1).splitlines()}
+        for soc in declared:
+            self.assertIn(f"`{soc}`", self.compatibility, soc)
+        for toolchain in ("arm-none-eabi-gcc", "armclang", "ATfE"):
+            self.assertIn(toolchain, self.compatibility, toolchain)
 
 
 class ReleaseAutomationTests(unittest.TestCase):
@@ -375,6 +390,7 @@ class ReleaseAutomationTests(unittest.TestCase):
         self.assertIn("unittest discover", self.ci)
         self.assertIn("tests/vendor_compile_smoke.sh", self.ci)
         self.assertIn("tests/nested_contract", self.ci)
+        self.assertIn("tests/module_compile_smoke.sh", self.ci)
 
 
 class NestedContractHarnessTests(unittest.TestCase):

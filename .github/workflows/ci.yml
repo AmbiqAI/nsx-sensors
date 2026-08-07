@@ -108,6 +108,41 @@ jobs:
           grep -qF 'nsx-sensors requires the nsx::core target' \
             <(cmake -S . -B build/unsatisfied 2>&1 || true)
 
+  module-compile-smoke:
+    name: Module compile smoke (${{ matrix.toolchain }}, ${{ matrix.soc }})
+    # Opt-in: needs an nsx-ambiq-sdk checkout with the AmbiqSuite payload and a
+    # cross toolchain. It never silently passes, so enabling it is deliberate.
+    if: ${{ vars.NSX_SENSORS_MODULE_SMOKE == 'true' }}
+    env:
+      NSX_AMBIQ_SDK_ROOT: ${{ vars.NSX_AMBIQ_SDK_ROOT }}
+      ATFE_ROOT: ${{ vars.ATFE_ROOT }}
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [arm-none-eabi-gcc, armclang, atfe]
+        soc: [apollo3, apollo3p, apollo4l, apollo4p, apollo330P, apollo510, apollo510b, apollo510L]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Require an nsx-ambiq-sdk checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${NSX_AMBIQ_SDK_ROOT:-}" || {
+            echo "Set NSX_AMBIQ_SDK_ROOT to run the module compile smoke." >&2
+            exit 1
+          }
+          test -d "$NSX_AMBIQ_SDK_ROOT"
+
+      - name: Compile every module source against real NSX headers
+        env:
+          NSX_SENSORS_TOOLCHAIN: ${{ matrix.toolchain }}
+          NSX_SENSORS_SOC: ${{ matrix.soc }}
+        run: |
+          tests/module_compile_smoke.sh "$NSX_AMBIQ_SDK_ROOT" \
+            "$NSX_SENSORS_TOOLCHAIN" "$NSX_SENSORS_SOC"
+
   target-smoke:
     name: NSX consumer smoke (${{ matrix.toolchain }}, ${{ matrix.board }})
     # Opt-in: needs an NSX consumer workspace and a cross toolchain that the

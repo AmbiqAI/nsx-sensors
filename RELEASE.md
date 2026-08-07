@@ -23,7 +23,9 @@ This release includes:
 - A single `nsx::sensors` target that exports as `nsx::sensors` into the shared
   `nsxTargets` export set and installs its public headers.
 - License, notice, provenance, ownership, changelog, catalog, and compatibility
-  metadata, plus host contract tests and pinned CI.
+  metadata, plus host contract tests, three levels of compile smoke, and
+  pinned CI.
+- Build verification for every declared SoC against every declared toolchain.
 
 This release does **not** include:
 

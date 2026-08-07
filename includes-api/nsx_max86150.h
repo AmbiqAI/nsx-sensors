@@ -94,5 +94,5 @@ void max86150_clear_fifo(const max86150_context_t *ctx);
 #ifdef __cplusplus
 }
 #endif
+/** @}*/
 #endif // NSX_MAX86150_H
-       /** @}*/

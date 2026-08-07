@@ -55,6 +55,7 @@ release. See `docs/compatibility.md` before relying on any device.
 | `RELEASE.md` | Versioning policy, compatibility surfaces, publication process |
 | `PROVENANCE.md` | Exact port lineage and the vendored TDK subset |
 | `docs/compatibility.md` | Declared vs build-verified vs runtime-validated |
+| `tests/` | Host contracts and the three compile-smoke levels |
 | `CATALOG.md` | Downstream registry view |
 | `OWNERS.md` | What this repository owns and does not own |
 
