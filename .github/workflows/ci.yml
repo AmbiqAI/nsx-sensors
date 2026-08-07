@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-contracts:
+    name: Host release and API contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Run release foundation contract tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Validate version coherence
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < version.txt)"
+          semver_re='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          [[ "$version" =~ $semver_re ]]
+          module_version="$(sed -n 's/^  version: "\(.*\)"/\1/p' nsx-module.yaml | head -1)"
+          test "$version" = "$module_version"
+          grep -qF "project(nsx_sensors VERSION ${version} LANGUAGES C)" CMakeLists.txt
+          grep -qF "## [${version}]" CHANGELOG.md
+
+      - name: Validate license and provenance surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qF 'BSD 3-Clause License' LICENSE
+          grep -qF 'Copyright (c) [2020] by InvenSense, Inc.' NOTICE
+          grep -qF 'NOT relicensed under' NOTICE
+          grep -qF '9a73d590fee7b377011af0b998a7563571acc228' PROVENANCE.md
+          grep -qF '7a12440477411aa28aa732047d4dd33a6a3c8a73' PROVENANCE.md
+          grep -qF 'No driver in this release is hardware-in-the-loop qualified' \
+            docs/compatibility.md
+
+  vendor-compile-smoke:
+    name: Vendored TDK subset standalone compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Install the Arm GNU bare-metal toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gcc-arm-none-eabi
+          arm-none-eabi-gcc --version
+
+      - name: Compile vendored subset with arm-none-eabi-gcc
+        run: tests/vendor_compile_smoke.sh arm-none-eabi-gcc
+
+      - name: Compile vendored subset with the host compiler
+        run: tests/vendor_compile_smoke.sh cc
+
+  nested-cmake-contract:
+    name: Nested CMake consumer contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Configure the nested consumer harness
+        run: cmake -S tests/nested_contract -B build/nested
+
+      - name: Reject an unguarded nested project()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp CMakeLists.txt CMakeLists.txt.orig
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("CMakeLists.txt")
+          text = path.read_text()
+          guarded = (
+              "if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)\n"
+              "    project(nsx_sensors VERSION 0.1.0 LANGUAGES C)\n"
+              "endif()"
+          )
+          assert guarded in text, "guard not found; the negative test is stale"
+          path.write_text(text.replace(guarded, "project(nsx_sensors VERSION 0.1.0 LANGUAGES C)"))
+          PY
+          if cmake -S tests/nested_contract -B build/nested-negative; then
+            mv CMakeLists.txt.orig CMakeLists.txt
+            echo "harness accepted an unguarded nested project()" >&2
+            exit 1
+          fi
+          mv CMakeLists.txt.orig CMakeLists.txt
+
+      - name: Reject a missing dependency target
+        shell: bash
+        run: |
+          set -euo pipefail
+          if cmake -S . -B build/unsatisfied; then
+            echo "standalone configure succeeded without nsx::core" >&2
+            exit 1
+          fi
+          grep -qF 'nsx-sensors requires the nsx::core target' \
+            <(cmake -S . -B build/unsatisfied 2>&1 || true)
+
+  target-smoke:
+    name: NSX consumer smoke (${{ matrix.toolchain }}, ${{ matrix.board }})
+    # Opt-in: needs an NSX consumer workspace and a cross toolchain that the
+    # default runner does not have. It never silently passes, so enabling it is
+    # a deliberate act, not a default that quietly degrades to a no-op.
+    if: ${{ vars.NSX_SENSORS_TARGET_SMOKE == 'true' }}
+    env:
+      NSX_SENSORS_CONSUMER_ROOT: ${{ vars.NSX_SENSORS_CONSUMER_ROOT }}
+      ATFE_ROOT: ${{ vars.ATFE_ROOT }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: arm-none-eabi-gcc
+            board: apollo510_evb
+          - toolchain: armclang
+            board: apollo510b_evb
+          - toolchain: atfe
+            board: apollo4p_blue_kxr_evb
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Require an NSX consumer workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${NSX_SENSORS_CONSUMER_ROOT:-}" || {
+            echo "Set NSX_SENSORS_CONSUMER_ROOT to run the consumer smoke." >&2
+            exit 1
+          }
+          test -d "$NSX_SENSORS_CONSUMER_ROOT"
+
+      - name: Configure and build a representative consumer
+        env:
+          NSX_SENSORS_TOOLCHAIN: ${{ matrix.toolchain }}
+          NSX_SENSORS_BOARD: ${{ matrix.board }}
+        run: |
+          tests/configure_target_smoke.sh "$NSX_SENSORS_CONSUMER_ROOT" \
+            "$NSX_SENSORS_TOOLCHAIN" "$NSX_SENSORS_BOARD"
