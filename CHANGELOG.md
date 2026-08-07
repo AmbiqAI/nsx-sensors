@@ -22,7 +22,8 @@ a change is called out against the audited `main` baseline
   diagnostic instead of an unresolved-link failure.
 - Host contract tests (`tests/test_release_foundation.py`), a nested-CMake
   consumer harness (`tests/nested_contract/`), a vendored-subset standalone
-  compile smoke (`tests/vendor_compile_smoke.sh`), a module compile smoke
+  compile smoke (`tests/vendor_compile_smoke.sh`, `-Wall -Wextra -Werror`), a
+  module compile smoke
   against real NSX and AmbiqSuite headers (`tests/module_compile_smoke.sh`),
   and a full NSX consumer configure/build smoke
   (`tests/configure_target_smoke.sh`).
@@ -63,8 +64,10 @@ a change is called out against the audited `main` baseline
 ### Fixed
 
 - `GNUInstallDirs` is now included, so `CMAKE_INSTALL_INCLUDEDIR` is defined for
-  the install interface and both `install()` rules instead of expanding empty in
-  a standalone configure.
+  the install interface and both `install()` rules. Previously the module relied
+  on a consumer having included `GNUInstallDirs` first; without that, the
+  variable expanded empty and the export interface and headers landed on a bare
+  relative path.
 - `CMakeLists.txt` ends with a newline.
 
 ### Carried forward from `9a73d59`

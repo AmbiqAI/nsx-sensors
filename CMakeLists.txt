@@ -1,17 +1,20 @@
 cmake_minimum_required(VERSION 3.20)
 
-# Standalone builds get a real project so `cmake -S .` reports a version and
-# selects a compiler. Nested NSX builds add this directory with
-# add_subdirectory(), where the enclosing project already owns the language and
-# toolchain setup, so declaring a nested project() there would start a second
-# project scope and re-run compiler detection for no benefit.
+# A top-level configure of this directory needs a project() for CMake to have a
+# language, a compiler, and a version at all. It is not a supported build: the
+# dependency guard below aborts it, by design, with a named diagnostic. Nested
+# NSX builds add this directory with add_subdirectory(), where the enclosing
+# project already owns the language and toolchain setup, so declaring a nested
+# project() there would start a second project scope and re-run compiler
+# detection for no benefit.
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     project(nsx_sensors VERSION 0.1.0 LANGUAGES C)
 endif()
 
 # Provides CMAKE_INSTALL_INCLUDEDIR, which the install interface and both
-# install() rules below already reference. Without it the variable is empty in a
-# standalone configure and headers install to a bare relative path.
+# install() rules below already reference. A consumer is not required to have
+# included GNUInstallDirs first, and without it the variable expands empty, so
+# the export interface and the headers land on a bare relative path.
 include(GNUInstallDirs)
 
 foreach(nsx_sensors_dependency nsx::core nsx::i2c nsx::spi)

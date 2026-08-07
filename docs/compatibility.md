@@ -77,7 +77,7 @@ today would be a claim, not evidence. The gate to add it later is explicit: the
 `armclang`, and `atfe`, so `nsx-sensors` declares the same three.
 
 The module uses no toolchain-specific extension. It requires `c_std_11`, and the
-vendored TDK subset compiles cleanly as C11 with warnings enabled.
+vendored TDK subset compiles cleanly as C11 with `-Wall -Wextra -Werror`.
 
 ## Qualification status for `v0.1.0`
 
@@ -140,9 +140,10 @@ None of the three links a firmware image against real hardware, and none of them
 exercises a sensor.
 
 `tests/vendor_compile_smoke.sh` runs unconditionally in CI and compiles the
-vendored TDK subset standalone as C11 with `-Wall -Wextra`. That proves the
-vendored subset is self-contained and warning-clean. It proves nothing about
-sensor behavior.
+vendored TDK subset standalone as C11 with `-Wall -Wextra -Werror`. Warnings are
+errors, so a future vendor intake that introduces one fails instead of passing
+green. That proves the vendored subset is self-contained and warning-clean. It
+proves nothing about sensor behavior.
 
 ## Application responsibilities
 

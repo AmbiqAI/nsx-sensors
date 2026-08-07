@@ -72,6 +72,36 @@ def tracked_files() -> list[str]:
     ).splitlines()
 
 
+
+def top_level_trigger_keys(workflow: str) -> set[str]:
+    """Return the keys under a workflow's top-level ``on:`` mapping.
+
+    Hand-rolled so the test suite keeps running on a bare stdlib Python: CI
+    runners are not guaranteed to have PyYAML. Only the block structure this
+    repository's workflows use is supported, which is enough to assert the
+    complete trigger set instead of the absence of one literal spelling.
+    """
+    lines = workflow.splitlines()
+    try:
+        start = next(i for i, line in enumerate(lines) if line.rstrip() == "on:")
+    except StopIteration:
+        raise AssertionError("workflow has no top-level 'on:' block")
+    keys: set[str] = set()
+    for line in lines[start + 1 :]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent == 0:
+            break
+        if indent == 2:
+            key = line.strip().split(":", 1)[0].lstrip("- ").strip()
+            if key:
+                keys.add(key)
+    if not keys:
+        raise AssertionError("workflow 'on:' block has no triggers")
+    return keys
+
+
 class ReleaseMetadataTests(unittest.TestCase):
     def test_versions_are_coherent_semver(self) -> None:
         version = (ROOT / "version.txt").read_text().strip()
@@ -375,11 +405,19 @@ class ReleaseAutomationTests(unittest.TestCase):
                 self.assertRegex(ref, r"@[0-9a-f]{40}$", f"{name}: {ref} is unpinned")
 
     def test_release_is_manual_and_gated_on_exact_commit_ci(self) -> None:
-        self.assertIn("workflow_dispatch:", self.release)
-        self.assertNotIn("on:\n  push:", self.release)
+        # Publication must never be a side effect of a push, so assert the whole
+        # trigger set rather than the absence of one literal spelling: a `push:`
+        # added after `workflow_dispatch:` would not contain "on:\n  push:".
+        self.assertEqual({"workflow_dispatch"}, top_level_trigger_keys(self.release))
         self.assertIn("--workflow ci.yml", self.release)
         self.assertIn("headSha", self.release)
         self.assertIn("Refusing to retarget", self.release)
+
+    def test_ci_runs_on_push_and_pull_request(self) -> None:
+        self.assertEqual(
+            {"push", "pull_request", "workflow_dispatch"},
+            top_level_trigger_keys(self.ci),
+        )
 
     def test_release_creates_an_immutable_annotated_tag_with_checksum(self) -> None:
         self.assertIn("git tag -a", self.release)

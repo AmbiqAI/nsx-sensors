@@ -2,9 +2,10 @@
 # Standalone compile smoke for the vendored TDK ICM-45605 eMD subset.
 #
 # The vendored subset must be self-contained: it must not need NSX, AmbiqSuite,
-# CMSIS, or CMSIS-DSP headers, and it must compile warning-clean as C11. This
-# proves the vendoring boundary is honest. It proves nothing about sensor
-# behavior on real hardware.
+# CMSIS, or CMSIS-DSP headers, and it must compile warning-clean as C11. Warnings
+# are errors here, so a future vendor intake that introduces one fails instead of
+# passing green. This proves the vendoring boundary is honest. It proves nothing
+# about sensor behavior on real hardware.
 #
 # Usage: tests/vendor_compile_smoke.sh [compiler]
 # The compiler defaults to $CC, then arm-none-eabi-gcc, then cc.
@@ -52,6 +53,7 @@ for source in "${sources[@]}"; do
         -Wall \
         -Wextra \
         -Wno-unused-parameter \
+        -Werror \
         -I "$vendor_dir" \
         "$source" \
         -o "$out_dir/$(basename "${source%.c}").o"
@@ -73,6 +75,9 @@ for header in "$vendor_dir"/*.h; do
         "${target_flags[@]}" \
         -std=c11 \
         -Wall \
+        -Wextra \
+        -Wno-unused-parameter \
+        -Werror \
         -I "$vendor_dir" \
         "$out_dir/header_check.c" \
         -o "$out_dir/header_check.o"
