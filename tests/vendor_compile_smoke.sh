@@ -29,11 +29,13 @@ if ! command -v "$compiler" >/dev/null 2>&1; then
     exit 1
 fi
 
-# Bare-metal cross compilers need a target CPU to emit an object file.
-target_flags=()
+# Bare-metal cross compilers need a target CPU to emit an object file. No specs
+# file is requested: this compiles only, so the link-time C library selection is
+# irrelevant, and distro packages of arm-none-eabi-gcc do not all ship
+# nosys.specs.
+target_flags=(-c)
 case "$(basename "$compiler")" in
-    arm-none-eabi-*) target_flags=(-mcpu=cortex-m4 -mthumb --specs=nosys.specs -c) ;;
-    *) target_flags=(-c) ;;
+    arm-none-eabi-*) target_flags=(-c -mcpu=cortex-m4 -mthumb) ;;
 esac
 
 rm -rf "$out_dir"

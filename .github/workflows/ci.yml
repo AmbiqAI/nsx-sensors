@@ -54,7 +54,8 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y gcc-arm-none-eabi
+          sudo apt-get install --no-install-recommends -y \
+            gcc-arm-none-eabi libnewlib-arm-none-eabi
           arm-none-eabi-gcc --version
 
       - name: Compile vendored subset with arm-none-eabi-gcc
