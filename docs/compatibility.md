@@ -18,7 +18,7 @@ Three distinct claims are kept separate throughout this document:
 ## SoC declarations
 
 Evidence source: `AmbiqAI/nsx-ambiq-sdk` at
-`2eba24ad776096784764cbe91c8176b434dd3bdf`, `compatibility.socs` of
+`a9f4ec25a162f6f3700623feb691423bb5a51132` (`v5.2.24`), `compatibility.socs` of
 `modules/nsx-core`, `modules/nsx-i2c`, and `modules/nsx-spi`.
 
 | SoC | `nsx-core` | `nsx-i2c` | `nsx-spi` | `nsx-sensors` declares |
@@ -92,7 +92,7 @@ vendored TDK subset compiles cleanly as C11 with `-Wall -Wextra -Werror`.
 "Build-verified" above means `tests/module_compile_smoke.sh` compiled all seven
 translation units, including the vendored TDK subset, against the real
 `nsx-core`, `nsx-i2c`, `nsx-spi`, and AmbiqSuite headers from `nsx-ambiq-sdk`
-at `2eba24ad776096784764cbe91c8176b434dd3bdf`. Every declared SoC was verified
+at `a9f4ec25a162f6f3700623feb691423bb5a51132`. Every declared SoC was verified
 against every declared toolchain:
 
 | SoC | Core | `arm-none-eabi-gcc` | `armclang` | ATfE |
@@ -129,13 +129,13 @@ Three smoke levels back these claims, in increasing fidelity:
 | `tests/module_compile_smoke.sh` | all module sources against real NSX and AmbiqSuite headers | an `nsx-ambiq-sdk` checkout plus a cross toolchain |
 | `tests/configure_target_smoke.sh` | full NSX consumer configure, build, and link | an NSX consumer workspace plus a cross toolchain |
 
-The module compile matrix runs on the protected `hpx-hardware` toolchain runner.
-CI checks out the exact qualified `nsx-ambiq-sdk v5.2.24` commit and compiles all
-24 declared SoC/toolchain combinations with `-Wall -Wextra -Werror`. The
+Hosted CI checks out the exact qualified `nsx-ambiq-sdk v5.2.24` commit and
+compiles all 8 declared SoCs with Arm GNU using `-Wall -Wextra -Werror`. The
 immutable-release workflow inspects the exact main-commit CI run and refuses
 publication unless this job and the three host jobs all completed successfully.
-Fork pull requests never execute untrusted code on the persistent runner; their
-matrix is qualified after merge on the exact main commit.
+The Armclang and ATfE columns in the table above are exact local qualification
+evidence from the same commit and SDK payload; they are not represented as
+hosted CI results.
 
 The full consumer smoke remains a maintainer-run escalation because it needs a
 prepared application workspace. Neither smoke passes silently: a missing

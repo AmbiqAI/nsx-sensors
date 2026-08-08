@@ -20,7 +20,7 @@ release foundation; that merge SHA is deliberately not guessed or published here
 
 | Dependency | Exact revision | Role |
 | --- | --- | --- |
-| `AmbiqAI/nsx-ambiq-sdk` | `2eba24ad776096784764cbe91c8176b434dd3bdf` | supplies `nsx-core`, `nsx-i2c`, `nsx-spi`, and their AmbiqSuite/SoC-HAL substrate |
+| `AmbiqAI/nsx-ambiq-sdk` | `v5.2.24` / `a9f4ec25a162f6f3700623feb691423bb5a51132` | supplies `nsx-core`, `nsx-i2c`, `nsx-spi`, and their AmbiqSuite/SoC-HAL substrate |
 | `AmbiqAI/neuralspotx` | `6dafd6880331eee8fc6caa99de1ccd8321f18495` | board and toolchain graph used for consumer configure smoke |
 
 Module metadata records only the direct logical dependencies (`nsx-core`,

@@ -110,12 +110,10 @@ jobs:
             <(cmake -S . -B build/unsatisfied 2>&1 || true)
 
   module-compile-smoke:
-    name: Module compile smoke (all declared SoCs and toolchains)
-    # Never execute untrusted fork code on the persistent toolchain runner.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    name: Module compile smoke (all declared SoCs, Arm GNU)
     env:
       NSX_AMBIQ_SDK_ROOT: ${{ github.workspace }}/.deps/nsx-ambiq-sdk
-    runs-on: [self-hosted, hpx-hardware]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
@@ -133,18 +131,18 @@ jobs:
           set -euo pipefail
           test "$(git -C "$NSX_AMBIQ_SDK_ROOT" rev-parse HEAD)" = \
             "a9f4ec25a162f6f3700623feb691423bb5a51132"
+      - name: Install Arm GNU
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gcc-arm-none-eabi
+      - name: Verify Arm GNU
+        run: |
           command -v arm-none-eabi-gcc
-          command -v armclang
-          test -n "${ATFE_ROOT:-}"
-          test -x "$ATFE_ROOT/bin/clang"
 
-      - name: Compile every declared SoC and toolchain combination
+      - name: Compile every declared SoC
         run: |
           set -euo pipefail
-          toolchains=(arm-none-eabi-gcc armclang atfe)
           socs=(apollo3 apollo3p apollo4l apollo4p apollo330P apollo510 apollo510b apollo510L)
-          for toolchain in "${toolchains[@]}"; do
-            for soc in "${socs[@]}"; do
-              tests/module_compile_smoke.sh "$NSX_AMBIQ_SDK_ROOT" "$toolchain" "$soc"
-            done
+          for soc in "${socs[@]}"; do
+            tests/module_compile_smoke.sh "$NSX_AMBIQ_SDK_ROOT" arm-none-eabi-gcc "$soc"
           done

@@ -87,7 +87,7 @@ jobs:
                  "Host release and API contracts"
                  "Vendored TDK subset standalone compile"
                  "Nested CMake consumer contract"
-                 "Module compile smoke (all declared SoCs and toolchains)"
+                 "Module compile smoke (all declared SoCs, Arm GNU)"
                )
                for name in "${required[@]}"; do
                  count="$(printf '%s' "$jobs" | jq --arg name "$name" \

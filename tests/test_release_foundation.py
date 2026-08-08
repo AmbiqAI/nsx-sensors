@@ -165,7 +165,7 @@ class ProvenanceTests(unittest.TestCase):
 
     def test_records_audited_baseline_and_dependency_pins(self) -> None:
         self.assertIn("9a73d590fee7b377011af0b998a7563571acc228", self.provenance)
-        self.assertIn("2eba24ad776096784764cbe91c8176b434dd3bdf", self.provenance)
+        self.assertIn("a9f4ec25a162f6f3700623feb691423bb5a51132", self.provenance)
 
     def test_records_neuralspot_port_lineage_with_exact_revisions(self) -> None:
         self.assertIn("AmbiqAI/neuralSPOT", self.provenance)
@@ -416,7 +416,7 @@ class ReleaseAutomationTests(unittest.TestCase):
             "Host release and API contracts",
             "Vendored TDK subset standalone compile",
             "Nested CMake consumer contract",
-            "Module compile smoke (all declared SoCs and toolchains)",
+            "Module compile smoke (all declared SoCs, Arm GNU)",
         ):
             self.assertIn(job, self.release)
 
@@ -436,10 +436,11 @@ class ReleaseAutomationTests(unittest.TestCase):
         self.assertIn("tests/vendor_compile_smoke.sh", self.ci)
         self.assertIn("tests/nested_contract", self.ci)
         self.assertIn("tests/module_compile_smoke.sh", self.ci)
-        self.assertIn("runs-on: [self-hosted, hpx-hardware]", self.ci)
+        self.assertIn("runs-on: ubuntu-latest", self.ci)
         self.assertIn("repository: AmbiqAI/nsx-ambiq-sdk", self.ci)
         self.assertIn("ref: v5.2.24", self.ci)
         self.assertIn("a9f4ec25a162f6f3700623feb691423bb5a51132", self.ci)
+        self.assertIn("gcc-arm-none-eabi", self.ci)
         self.assertNotIn("NSX_SENSORS_MODULE_SMOKE", self.ci)
         self.assertNotIn("NSX_SENSORS_TARGET_SMOKE", self.ci)
 
