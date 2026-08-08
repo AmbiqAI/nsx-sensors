@@ -441,6 +441,7 @@ class ReleaseAutomationTests(unittest.TestCase):
         self.assertIn("ref: v5.2.24", self.ci)
         self.assertIn("a9f4ec25a162f6f3700623feb691423bb5a51132", self.ci)
         self.assertIn("gcc-arm-none-eabi", self.ci)
+        self.assertIn("libnewlib-arm-none-eabi", self.ci)
         self.assertNotIn("NSX_SENSORS_MODULE_SMOKE", self.ci)
         self.assertNotIn("NSX_SENSORS_TARGET_SMOKE", self.ci)
 

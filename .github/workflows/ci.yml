@@ -134,7 +134,8 @@ jobs:
       - name: Install Arm GNU
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y gcc-arm-none-eabi
+          sudo apt-get install --no-install-recommends -y \
+            gcc-arm-none-eabi libnewlib-arm-none-eabi
       - name: Verify Arm GNU
         run: |
           command -v arm-none-eabi-gcc
