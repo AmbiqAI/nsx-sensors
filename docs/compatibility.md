@@ -129,12 +129,19 @@ Three smoke levels back these claims, in increasing fidelity:
 | `tests/module_compile_smoke.sh` | all module sources against real NSX and AmbiqSuite headers | an `nsx-ambiq-sdk` checkout plus a cross toolchain |
 | `tests/configure_target_smoke.sh` | full NSX consumer configure, build, and link | an NSX consumer workspace plus a cross toolchain |
 
-The latter two are opt-in because they need dependencies a default CI runner
-does not have. Neither ever passes silently: a missing workspace, a missing
-`cmake`, a missing `arm-none-eabi-gcc`, a missing `armclang`, or a missing ATfE
-`clang` is a hard failure, not a skip. An ATfE request is additionally checked
-against the compiler's version banner and target list, so a host `clang` cannot
-be mistaken for ATfE.
+The module compile matrix runs on the protected `hpx-hardware` toolchain runner.
+CI checks out the exact qualified `nsx-ambiq-sdk v5.2.24` commit and compiles all
+24 declared SoC/toolchain combinations with `-Wall -Wextra -Werror`. The
+immutable-release workflow inspects the exact main-commit CI run and refuses
+publication unless this job and the three host jobs all completed successfully.
+Fork pull requests never execute untrusted code on the persistent runner; their
+matrix is qualified after merge on the exact main commit.
+
+The full consumer smoke remains a maintainer-run escalation because it needs a
+prepared application workspace. Neither smoke passes silently: a missing
+workspace, `cmake`, cross compiler, SDK payload, or ATfE `clang` is a hard
+failure. An ATfE request is additionally checked against the compiler's version
+banner and target list, so a host `clang` cannot be mistaken for ATfE.
 
 None of the three links a firmware image against real hardware, and none of them
 exercises a sensor.

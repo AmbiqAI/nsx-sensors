@@ -110,77 +110,41 @@ jobs:
             <(cmake -S . -B build/unsatisfied 2>&1 || true)
 
   module-compile-smoke:
-    name: Module compile smoke (${{ matrix.toolchain }}, ${{ matrix.soc }})
-    # Opt-in: needs an nsx-ambiq-sdk checkout with the AmbiqSuite payload and a
-    # cross toolchain. It never silently passes, so enabling it is deliberate.
-    if: ${{ vars.NSX_SENSORS_MODULE_SMOKE == 'true' }}
+    name: Module compile smoke (all declared SoCs and toolchains)
+    # Never execute untrusted fork code on the persistent toolchain runner.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     env:
-      NSX_AMBIQ_SDK_ROOT: ${{ vars.NSX_AMBIQ_SDK_ROOT }}
-      ATFE_ROOT: ${{ vars.ATFE_ROOT }}
-    strategy:
-      fail-fast: false
-      matrix:
-        toolchain: [arm-none-eabi-gcc, armclang, atfe]
-        soc: [apollo3, apollo3p, apollo4l, apollo4p, apollo330P, apollo510, apollo510b, apollo510L]
-    runs-on: ubuntu-latest
+      NSX_AMBIQ_SDK_ROOT: ${{ github.workspace }}/.deps/nsx-ambiq-sdk
+    runs-on: [self-hosted, hpx-hardware]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
-      - name: Require an nsx-ambiq-sdk checkout
+      - name: Checkout the qualified NSX SDK
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AmbiqAI/nsx-ambiq-sdk
+          ref: v5.2.24
+          path: .deps/nsx-ambiq-sdk
+          persist-credentials: false
+
+      - name: Verify SDK and toolchain prerequisites
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${NSX_AMBIQ_SDK_ROOT:-}" || {
-            echo "Set NSX_AMBIQ_SDK_ROOT to run the module compile smoke." >&2
-            exit 1
-          }
-          test -d "$NSX_AMBIQ_SDK_ROOT"
+          test "$(git -C "$NSX_AMBIQ_SDK_ROOT" rev-parse HEAD)" = \
+            "a9f4ec25a162f6f3700623feb691423bb5a51132"
+          command -v arm-none-eabi-gcc
+          command -v armclang
+          test -n "${ATFE_ROOT:-}"
+          test -x "$ATFE_ROOT/bin/clang"
 
-      - name: Compile every module source against real NSX headers
-        env:
-          NSX_SENSORS_TOOLCHAIN: ${{ matrix.toolchain }}
-          NSX_SENSORS_SOC: ${{ matrix.soc }}
-        run: |
-          tests/module_compile_smoke.sh "$NSX_AMBIQ_SDK_ROOT" \
-            "$NSX_SENSORS_TOOLCHAIN" "$NSX_SENSORS_SOC"
-
-  target-smoke:
-    name: NSX consumer smoke (${{ matrix.toolchain }}, ${{ matrix.board }})
-    # Opt-in: needs an NSX consumer workspace and a cross toolchain that the
-    # default runner does not have. It never silently passes, so enabling it is
-    # a deliberate act, not a default that quietly degrades to a no-op.
-    if: ${{ vars.NSX_SENSORS_TARGET_SMOKE == 'true' }}
-    env:
-      NSX_SENSORS_CONSUMER_ROOT: ${{ vars.NSX_SENSORS_CONSUMER_ROOT }}
-      ATFE_ROOT: ${{ vars.ATFE_ROOT }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - toolchain: arm-none-eabi-gcc
-            board: apollo510_evb
-          - toolchain: armclang
-            board: apollo510b_evb
-          - toolchain: atfe
-            board: apollo4p_blue_kxr_evb
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-
-      - name: Require an NSX consumer workspace
-        shell: bash
+      - name: Compile every declared SoC and toolchain combination
         run: |
           set -euo pipefail
-          test -n "${NSX_SENSORS_CONSUMER_ROOT:-}" || {
-            echo "Set NSX_SENSORS_CONSUMER_ROOT to run the consumer smoke." >&2
-            exit 1
-          }
-          test -d "$NSX_SENSORS_CONSUMER_ROOT"
-
-      - name: Configure and build a representative consumer
-        env:
-          NSX_SENSORS_TOOLCHAIN: ${{ matrix.toolchain }}
-          NSX_SENSORS_BOARD: ${{ matrix.board }}
-        run: |
-          tests/configure_target_smoke.sh "$NSX_SENSORS_CONSUMER_ROOT" \
-            "$NSX_SENSORS_TOOLCHAIN" "$NSX_SENSORS_BOARD"
+          toolchains=(arm-none-eabi-gcc armclang atfe)
+          socs=(apollo3 apollo3p apollo4l apollo4p apollo330P apollo510 apollo510b apollo510L)
+          for toolchain in "${toolchains[@]}"; do
+            for soc in "${socs[@]}"; do
+              tests/module_compile_smoke.sh "$NSX_AMBIQ_SDK_ROOT" "$toolchain" "$soc"
+            done
+          done

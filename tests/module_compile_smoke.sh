@@ -85,16 +85,16 @@ done
 includes=(
     -I "$repo_root/includes-api"
     -I "$repo_root/vendor/tdk-icm45605"
-    -I "$sdk_root/modules/nsx-core/includes-api"
-    -I "$sdk_root/modules/nsx-i2c/includes-api"
-    -I "$sdk_root/modules/nsx-spi/includes-api"
-    -I "$sdk_root/modules/nsx-soc-hal/includes-api"
-    -I "$sdk_root/modules/nsx-cmsis-core/Include"
-    -I "$mcu_dir"
-    -I "$mcu_dir/hal"
-    -I "$mcu_dir/regs"
-    -I "$ambiqsuite/utils"
-    -I "$ambiqsuite/CMSIS/AmbiqMicro/Include"
+    -isystem "$sdk_root/modules/nsx-core/includes-api"
+    -isystem "$sdk_root/modules/nsx-i2c/includes-api"
+    -isystem "$sdk_root/modules/nsx-spi/includes-api"
+    -isystem "$sdk_root/modules/nsx-soc-hal/includes-api"
+    -isystem "$sdk_root/modules/nsx-cmsis-core/Include"
+    -isystem "$mcu_dir"
+    -isystem "$mcu_dir/hal"
+    -isystem "$mcu_dir/regs"
+    -isystem "$ambiqsuite/utils"
+    -isystem "$ambiqsuite/CMSIS/AmbiqMicro/Include"
 )
 
 case "$toolchain" in
@@ -160,6 +160,7 @@ sources=("$repo_root"/src/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
 for source in "${sources[@]}"; do
     echo "compiling $(basename "$source") [$toolchain/$soc/$soc_core]"
     "$compiler" -c -std=c11 \
+        -Wall -Wextra -Werror \
         "${arch_flags[@]}" \
         "${defines[@]}" \
         "${includes[@]}" \

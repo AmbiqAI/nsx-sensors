@@ -412,6 +412,13 @@ class ReleaseAutomationTests(unittest.TestCase):
         self.assertIn("--workflow ci.yml", self.release)
         self.assertIn("headSha", self.release)
         self.assertIn("Refusing to retarget", self.release)
+        for job in (
+            "Host release and API contracts",
+            "Vendored TDK subset standalone compile",
+            "Nested CMake consumer contract",
+            "Module compile smoke (all declared SoCs and toolchains)",
+        ):
+            self.assertIn(job, self.release)
 
     def test_ci_runs_on_push_and_pull_request(self) -> None:
         self.assertEqual(
@@ -429,6 +436,16 @@ class ReleaseAutomationTests(unittest.TestCase):
         self.assertIn("tests/vendor_compile_smoke.sh", self.ci)
         self.assertIn("tests/nested_contract", self.ci)
         self.assertIn("tests/module_compile_smoke.sh", self.ci)
+        self.assertIn("runs-on: [self-hosted, hpx-hardware]", self.ci)
+        self.assertIn("repository: AmbiqAI/nsx-ambiq-sdk", self.ci)
+        self.assertIn("ref: v5.2.24", self.ci)
+        self.assertIn("a9f4ec25a162f6f3700623feb691423bb5a51132", self.ci)
+        self.assertNotIn("NSX_SENSORS_MODULE_SMOKE", self.ci)
+        self.assertNotIn("NSX_SENSORS_TARGET_SMOKE", self.ci)
+
+    def test_module_compile_matrix_is_warning_clean(self) -> None:
+        smoke = (ROOT / "tests/module_compile_smoke.sh").read_text()
+        self.assertIn("-Wall -Wextra -Werror", smoke)
 
 
 class NestedContractHarnessTests(unittest.TestCase):

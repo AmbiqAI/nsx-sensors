@@ -224,16 +224,24 @@ uint32_t
 ina228_read_shunt_voltage(ina228_context_t *ctx, float *shunt_voltage)
 {
     uint32_t rst;
+    uint32_t raw_value;
     uint16_t value16;
-    int32_t value;
 
     rst = ina228_get_adc_range(ctx, &value16);
+    if (rst != 0) {
+        return rst;
+    }
     float scale = value16 ? 78.125 : 312.5;
 
-    rst = ina228_read_register_24(ctx, INA228_REG_VSHUNT, &value);
-    if (value & 0x800000) {
-        value |= 0xFF000000;
+    rst = ina228_read_register_24(ctx, INA228_REG_VSHUNT, &raw_value);
+    if (rst != 0) {
+        return rst;
     }
+    int32_t value = (int32_t)(raw_value & 0x7FFFFFU);
+    if ((raw_value & 0x800000U) != 0U) {
+        value -= INT32_C(0x800000);
+    }
+
     // 78.125 nV/LSB if adc is 1 else 312.5 nV/LSB
     // /16 is because last 4 bits are dont care
     // Convert to mV
