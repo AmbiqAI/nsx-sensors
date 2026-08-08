@@ -62,7 +62,7 @@ jobs:
           tag="v${version}"
           if git ls-remote --exit-code origin "refs/tags/${tag}" >/dev/null 2>&1; then
             if [[ "$RETRY_EXISTING_TAG" != "true" ]]; then
-              echo "Refusing to reuse existing immutable tag ${tag} without retry_existing_tag." >&2
+              echo "Refusing to retarget or reuse existing immutable tag ${tag} without retry_existing_tag." >&2
               exit 1
             fi
             git fetch --no-tags origin "refs/tags/${tag}:refs/tags/${tag}"
