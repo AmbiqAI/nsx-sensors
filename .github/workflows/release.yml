@@ -10,6 +10,11 @@ on:
         description: Version to publish, for example 0.1.0
         required: true
         type: string
+      retry_existing_tag:
+        description: Retry assets for an existing tag that already targets current main
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -33,6 +38,7 @@ jobs:
         id: release
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          RETRY_EXISTING_TAG: ${{ inputs.retry_existing_tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -55,8 +61,12 @@ jobs:
 
           tag="v${version}"
           if git ls-remote --exit-code origin "refs/tags/${tag}" >/dev/null 2>&1; then
-            echo "Refusing to retarget existing immutable tag ${tag}" >&2
-            exit 1
+            if [[ "$RETRY_EXISTING_TAG" != "true" ]]; then
+              echo "Refusing to reuse existing immutable tag ${tag} without retry_existing_tag." >&2
+              exit 1
+            fi
+            git fetch --no-tags origin "refs/tags/${tag}:refs/tags/${tag}"
+            test "$(git rev-parse "refs/tags/${tag}^{commit}")" = "$(git rev-parse HEAD)"
           fi
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -133,13 +143,14 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           if git ls-remote --exit-code origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            echo "Refusing to retarget existing immutable tag ${RELEASE_TAG}" >&2
-            exit 1
+            git fetch --no-tags origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+            test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG" "$RELEASE_SHA"
+            git push origin "$RELEASE_TAG"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG" "$RELEASE_SHA"
-          git push origin "$RELEASE_TAG"
 
       - name: Create the source archive and checksum
         env:
@@ -151,9 +162,10 @@ jobs:
           git archive --format=tar.gz \
             --prefix="nsx-sensors-${RELEASE_TAG#v}/" "$RELEASE_TAG" -o "$archive"
           sha256sum "$archive" > "${archive}.sha256"
-          tar -tzf "$archive" | grep -qF "nsx-sensors-${RELEASE_TAG#v}/NOTICE"
-          tar -tzf "$archive" | grep -qF "nsx-sensors-${RELEASE_TAG#v}/LICENSE"
-          tar -tzf "$archive" | grep -qF "nsx-sensors-${RELEASE_TAG#v}/PROVENANCE.md"
+          tar -tzf "$archive" > archive.list
+          grep -Fx "nsx-sensors-${RELEASE_TAG#v}/NOTICE" archive.list
+          grep -Fx "nsx-sensors-${RELEASE_TAG#v}/LICENSE" archive.list
+          grep -Fx "nsx-sensors-${RELEASE_TAG#v}/PROVENANCE.md" archive.list
 
       - name: Upload the source archive
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65

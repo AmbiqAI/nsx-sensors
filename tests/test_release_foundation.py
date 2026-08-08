@@ -430,6 +430,10 @@ class ReleaseAutomationTests(unittest.TestCase):
         self.assertIn("git tag -a", self.release)
         self.assertIn("git archive --format=tar.gz", self.release)
         self.assertIn("sha256sum", self.release)
+        self.assertIn("retry_existing_tag", self.release)
+        self.assertIn('refs/tags/${tag}^{commit}', self.release)
+        self.assertIn("tar -tzf \"$archive\" > archive.list", self.release)
+        self.assertNotIn('tar -tzf "$archive" | grep -q', self.release)
 
     def test_ci_runs_host_contracts_and_vendor_compile_smoke(self) -> None:
         self.assertIn("unittest discover", self.ci)
