@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef __INA228_H
-#define __INA228_H
+#ifndef NSX_INA228_H
+#define NSX_INA228_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -246,4 +246,4 @@ ina228_set_averaging_count(ina228_context_t *ctx, ina228_avg_count_t count);
 }
 #endif
 
-#endif // __INA228_H
+#endif // NSX_INA228_H

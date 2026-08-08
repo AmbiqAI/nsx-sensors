@@ -15,7 +15,10 @@
 #include <string.h>
 
 // Internal state - the TDK driver only supports a single active device handle
-// per transport callback set, matching the legacy ns-imu behavior.
+// per transport callback set, matching the legacy ns-imu behavior. Exactly one
+// ICM-45605 may therefore be active per firmware image; icm45605_init() rebinds
+// this shared state and icm45605_handle_interrupt() is deliberately
+// context-free so it can be called from an ISR.
 static inv_imu_device_t icm45605_dev;
 static nsx_spi_config_t *icm45605_spi_config;
 static uint32_t icm45605_cs_pin;
@@ -79,9 +82,8 @@ uint32_t icm45605_init(icm45605_context_t *ctx) {
         ctx->calibrated = 0;
     }
 
-    // If callback is set, configure interrupt. Invoker is responsible for INT pin setup.
-    if (ctx->frame_available_cb != NULL) {
-        ctx->frame_size = ctx->frame_size ? ctx->frame_size : 1;
+    // If requested, configure the data-ready interrupt. Invoker owns INT pin setup.
+    if (ctx->enable_drdy_interrupt) {
         status |= icm45605_configure_interrupts(ctx);
     }
 

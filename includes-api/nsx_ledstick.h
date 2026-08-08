@@ -8,8 +8,8 @@
  * @copyright Copyright (c) 2023
  *
  */
-#ifndef __LED_STICK_H
-#define __LED_STICK_H
+#ifndef NSX_LEDSTICK_H
+#define NSX_LEDSTICK_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,4 +114,4 @@ ledstick_set_brightness(ledstick_context_t *ctx, uint8_t number, uint8_t brightn
 }
 #endif
 
-#endif // __LED_STICK_H
+#endif // NSX_LEDSTICK_H

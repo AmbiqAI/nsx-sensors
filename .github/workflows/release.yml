@@ -1,0 +1,166 @@
+name: Immutable release
+
+# Manual by design. Publication is never a side effect of a merge: a maintainer
+# supplies the expected version, and the workflow refuses to proceed unless the
+# exact commit it would tag already passed CI on main.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, for example 0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate exact main CI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      sha: ${{ steps.release.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Validate release metadata
+        id: release
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+          version="$(tr -d '[:space:]' < version.txt)"
+          test "$version" = "$RELEASE_VERSION"
+          test "$version" = "$(sed -n 's/^  version: "\(.*\)"/\1/p' nsx-module.yaml | head -1)"
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          grep -qF "project(nsx_sensors VERSION ${version} LANGUAGES C)" CMakeLists.txt
+          grep -qF "## [${version}]" CHANGELOG.md
+
+          # The release contract must be in the archive, and the vendored
+          # third-party notice must still be present and unrelicensed.
+          for required in LICENSE NOTICE PROVENANCE.md RELEASE.md CHANGELOG.md version.txt; do
+            git ls-files --error-unmatch "$required" >/dev/null
+          done
+          grep -qF 'Copyright (c) [2020] by InvenSense, Inc.' NOTICE
+
+          tag="v${version}"
+          if git ls-remote --exit-code origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Refusing to retarget existing immutable tag ${tag}" >&2
+            exit 1
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Run host contracts on the release commit
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Wait for successful CI on the exact commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            runs="$(gh run list --workflow ci.yml --commit "$RELEASE_SHA" \
+              --json databaseId,event,headBranch,status,conclusion,headSha --limit 20)"
+            match="$(printf '%s' "$runs" | jq -c --arg sha "$RELEASE_SHA" \
+              '[.[] | select(.headSha == $sha and .event == "push" and
+                .headBranch == "main")] | first // {}')"
+            state="$(printf '%s' "$match" | jq -r \
+              'if .status == null then "missing" else "\(.status)|\(.conclusion)" end')"
+            case "$state" in
+              completed\|success)
+               run_id="$(printf '%s' "$match" | jq -r '.databaseId')"
+               jobs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs?per_page=100")"
+               required=(
+                 "Host release and API contracts"
+                 "Vendored TDK subset standalone compile"
+                 "Nested CMake consumer contract"
+                 "Module compile smoke (all declared SoCs, Arm GNU)"
+               )
+               for name in "${required[@]}"; do
+                 count="$(printf '%s' "$jobs" | jq --arg name "$name" \
+                   '[.jobs[] | select(.name == $name and .conclusion == "success")] | length')"
+                 if [[ "$count" != "1" ]]; then
+                   echo "Required CI job did not pass for ${RELEASE_SHA}: ${name}" >&2
+                   exit 1
+                 fi
+               done
+               echo "Required CI jobs succeeded for ${RELEASE_SHA}."
+               exit 0
+               ;;
+              completed\|*)
+                echo "CI failed for ${RELEASE_SHA}: $state" >&2
+                exit 1
+                ;;
+              *)
+                echo "CI state ${state} (${attempt}/60)"
+                sleep 30
+                ;;
+            esac
+          done
+          echo "Timed out waiting for CI on ${RELEASE_SHA}" >&2
+          exit 1
+
+  publish:
+    name: Publish immutable annotated tag and archive
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Create the annotated tag
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          if git ls-remote --exit-code origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Refusing to retarget existing immutable tag ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG" "$RELEASE_SHA"
+          git push origin "$RELEASE_TAG"
+
+      - name: Create the source archive and checksum
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="nsx-sensors-${RELEASE_TAG#v}.tar.gz"
+          git archive --format=tar.gz \
+            --prefix="nsx-sensors-${RELEASE_TAG#v}/" "$RELEASE_TAG" -o "$archive"
+          sha256sum "$archive" > "${archive}.sha256"
+          tar -tzf "$archive" | grep -qF "nsx-sensors-${RELEASE_TAG#v}/NOTICE"
+          tar -tzf "$archive" | grep -qF "nsx-sensors-${RELEASE_TAG#v}/LICENSE"
+          tar -tzf "$archive" | grep -qF "nsx-sensors-${RELEASE_TAG#v}/PROVENANCE.md"
+
+      - name: Upload the source archive
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
+        with:
+          tag_name: ${{ needs.validate.outputs.tag }}
+          files: |
+            nsx-sensors-${{ inputs.version }}.tar.gz
+            nsx-sensors-${{ inputs.version }}.tar.gz.sha256
+          generate_release_notes: false
+          body_path: RELEASE.md

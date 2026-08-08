@@ -1,0 +1,41 @@
+nsx-sensors
+Copyright (c) 2026, Ambiq
+
+This distribution contains the NSX external sensor and accessory drivers. The
+Ambiq-authored sources in `includes-api/` and `src/` are licensed under the
+BSD-3-Clause License in LICENSE. Those sources were ported from AmbiqAI's
+neuralSPOT drivers; the exact upstream files and revisions are recorded in
+PROVENANCE.md.
+
+--------------------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------------------
+
+vendor/tdk-icm45605/
+    TDK InvenSense ICM-45605 eMD driver, version 2.1.0 (common files and basic
+    driver subset only).
+
+    Copyright (c) [2020] by InvenSense, Inc.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+    SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+    OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+    CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+    These files are redistributed under the permissive InvenSense terms
+    reproduced above and in each file header. They are NOT relicensed under
+    BSD-3-Clause. The copyright notice and permission terms must be retained in
+    any redistribution, in source or binary form. The only local modification is
+    the removal of the upstream `imu/` include-path prefix; see PROVENANCE.md.
+
+--------------------------------------------------------------------------------
+
+This repository does not vendor NSX, AmbiqSuite, CMSIS, or CMSIS-DSP sources.
+Those are supplied by separate dependencies and consumers must retain the
+notices those projects ship.

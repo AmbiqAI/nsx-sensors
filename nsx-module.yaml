@@ -50,6 +50,11 @@ depends:
     - nsx-spi
   optional: []
 
+# Declared reach is the intersection of what nsx-core, nsx-i2c, and nsx-spi
+# declare; this module has no SoC-conditional code. A declaration is a build
+# expectation, not a hardware-validation claim. apollo5b is deliberately absent:
+# it is descriptor-only in nsx-ambiq-sdk and is declared by none of the three
+# required dependencies. See docs/compatibility.md.
 compatibility:
   boards:
     - "*"

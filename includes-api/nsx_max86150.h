@@ -12,15 +12,15 @@
  *  @ingroup ns-i2c
  */
 #ifndef NSX_MAX86150_H
-    #define NSX_MAX86150_H
+#define NSX_MAX86150_H
 
-    #ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-    #endif
+#endif
 
-    #include "nsx_i2c.h"
-    #include <stddef.h>
-    #include <stdint.h>
+#include "nsx_i2c.h"
+#include <stddef.h>
+#include <stdint.h>
 
 typedef enum {
     Max86150SlotOff = 0,
@@ -91,8 +91,8 @@ uint8_t max86150_get_part_id(const max86150_context_t *ctx);
 
 void max86150_clear_fifo(const max86150_context_t *ctx);
 
-    #ifdef __cplusplus
+#ifdef __cplusplus
 }
-    #endif
+#endif
+/** @}*/
 #endif // NSX_MAX86150_H
-       /** @}*/
