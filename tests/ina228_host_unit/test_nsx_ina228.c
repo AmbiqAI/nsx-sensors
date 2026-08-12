@@ -5,13 +5,18 @@
  * fake below emulates the INA228 register map as big-endian byte arrays, the
  * same wire format the device uses. These tests pin down:
  *
- *   - SHUNT_CAL programming per the TI INA228 datasheet (SBOSA20):
+ *   - SHUNT_CAL programming per the TI INA228 datasheet (SLYS021):
  *     SHUNT_CAL = 13107.2e6 * CURRENT_LSB * R_shunt, multiplied by 4 when
  *     ADCRANGE = 1. A regression here previously multiplied by the raw
  *     ADCRANGE bit, writing SHUNT_CAL = 0 for ADCRANGE = 0.
  *   - CHARGE register decoding: 40-bit two's complement, so negative
  *     accumulated charge must sign-extend.
- *   - ina228_validate() against the fixed MFG/DEVICE ID registers.
+ *   - Which register each field actually lives in: ADCRANGE is CONFIG bit 4,
+ *     and ADC_CONFIG bit 4 is the middle bit of VTCT.
+ *   - Conversion-ready polling reads DIAG_ALRT.CNVRF (bit 1), not MEMSTAT
+ *     (bit 0), which reads 1 on every healthy part.
+ *   - ina228_validate() masks DEVICE_ID.REV_ID off before comparing the die
+ *     id, so a real part reading 0x2281 is accepted.
  */
 #include <math.h>
 #include <stdio.h>
@@ -19,11 +24,16 @@
 
 #include "nsx_ina228.h"
 
+#define REG_CONFIG 0x00
 #define REG_ADCCFG 0x01
 #define REG_SHUNTCAL 0x02
 #define REG_CHARGE 0x0A
+#define REG_DIAGALRT 0x0B
 #define REG_MFG_UID 0x3E
 #define REG_DVC_UID 0x3F
+
+// ADC_CONFIG power-on value: MODE=Fh, VBUSCT=VSHCT=VTCT=5h, AVG=0h.
+#define ADCCFG_RESET 0xFB68
 
 #define NUM_REGS 0x40
 #define MAX_REG_BYTES 5
@@ -109,6 +119,9 @@ fresh_device(void)
 {
     ina228_context_t ctx;
     memset(fake_regs, 0, sizeof(fake_regs));
+    // Power-on defaults for the registers whose reset value is not zero.
+    set_reg16(REG_ADCCFG, ADCCFG_RESET);
+    set_reg16(REG_DIAGALRT, 0x0001); // MEMSTAT = 1 (trim memory healthy)
     CHECK(ina228_init(&ctx, &i2c_stub, 0x40) == 0);
     return ctx;
 }
@@ -125,13 +138,25 @@ test_shunt_cal_adcrange_0(void)
 }
 
 // Same operating point with ADCRANGE = 1 must program 4x the value.
+// ADCRANGE lives in CONFIG bit 4, not ADC_CONFIG bit 4.
 static void
 test_shunt_cal_adcrange_1(void)
 {
     ina228_context_t ctx = fresh_device();
-    set_reg16(REG_ADCCFG, 1 << 4);
+    set_reg16(REG_CONFIG, 1 << 4);
     CHECK(ina228_set_shunt(&ctx, 0.1f, 0.5f) == 0);
     CHECK(get_reg16(REG_SHUNTCAL) == 5000);
+}
+
+// A stray bit 4 in ADC_CONFIG is the middle bit of VTCT, not the shunt range,
+// and must not change the calibration.
+static void
+test_shunt_cal_ignores_adc_config_bit_4(void)
+{
+    ina228_context_t ctx = fresh_device();
+    set_reg16(REG_ADCCFG, ADCCFG_RESET | (1 << 4));
+    CHECK(ina228_set_shunt(&ctx, 0.1f, 0.5f) == 0);
+    CHECK(get_reg16(REG_SHUNTCAL) == 1250);
 }
 
 // SHUNT_CAL must not clobber the reserved top bit of the register.
@@ -172,14 +197,70 @@ test_charge_negative_sign_extends(void)
     CHECK_NEAR(charge, -549755813888.0f * 0.0001f, 1e4f);
 }
 
+// ADCRANGE must be written to CONFIG bit 4, leaving ADC_CONFIG alone. Writing
+// it to ADC_CONFIG bit 4 would silently retune VTCT from 1052 us to 4120 us.
+static void
+test_adc_range_uses_the_config_register(void)
+{
+    ina228_context_t ctx = fresh_device();
+    ina228_conversion_time_t vtct;
+
+    CHECK(ina228_set_adc_range(&ctx, 1) == 0);
+    CHECK(get_reg16(REG_CONFIG) == (1 << 4));
+    CHECK(get_reg16(REG_ADCCFG) == ADCCFG_RESET);
+    CHECK(ina228_get_temperature_conversion_time(&ctx, &vtct) == 0);
+    CHECK(vtct == INA228_TIME_1052_us);
+
+    uint16_t range = 0;
+    CHECK(ina228_get_adc_range(&ctx, &range) == 0);
+    CHECK(range == 1);
+
+    CHECK(ina228_set_adc_range(&ctx, 0) == 0);
+    CHECK(ina228_get_adc_range(&ctx, &range) == 0);
+    CHECK(range == 0);
+}
+
+// CNVRF is DIAG_ALRT bit 1; bit 0 is MEMSTAT, which reads 1 on a healthy part.
+static void
+test_conversion_ready_reads_cnvrf(void)
+{
+    ina228_context_t ctx = fresh_device();
+    uint8_t ready = 0xFF;
+
+    // Only MEMSTAT set: no conversion has completed yet.
+    CHECK(ina228_conversion_ready(&ctx, &ready) == 0);
+    CHECK(ready == 0);
+
+    set_reg16(REG_DIAGALRT, 0x0003); // MEMSTAT | CNVRF
+    CHECK(ina228_conversion_ready(&ctx, &ready) == 0);
+    CHECK(ready == 1);
+}
+
+// DEVICE_ID is DIEID in bits 15:4 plus REV_ID in bits 3:0, so a real part
+// reads 0x2281 and the revision must be masked off before comparing.
 static void
 test_validate(void)
 {
     ina228_context_t ctx = fresh_device();
     set_reg16(REG_MFG_UID, 0x5449);
-    set_reg16(REG_DVC_UID, 0x228);
+    set_reg16(REG_DVC_UID, 0x2281);
     CHECK(ina228_validate(&ctx) == 0);
 
+    // Any silicon revision of the same die must pass.
+    set_reg16(REG_DVC_UID, 0x2280);
+    CHECK(ina228_validate(&ctx) == 0);
+    set_reg16(REG_DVC_UID, 0x228F);
+    CHECK(ina228_validate(&ctx) == 0);
+
+    // The unshifted die id is not a valid DEVICE_ID and must be rejected.
+    set_reg16(REG_DVC_UID, 0x0228);
+    CHECK(ina228_validate(&ctx) == 1);
+
+    // A different part must be rejected.
+    set_reg16(REG_DVC_UID, 0x2261);
+    CHECK(ina228_validate(&ctx) == 1);
+
+    set_reg16(REG_DVC_UID, 0x2281);
     set_reg16(REG_MFG_UID, 0xDEAD);
     CHECK(ina228_validate(&ctx) == 1);
 }
@@ -189,9 +270,12 @@ main(void)
 {
     test_shunt_cal_adcrange_0();
     test_shunt_cal_adcrange_1();
+    test_shunt_cal_ignores_adc_config_bit_4();
     test_shunt_cal_preserves_reserved_bit();
     test_charge_positive();
     test_charge_negative_sign_extends();
+    test_adc_range_uses_the_config_register();
+    test_conversion_ready_reads_cnvrf();
     test_validate();
 
     if (failures) {

@@ -29,11 +29,11 @@
 #define INA228_REG_BOVL 0x0E        ///< Bus overvoltage threshold register
 #define INA228_REG_BUVL 0x0F        ///< Bus undervoltage threshold register
 #define INA228_REG_TEMPLIMIT 0x10 ///< Temperature over-limit threshold register
-#define INA228_REG_PWRLIMIT 0x10  ///< Power over-limit threshold register
+#define INA228_REG_PWRLIMIT 0x11  ///< Power over-limit threshold register
 #define INA228_REG_MFG_UID 0x3E   ///< Manufacturer ID register
 #define INA228_REG_DVC_UID 0x3F   ///< Device ID and revision register
 #define INA228_REG_MFG_VAL 0x5449
-#define INA228_REG_DVC_VAL 0x228
+#define INA228_REG_DVC_VAL 0x228  ///< DEVICE_ID.DIEID, the revision-independent part
 
 static uint32_t
 ina228_read_register(ina228_context_t *ctx, uint8_t reg, uint16_t *value, uint16_t mask)
@@ -129,11 +129,19 @@ ina228_validate(ina228_context_t *ctx)
     uint16_t value;
     uint32_t rst;
     rst = ina228_get_manufacturer_id(ctx, &value);
+    if (rst != 0) {
+        return rst;
+    }
     if (value != INA228_REG_MFG_VAL) {
         return 1;
     }
     rst = ina228_get_device_id(ctx, &value);
-    if (value != INA228_REG_DVC_VAL) {
+    if (rst != 0) {
+        return rst;
+    }
+    // DEVICE_ID is DIEID in bits 15:4 and silicon REV_ID in bits 3:0, so the
+    // revision has to be masked off: a real part reads 0x2281, not 0x228.
+    if ((value >> 4) != INA228_REG_DVC_VAL) {
         return 1;
     }
     return rst;
@@ -174,13 +182,14 @@ ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current)
 uint32_t
 ina228_set_adc_range(ina228_context_t *ctx, uint16_t adc_range)
 {
-    return ina228_write_bits(ctx, INA228_REG_ADCCFG, adc_range, 1, 4);
+    // ADCRANGE is CONFIG bit 4. ADC_CONFIG bit 4 is the middle bit of VTCT.
+    return ina228_write_bits(ctx, INA228_REG_CONFIG, adc_range, 1, 4);
 }
 
 uint32_t
 ina228_get_adc_range(ina228_context_t *ctx, uint16_t *adc_range)
 {
-    return ina228_read_bits(ctx, INA228_REG_ADCCFG, adc_range, 1, 4);
+    return ina228_read_bits(ctx, INA228_REG_CONFIG, adc_range, 1, 4);
 }
 
 uint32_t
@@ -320,7 +329,9 @@ ina228_conversion_ready(ina228_context_t *ctx, uint8_t *ready)
 {
     uint16_t value;
     uint32_t rst;
-    rst = ina228_read_bits(ctx, INA228_REG_DIAGALRT, &value, 1, 0);
+    // CNVRF is DIAG_ALRT bit 1. Bit 0 is MEMSTAT, which reads 1 on a healthy
+    // part, so polling it reports ready immediately.
+    rst = ina228_read_bits(ctx, INA228_REG_DIAGALRT, &value, 1, 1);
     *ready = value;
     return rst;
 }

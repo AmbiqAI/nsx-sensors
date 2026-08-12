@@ -164,6 +164,17 @@ ina228_validate(ina228_context_t *ctx);
 uint32_t
 ina228_reset(ina228_context_t *ctx);
 
+/**
+ * @brief Reset the ENERGY and CHARGE accumulators (CONFIG.RSTACC).
+ *
+ * This also clears DIAG_ALRT.MATHOF. It does not clear DIAG_ALRT.ENERGYOF or
+ * DIAG_ALRT.CHARGEOF: those clear only when the ENERGY or CHARGE register is
+ * read, so a windowed measurement that resets the accumulators and then polls
+ * the overflow flags can observe a flag raised before the reset. Read the
+ * accumulator itself to clear it. Note that the ADC free-runs in continuous
+ * mode, so MATHOF can be raised again immediately while SHUNT_CAL is still
+ * zero, before ina228_set_shunt() has run.
+ */
 uint32_t
 ina228_reset_accumulators(ina228_context_t *ctx);
 

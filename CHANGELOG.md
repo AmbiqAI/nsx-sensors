@@ -3,6 +3,45 @@
 All notable changes to `nsx-sensors` are documented here. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-08-12
+
+Four INA228 register-map defects, all verified against the TI INA228 datasheet
+(SLYS021, January 2021). The first was reported from Apollo510B hardware
+bring-up; the rest were found while confirming it against the register tables.
+
+### Fixed
+
+- `ina228_validate()` compared the whole 16-bit DEVICE_ID register against
+  `0x228`. Per Table 7-24 that register is `DIEID` in bits 15:4 plus silicon
+  `REV_ID` in bits 3:0, so a real part reads `0x2281` and validation rejected
+  every genuine INA228. The revision is now masked off. Reported from hardware
+  bring-up on Apollo510B.
+- `ina228_set_adc_range()` and `ina228_get_adc_range()` addressed bit 4 of
+  ADC_CONFIG (`0x01`). `ADCRANGE` is bit 4 of CONFIG (`0x00`); bit 4 of
+  ADC_CONFIG is the middle bit of `VTCT`. Selecting the ±40.96 mV range
+  therefore left the shunt range untouched and silently retuned the
+  temperature conversion time from 1052 µs to 4120 µs, while
+  `ina228_get_adc_range()` returned a `VTCT` bit. Because that read feeds
+  `ina228_set_shunt()` and `ina228_read_shunt_voltage()`, a caller that
+  selected the ±40.96 mV range got a SHUNT_CAL 4x too large and a shunt
+  voltage 4x too small. At power-on defaults both registers read 0 in bit 4,
+  so a caller that never touched the ADC range was unaffected.
+- `ina228_conversion_ready()` read DIAG_ALRT bit 0, which is `MEMSTAT` and
+  reads `1` on any part with healthy trim memory, so polling reported ready
+  immediately and unconditionally. `CNVRF` is bit 1.
+- `INA228_REG_PWRLIMIT` was defined as `0x10`, the address of `TEMP_LIMIT`.
+  `PWR_LIMIT` is `0x11`. The macro is not referenced by any driver function,
+  so this was latent.
+
+### Added
+
+- Documented on `ina228_reset_accumulators()` that `RSTACC` clears
+  `DIAG_ALRT.MATHOF` but not `ENERGYOF` or `CHARGEOF`, which clear only when
+  the ENERGY or CHARGE register is read, and that a free-running ADC can raise
+  `MATHOF` again while SHUNT_CAL is still zero.
+- Host unit test coverage for all four fixes, including that ADC_CONFIG is
+  left untouched when the ADC range is set. The new checks fail against 0.2.0.
+
 ## [0.2.0] - 2026-08-12
 
 ### Added
