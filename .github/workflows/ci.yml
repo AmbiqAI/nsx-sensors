@@ -86,13 +86,15 @@ jobs:
 
           path = Path("CMakeLists.txt")
           text = path.read_text()
+          version = Path("version.txt").read_text().strip()
+          project_line = f"project(nsx_sensors VERSION {version} LANGUAGES C)"
           guarded = (
               "if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)\n"
-              "    project(nsx_sensors VERSION 0.1.0 LANGUAGES C)\n"
+              f"    {project_line}\n"
               "endif()"
           )
           assert guarded in text, "guard not found; the negative test is stale"
-          path.write_text(text.replace(guarded, "project(nsx_sensors VERSION 0.1.0 LANGUAGES C)"))
+          path.write_text(text.replace(guarded, project_line))
           PY
           if cmake -S tests/nested_contract -B build/nested-negative; then
             mv CMakeLists.txt.orig CMakeLists.txt

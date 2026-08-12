@@ -3,6 +3,33 @@
 All notable changes to `nsx-sensors` are documented here. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-12
+
+### Added
+
+- `ina228_validate()` is now declared in `includes-api/nsx_ina228.h`. The
+  function was always compiled into the library but missing from the public
+  header; the additive header-surface change is why this is a minor release.
+- Host unit tests for the INA228 register math
+  (`tests/ina228_host_unit.sh`), compiled against a stubbed nsx-i2c
+  transport and run in the host-contracts CI job. They pin the SHUNT_CAL
+  and CHARGE arithmetic to the TI INA228 datasheet (SBOSA20) and fail
+  against the pre-fix driver.
+
+### Fixed
+
+- `ina228_set_shunt()` programmed SHUNT_CAL by multiplying with the raw
+  ADCRANGE register bit: ADCRANGE = 0 wrote SHUNT_CAL = 0, so current,
+  power, energy, and charge all read zero, and ADCRANGE = 1 underreported
+  every derived measurement by 4x. The datasheet formula is
+  SHUNT_CAL = 13107.2e6 * CURRENT_LSB * R_shunt, multiplied by 4 only when
+  ADCRANGE = 1. A failed ADC-range read now propagates its error instead of
+  scaling by an uninitialized value.
+- `ina228_read_charge()` decoded the 40-bit two's-complement CHARGE
+  register as unsigned, so negative accumulated charge read as a huge
+  positive value. It now sign-extends. The ENERGY register is unsigned and
+  is unchanged.
+
 ## [0.1.0] - 2026-08-06
 
 First semantic release. There is no prior tag, so everything below describes the

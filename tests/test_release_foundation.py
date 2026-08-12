@@ -250,7 +250,9 @@ class CMakeContractTests(unittest.TestCase):
         self.assertLess(
             self.cmake.index(guard), self.cmake.index("project(nsx_sensors")
         )
-        self.assertIn("project(nsx_sensors VERSION 0.1.0 LANGUAGES C)", self.cmake)
+        self.assertIn(
+            f"project(nsx_sensors VERSION {module_version()} LANGUAGES C)", self.cmake
+        )
         # The module has no C++ or assembly sources; enabling them would force
         # needless compiler detection.
         self.assertNotIn("LANGUAGES C CXX ASM", self.cmake)

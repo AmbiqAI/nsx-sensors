@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.20)
 # project() there would start a second project scope and re-run compiler
 # detection for no benefit.
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    project(nsx_sensors VERSION 0.1.0 LANGUAGES C)
+    project(nsx_sensors VERSION 0.2.0 LANGUAGES C)
 endif()
 
 # Provides CMAKE_INSTALL_INCLUDEDIR, which the install interface and both
