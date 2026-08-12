@@ -3,7 +3,7 @@ schema_version: 1
 module:
   name: nsx-sensors
   type: runtime
-  version: "0.2.1"
+  version: "0.3.0"
 
 support:
   ambiqsuite: true

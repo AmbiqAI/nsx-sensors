@@ -3,6 +3,69 @@
 All notable changes to `nsx-sensors` are documented here. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-12
+
+A full audit of the INA228 driver against the TI datasheet (SLYS021), plus one
+Apollo510B hardware finding. Every unit conversion was re-derived and verified
+correct; the changes below are calibration edge cases, error handling, and
+public-surface corrections. Minor rather than patch because the public surface
+changes (see Breaking below).
+
+### Breaking
+
+- **`ina228_alert_type_t` values changed.** Every value was one bit position
+  too low for the DIAG_ALRT register it is masked against (the old values
+  started from MEMSTAT, bit 0, instead of CNVRF, bit 1), so any caller masking
+  `ina228_alert_functions()` output with these constants misread every flag.
+  The values now match Table 7-16, and `INA228_ALERT_OVERTEMP`,
+  `INA228_ALERT_MATH_OVERFLOW`, `INA228_ALERT_CHARGE_OVERFLOW`, and
+  `INA228_ALERT_ENERGY_OVERFLOW` are added. Callers using the old numeric
+  values must recompile against the new header.
+- **`ina228_context_t` gained a `_calibrated` field**, changing the struct
+  layout. Recompile; do not mix objects built against 0.2.x headers.
+- **`ina228_set_shunt()` now fails** (returns nonzero, device untouched) for
+  non-positive inputs and when the computed SHUNT_CAL exceeds the register's
+  15-bit field. Previously an oversized value was silently masked into the
+  field — R = 1 Ω, Imax = 2 A programmed 17232 instead of 50000, a silent
+  2.9x miscalibration — and values above 65535 hit undefined float-to-uint16
+  conversion first.
+
+### Fixed
+
+- `ina228_set_adc_range()` now reprograms SHUNT_CAL when the device is
+  already calibrated: the calibration carries a x4 factor when ADCRANGE = 1,
+  so changing the range after `ina228_set_shunt()` silently invalidated it
+  (4x low after 0→1). If the x4 recalibration would overflow the 15-bit
+  field, the call reports failure and `ina228_set_shunt()` must be called
+  before measurements are trusted.
+- `ina228_set_shunt()` writes SHUNT_CAL as a plain full-register write and
+  verifies it by readback. On Apollo510B hardware the previous masked
+  read-modify-write left SHUNT_CAL at 0 — current, power, energy, and charge
+  all read exactly zero while bus voltage stayed correct — while a plain
+  write of the same bytes landed. Bit 15 is reserved and always reads 0, so
+  the RMW preserved nothing anyway; the readback verify converts any
+  remaining write failure from silently-zero data into an error return.
+- A failed I2C read now propagates out of every getter with the output value
+  zeroed, instead of fabricating a result from an uninitialized buffer, and
+  every read-modify-write setter aborts on a failed read instead of writing
+  back garbage (previously a single transient I2C error could silently
+  reconfigure the device).
+- `ina228_read_energy()` and `ina228_read_charge()` scale through double
+  instead of accumulating the 40-bit register in float, which quantized
+  large values (about 512-LSB steps near 2^32).
+
+### Added
+
+- `ina228_read_energy_raw()` and `ina228_read_charge_raw()`: exact 64-bit
+  register values for windowed (delta) measurements, which stay exact where
+  the float conversions cannot (a float carries 24 mantissa bits against the
+  registers' 40).
+- Documented that `ina228_set_shunt()` is required after `ina228_init()` and
+  after `ina228_reset()` before current, power, energy, or charge readings
+  are meaningful (the device powers up with SHUNT_CAL = 0x1000, which
+  matches no driver calibration), and that DIAG_ALRT reads clear the latched
+  flags when ALATCH = 1.
+
 ## [0.2.1] - 2026-08-12
 
 Four INA228 register-map defects, all verified against the TI INA228 datasheet
