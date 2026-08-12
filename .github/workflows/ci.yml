@@ -19,6 +19,9 @@ jobs:
       - name: Run release foundation contract tests
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
+      - name: Run INA228 host unit tests
+        run: tests/ina228_host_unit.sh cc
+
       - name: Validate version coherence
         shell: bash
         run: |

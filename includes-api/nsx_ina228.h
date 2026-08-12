@@ -159,6 +159,9 @@ uint32_t
 ina228_get_device_id(ina228_context_t *ctx, uint16_t *value);
 
 uint32_t
+ina228_validate(ina228_context_t *ctx);
+
+uint32_t
 ina228_reset(ina228_context_t *ctx);
 
 uint32_t
