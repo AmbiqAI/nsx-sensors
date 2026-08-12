@@ -5,11 +5,21 @@ All notable changes to `nsx-sensors` are documented here. This project follows
 
 ## [0.3.0] - 2026-08-12
 
-A full audit of the INA228 driver against the TI datasheet (SLYS021), plus one
-Apollo510B hardware finding. Every unit conversion was re-derived and verified
-correct; the changes below are calibration edge cases, error handling, and
-public-surface corrections. Minor rather than patch because the public surface
-changes (see Breaking below).
+A full audit of the INA228 driver against the TI datasheet (SLYS021). Every
+unit conversion was re-derived and verified correct; the changes below are
+calibration edge cases, error handling, and public-surface corrections. Minor
+rather than patch because the public surface changes (see Breaking below).
+
+> **Correction (2026-08-12, after release):** this entry originally attributed
+> the SHUNT_CAL write change to an Apollo510B hardware failure of the masked
+> read-modify-write. That report was withdrawn: the failing firmware was
+> unknowingly running v0.1.0 (a consumer-side dependency-pinning bug), whose
+> `set_shunt()` computed SHUNT_CAL = 0 arithmetically. No transport-level
+> write corruption was ever observed. The plain full-register write and
+> readback verify remain, on their own merits: bit 15 is reserved-always-0 so
+> there is nothing to preserve, and the verify converts any genuinely lost
+> write into an error instead of silently-zero measurements. v0.3.0 was
+> subsequently verified end-to-end on Apollo510B hardware.
 
 ### Breaking
 
@@ -39,12 +49,12 @@ changes (see Breaking below).
   field, the call reports failure and `ina228_set_shunt()` must be called
   before measurements are trusted.
 - `ina228_set_shunt()` writes SHUNT_CAL as a plain full-register write and
-  verifies it by readback. On Apollo510B hardware the previous masked
-  read-modify-write left SHUNT_CAL at 0 — current, power, energy, and charge
-  all read exactly zero while bus voltage stayed correct — while a plain
-  write of the same bytes landed. Bit 15 is reserved and always reads 0, so
-  the RMW preserved nothing anyway; the readback verify converts any
-  remaining write failure from silently-zero data into an error return.
+  verifies it by readback. Bit 15 is reserved and always reads 0, so the
+  previous masked read-modify-write preserved nothing and cost an extra
+  transfer; the readback verify converts a lost write — the one register
+  where that means silently-zero current, power, energy, and charge — into
+  an error return. (See the correction note above: the hardware-failure
+  report that originally motivated this change was withdrawn.)
 - A failed I2C read now propagates out of every getter with the output value
   zeroed, instead of fabricating a result from an uninitialized buffer, and
   every read-modify-write setter aborts on a failed read instead of writing

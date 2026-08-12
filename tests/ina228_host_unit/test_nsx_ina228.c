@@ -185,9 +185,8 @@ test_shunt_cal_ignores_adc_config_bit_4(void)
 }
 
 // set_shunt writes the full register in one plain transfer (the reserved top
-// bit always reads 0, so there is nothing to preserve), fully replacing the
-// 0x1000 power-on value. The masked read-modify-write this replaced was
-// observed to leave SHUNT_CAL at 0 on real hardware.
+// bit always reads 0, so a read-modify-write would preserve nothing), fully
+// replacing the 0x1000 power-on value.
 static void
 test_shunt_cal_plain_full_write(void)
 {
@@ -221,9 +220,9 @@ test_shunt_cal_rejects_out_of_range(void)
     CHECK(ctx._calibrated == 0);
 }
 
-// A write that the bus accepts but the device never applies (the Apollo510B
-// bring-up failure mode) must surface as an error, not as silently-zero
-// current/power/energy readings.
+// A write that the bus accepts but the device never applies must surface as
+// an error, not as silently-zero current/power/energy readings: SHUNT_CAL is
+// the one register where a lost write zeroes every derived measurement.
 static void
 test_shunt_cal_readback_verify(void)
 {
@@ -235,8 +234,8 @@ test_shunt_cal_readback_verify(void)
 }
 
 // set_shunt must be exactly: one ADCRANGE read, one plain SHUNT_CAL write,
-// one readback. A read-modify-write of SHUNT_CAL (a third read) is the
-// transaction sequence that corrupted the write on Apollo510B hardware.
+// one readback. Pins the design: no read-modify-write of SHUNT_CAL (there is
+// nothing to preserve) and no unverified write.
 static void
 test_set_shunt_transaction_shape(void)
 {
