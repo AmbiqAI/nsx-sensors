@@ -235,10 +235,8 @@ ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current)
     }
 
     // Plain full-register write: SHUNT_CAL bit 15 is reserved and always
-    // reads 0, and the range check above keeps the value out of it, so there
-    // is nothing to preserve. The masked read-modify-write this replaces has
-    // been observed to leave SHUNT_CAL at 0 on real hardware (Apollo510B
-    // bring-up) while plain writes of the same bytes land.
+    // reads 0, and the range check above keeps the value out of it, so a
+    // read-modify-write would preserve nothing and cost an extra transfer.
     uint16_t shunt_cal_reg = (uint16_t)(shunt_cal + 0.5f);
     rst = ina228_write_register(ctx, INA228_REG_SHUNTCAL, shunt_cal_reg, 0xFFFF);
     if (rst != 0) {
