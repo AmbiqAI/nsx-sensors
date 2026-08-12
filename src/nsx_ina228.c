@@ -156,13 +156,18 @@ ina228_reset_accumulators(ina228_context_t *ctx)
 uint32_t
 ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current)
 {
-    uint16_t scale;
-    ina228_get_adc_range(ctx, &scale);
+    uint16_t adc_range;
+    uint32_t rst;
+    rst = ina228_get_adc_range(ctx, &adc_range);
+    if (rst != 0) {
+        return rst;
+    }
 
     ctx->_shunt_res = shunt_res;
     ctx->_current_lsb = max_current / (float)(1UL << 19);
 
-    float shunt_cal = 13107.2 * 1000000.0 * ctx->_shunt_res * ctx->_current_lsb * scale;
+    // SHUNT_CAL = 13107.2e6 * CURRENT_LSB * R_shunt, x4 when ADCRANGE = 1
+    float shunt_cal = 13107.2 * 1000000.0 * ctx->_shunt_res * ctx->_current_lsb * (adc_range ? 4.0f : 1.0f);
     return ina228_write_register(ctx, INA228_REG_SHUNTCAL, (uint16_t)shunt_cal, 0x7FFF);
 }
 
@@ -282,12 +287,15 @@ ina228_read_charge(ina228_context_t *ctx, float *charge)
     uint8_t buff[5];
     buff[0] = INA228_REG_CHARGE;
     rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, buff, 1, buff, 5);
-    float e = 0;
+    // CHARGE is 40-bit two's complement; sign-extend before scaling
+    int64_t value = 0;
     for (int i = 0; i < 5; i++) {
-        e *= 256;
-        e += buff[i];
+        value = (value << 8) | buff[i];
     }
-    *charge = e * ctx->_current_lsb;
+    if (value & (INT64_C(1) << 39)) {
+        value -= (INT64_C(1) << 40);
+    }
+    *charge = (float)value * ctx->_current_lsb;
     return rst;
 }
 
