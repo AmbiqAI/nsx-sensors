@@ -42,6 +42,11 @@ ina228_read_register(ina228_context_t *ctx, uint8_t reg, uint16_t *value, uint16
     uint32_t rst;
     i2cBuffer[0] = reg;
     rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, i2cBuffer, 1, i2cBuffer, 2);
+    if (rst != 0) {
+        // The buffer holds no device data on a failed transfer.
+        *value = 0;
+        return rst;
+    }
     *value = (i2cBuffer[0] << 8) | i2cBuffer[1];
     if (mask != 0xFFFF) {
         *value &= mask;
@@ -56,7 +61,29 @@ ina228_read_register_24(ina228_context_t *ctx, uint8_t reg, uint32_t *value)
     uint32_t rst;
     i2cBuffer[0] = reg;
     rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, i2cBuffer, 1, i2cBuffer, 3);
+    if (rst != 0) {
+        *value = 0;
+        return rst;
+    }
     *value = (i2cBuffer[0] << 16) | (i2cBuffer[1] << 8) | i2cBuffer[2];
+    return rst;
+}
+
+static uint32_t
+ina228_read_register_40(ina228_context_t *ctx, uint8_t reg, uint64_t *value)
+{
+    uint8_t i2cBuffer[5];
+    uint32_t rst;
+    i2cBuffer[0] = reg;
+    rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, i2cBuffer, 1, i2cBuffer, 5);
+    if (rst != 0) {
+        *value = 0;
+        return rst;
+    }
+    *value = 0;
+    for (int i = 0; i < 5; i++) {
+        *value = (*value << 8) | i2cBuffer[i];
+    }
     return rst;
 }
 
@@ -76,9 +103,14 @@ ina228_write_register(ina228_context_t *ctx, uint8_t reg, uint16_t value, uint16
 {
     uint16_t rdValue;
     uint8_t i2cBuffer[3];
+    uint32_t rst;
     i2cBuffer[0] = reg;
     if (mask != 0xFFFF) {
-        ina228_read_register(ctx, reg, &rdValue, ~mask);
+        rst = ina228_read_register(ctx, reg, &rdValue, ~mask);
+        if (rst != 0) {
+            // Never read-modify-write on top of a failed read.
+            return rst;
+        }
         value = (rdValue & ~mask) | (value & mask);
     }
     i2cBuffer[1] = (value >> 8) & 0xFF;
@@ -93,6 +125,10 @@ ina228_write_bits(ina228_context_t *ctx, uint8_t reg, uint16_t value, uint16_t l
     uint16_t regValue;
     uint32_t rst;
     rst = ina228_read_register(ctx, reg, &regValue, 0xFFFF);
+    if (rst != 0) {
+        // Never read-modify-write on top of a failed read.
+        return rst;
+    }
     regValue &= ~(mask << offset);
     regValue |= (value & mask) << offset;
     rst = ina228_write_register(ctx, reg, regValue, 0xFFFF);
@@ -107,7 +143,10 @@ ina228_init(ina228_context_t *ctx, nsx_i2c_config_t *i2c_config, uint16_t addr)
     ctx->addr = addr;
     ctx->_shunt_res = 0.1;
     ctx->_current_lsb = 0.0001;
-    // Validate the device?
+    // The cached scaling above matches the device only once ina228_set_shunt()
+    // has programmed SHUNT_CAL; until then _calibrated stays 0 and current,
+    // power, energy, and charge readings are not meaningful.
+    ctx->_calibrated = 0;
     return 0;
 }
 
@@ -151,7 +190,15 @@ ina228_validate(ina228_context_t *ctx)
 uint32_t
 ina228_reset(ina228_context_t *ctx)
 {
-    return ina228_write_bits(ctx, INA228_REG_CONFIG, 1, 1, 15);
+    uint32_t rst;
+    rst = ina228_write_bits(ctx, INA228_REG_CONFIG, 1, 1, 15);
+    if (rst != 0) {
+        return rst;
+    }
+    // The device is back at power-on defaults (SHUNT_CAL = 0x1000), so the
+    // cached calibration no longer matches it.
+    ctx->_calibrated = 0;
+    return 0;
 }
 
 
@@ -166,24 +213,70 @@ ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current)
 {
     uint16_t adc_range;
     uint32_t rst;
+
+    if (!(shunt_res > 0.0f) || !(max_current > 0.0f)) {
+        return 1;
+    }
+
     rst = ina228_get_adc_range(ctx, &adc_range);
     if (rst != 0) {
         return rst;
     }
 
-    ctx->_shunt_res = shunt_res;
-    ctx->_current_lsb = max_current / (float)(1UL << 19);
+    float current_lsb = max_current / (float)(1UL << 19);
 
     // SHUNT_CAL = 13107.2e6 * CURRENT_LSB * R_shunt, x4 when ADCRANGE = 1
-    float shunt_cal = 13107.2 * 1000000.0 * ctx->_shunt_res * ctx->_current_lsb * (adc_range ? 4.0f : 1.0f);
-    return ina228_write_register(ctx, INA228_REG_SHUNTCAL, (uint16_t)shunt_cal, 0x7FFF);
+    float shunt_cal = 13107.2 * 1000000.0 * shunt_res * current_lsb * (adc_range ? 4.0f : 1.0f);
+    // SHUNT_CAL is a 15-bit field. A value that does not fit must be an
+    // error: masking it into the field would silently miscalibrate, and
+    // converting it to uint16_t would be undefined behavior first.
+    if (shunt_cal > 32767.0f) {
+        return 1;
+    }
+
+    // Plain full-register write: SHUNT_CAL bit 15 is reserved and always
+    // reads 0, and the range check above keeps the value out of it, so there
+    // is nothing to preserve. The masked read-modify-write this replaces has
+    // been observed to leave SHUNT_CAL at 0 on real hardware (Apollo510B
+    // bring-up) while plain writes of the same bytes land.
+    uint16_t shunt_cal_reg = (uint16_t)(shunt_cal + 0.5f);
+    rst = ina228_write_register(ctx, INA228_REG_SHUNTCAL, shunt_cal_reg, 0xFFFF);
+    if (rst != 0) {
+        return rst;
+    }
+
+    // SHUNT_CAL = 0 silently zeroes current, power, energy, and charge, so
+    // verify the write actually landed before trusting the calibration.
+    uint16_t readback;
+    rst = ina228_read_register(ctx, INA228_REG_SHUNTCAL, &readback, 0xFFFF);
+    if (rst != 0) {
+        return rst;
+    }
+    if (readback != shunt_cal_reg) {
+        return 1;
+    }
+
+    ctx->_shunt_res = shunt_res;
+    ctx->_current_lsb = current_lsb;
+    ctx->_calibrated = 1;
+    return 0;
 }
 
 uint32_t
 ina228_set_adc_range(ina228_context_t *ctx, uint16_t adc_range)
 {
+    uint32_t rst;
     // ADCRANGE is CONFIG bit 4. ADC_CONFIG bit 4 is the middle bit of VTCT.
-    return ina228_write_bits(ctx, INA228_REG_CONFIG, adc_range, 1, 4);
+    rst = ina228_write_bits(ctx, INA228_REG_CONFIG, adc_range, 1, 4);
+    if (rst != 0) {
+        return rst;
+    }
+    // SHUNT_CAL carries a x4 factor when ADCRANGE = 1, so an existing
+    // calibration must be reprogrammed for the new range.
+    if (ctx->_calibrated) {
+        return ina228_set_shunt(ctx, ctx->_shunt_res, ctx->_current_lsb * (float)(1UL << 19));
+    }
+    return 0;
 }
 
 uint32_t
@@ -211,11 +304,10 @@ ina228_read_current(ina228_context_t *ctx, float *current)
 
     uint32_t rst;
     uint32_t uvalue;
-    int32_t value;
     rst = ina228_read_register_24(ctx, INA228_REG_CURRENT, &uvalue);
-    value = (int32_t)uvalue;
-    if (value & 0x800000) {
-        value |= 0xFF000000;
+    int32_t value = (int32_t)(uvalue & 0x7FFFFFU);
+    if ((uvalue & 0x800000U) != 0U) {
+        value -= INT32_C(0x800000);
     }
     // /16 is because last 4 bits are dont care, convert to mA
     *current = (float)value / 16.0 * ctx->_current_lsb * 1000.0;
@@ -275,36 +367,44 @@ ina228_read_power(ina228_context_t *ctx, float *power)
 }
 
 uint32_t
+ina228_read_energy_raw(ina228_context_t *ctx, uint64_t *energy)
+{
+    return ina228_read_register_40(ctx, INA228_REG_ENERGY, energy);
+}
+
+uint32_t
 ina228_read_energy(ina228_context_t *ctx, float *energy) {
+    uint64_t value;
     uint32_t rst;
-    uint8_t buff[5];
-    buff[0] = INA228_REG_ENERGY;
-    rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, buff, 1, buff, 5);
-    float e = 0;
-    for (int i = 0; i < 5; i++) {
-        e *= 256;
-        e += buff[i];
+    rst = ina228_read_energy_raw(ctx, &value);
+    // Scale in double: a float mantissa holds 24 bits and the register 40,
+    // so scaling in float would quantize large accumulations.
+    *energy = (float)((double)value * 16.0 * 3.2 * (double)ctx->_current_lsb);
+    return rst;
+}
+
+uint32_t
+ina228_read_charge_raw(ina228_context_t *ctx, int64_t *charge)
+{
+    uint64_t uvalue;
+    uint32_t rst;
+    rst = ina228_read_register_40(ctx, INA228_REG_CHARGE, &uvalue);
+    // CHARGE is 40-bit two's complement; sign-extend before scaling
+    int64_t value = (int64_t)uvalue;
+    if (value & (INT64_C(1) << 39)) {
+        value -= (INT64_C(1) << 40);
     }
-    *energy = e * 16 * 3.2 * ctx->_current_lsb;
+    *charge = value;
     return rst;
 }
 
 uint32_t
 ina228_read_charge(ina228_context_t *ctx, float *charge)
 {
+    int64_t value;
     uint32_t rst;
-    uint8_t buff[5];
-    buff[0] = INA228_REG_CHARGE;
-    rst = nsx_i2c_write_read(ctx->i2c_config, ctx->addr, buff, 1, buff, 5);
-    // CHARGE is 40-bit two's complement; sign-extend before scaling
-    int64_t value = 0;
-    for (int i = 0; i < 5; i++) {
-        value = (value << 8) | buff[i];
-    }
-    if (value & (INT64_C(1) << 39)) {
-        value -= (INT64_C(1) << 40);
-    }
-    *charge = (float)value * ctx->_current_lsb;
+    rst = ina228_read_charge_raw(ctx, &value);
+    *charge = (float)((double)value * (double)ctx->_current_lsb);
     return rst;
 }
 

@@ -26,6 +26,7 @@ typedef struct {
   uint16_t addr;
   float _shunt_res;
   float _current_lsb;
+  uint8_t _calibrated; ///< Nonzero once ina228_set_shunt() has programmed SHUNT_CAL
 } ina228_context_t;
 
 
@@ -112,18 +113,24 @@ typedef enum {
 } ina228_avg_count_t;
 
 /**
- * @brief Alert trigger options.
+ * @brief DIAG_ALRT flag masks, as returned by ina228_alert_functions().
  *
- * Allowed values for setAlertType.
+ * Each value is the flag's real bit position in the DIAG_ALRT register.
+ * MEMSTAT (bit 0) is deliberately not listed: it reads 1 on a healthy part,
+ * so it is not a fault flag.
  */
 typedef enum  {
-  INA228_ALERT_CONVERSION_READY = 0x1, ///< Trigger on conversion ready
-  INA228_ALERT_OVERPOWER = 0x2,        ///< Trigger on power over limit
-  INA228_ALERT_UNDERVOLTAGE = 0x4,     ///< Trigger on bus voltage under limit
-  INA228_ALERT_OVERVOLTAGE = 0x8,      ///< Trigger on bus voltage over limit
-  INA228_ALERT_UNDERCURRENT = 0x10,    ///< Trigger on current under limit
-  INA228_ALERT_OVERCURRENT = 0x20,     ///< Trigger on current over limit
-  INA228_ALERT_NONE = 0x0,             ///< Do not trigger alert pin (Default)
+  INA228_ALERT_NONE = 0x0,              ///< No flag set (Default)
+  INA228_ALERT_CONVERSION_READY = 0x2,  ///< CNVRF: conversion ready
+  INA228_ALERT_OVERPOWER = 0x4,         ///< POL: power over limit
+  INA228_ALERT_UNDERVOLTAGE = 0x8,      ///< BUSUL: bus voltage under limit
+  INA228_ALERT_OVERVOLTAGE = 0x10,      ///< BUSOL: bus voltage over limit
+  INA228_ALERT_UNDERCURRENT = 0x20,     ///< SHNTUL: shunt voltage under limit
+  INA228_ALERT_OVERCURRENT = 0x40,      ///< SHNTOL: shunt voltage over limit
+  INA228_ALERT_OVERTEMP = 0x80,         ///< TMPOL: temperature over limit
+  INA228_ALERT_MATH_OVERFLOW = 0x200,   ///< MATHOF: current/power arithmetic overflowed
+  INA228_ALERT_CHARGE_OVERFLOW = 0x400, ///< CHARGEOF: CHARGE register overflowed
+  INA228_ALERT_ENERGY_OVERFLOW = 0x800, ///< ENERGYOF: ENERGY register overflowed
 } ina228_alert_type_t;
 
 /**
@@ -149,6 +156,14 @@ typedef enum {
 } ina228_alert_latch_t;
 
 
+/**
+ * @brief Bind a context to an I2C bus and address. Performs no I2C traffic.
+ *
+ * The device powers up with SHUNT_CAL = 0x1000, which does not correspond to
+ * any calibration this driver knows about, so current, power, energy, and
+ * charge readings are not meaningful until ina228_set_shunt() has been
+ * called. The same applies again after ina228_reset().
+ */
 uint32_t
 ina228_init(ina228_context_t *ctx, nsx_i2c_config_t *i2c_config, uint16_t addr);
 
@@ -161,6 +176,13 @@ ina228_get_device_id(ina228_context_t *ctx, uint16_t *value);
 uint32_t
 ina228_validate(ina228_context_t *ctx);
 
+/**
+ * @brief Reset the device to power-on defaults (CONFIG.RST).
+ *
+ * This reverts SHUNT_CAL to its reset value, so ina228_set_shunt() must be
+ * called again before current, power, energy, or charge readings are
+ * meaningful.
+ */
 uint32_t
 ina228_reset(ina228_context_t *ctx);
 
@@ -178,9 +200,29 @@ ina228_reset(ina228_context_t *ctx);
 uint32_t
 ina228_reset_accumulators(ina228_context_t *ctx);
 
+/**
+ * @brief Program SHUNT_CAL for a shunt resistance (ohms) and the maximum
+ * expected current (amperes).
+ *
+ * Fails without touching the device or the cached calibration if either
+ * input is not positive, or if the computed SHUNT_CAL exceeds the register's
+ * 15-bit field (13107.2e6 * (max_current / 2^19) * shunt_res, x4 when
+ * ADCRANGE = 1, must be <= 32767) — in that case pick a smaller shunt or a
+ * larger range.
+ */
 uint32_t
 ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current);
 
+/**
+ * @brief Select the shunt full-scale range (CONFIG.ADCRANGE): 0 = +/-163.84
+ * mV, 1 = +/-40.96 mV.
+ *
+ * SHUNT_CAL depends on ADCRANGE, so if ina228_set_shunt() has already run,
+ * this reprograms SHUNT_CAL for the new range. That reprogramming can fail
+ * (see ina228_set_shunt()); on failure the range has changed but SHUNT_CAL
+ * still holds the old range's value, and ina228_set_shunt() must be called
+ * before measurements are trusted.
+ */
 uint32_t
 ina228_set_adc_range(ina228_context_t *ctx, uint16_t adc_range);
 
@@ -202,11 +244,35 @@ ina228_read_shunt_voltage(ina228_context_t *ctx, float *shunt_voltage);
 uint32_t
 ina228_read_power(ina228_context_t *ctx, float *power);
 
+/**
+ * @brief Energy in joules. Scaled from the raw register through double, but
+ * the float result still carries only 24 mantissa bits — for windowed
+ * (delta) measurements subtract two ina228_read_energy_raw() readings
+ * instead, which stay exact over the full 40-bit range.
+ */
 uint32_t
 ina228_read_energy(ina228_context_t *ctx, float *energy);
 
+/**
+ * @brief Raw unsigned 40-bit ENERGY register, exact. Multiply by
+ * 16 * 3.2 * CURRENT_LSB for joules. Reading clears DIAG_ALRT.ENERGYOF.
+ */
+uint32_t
+ina228_read_energy_raw(ina228_context_t *ctx, uint64_t *energy);
+
+/**
+ * @brief Charge in coulombs. See ina228_read_energy() for float precision;
+ * windowed measurements should subtract ina228_read_charge_raw() readings.
+ */
 uint32_t
 ina228_read_charge(ina228_context_t *ctx, float *charge);
+
+/**
+ * @brief Raw sign-extended 40-bit CHARGE register, exact. Multiply by
+ * CURRENT_LSB for coulombs. Reading clears DIAG_ALRT.CHARGEOF.
+ */
+uint32_t
+ina228_read_charge_raw(ina228_context_t *ctx, int64_t *charge);
 
 uint32_t
 ina228_set_mode(ina228_context_t *ctx, ina228_meas_mode_t mode);
@@ -214,9 +280,17 @@ ina228_set_mode(ina228_context_t *ctx, ina228_meas_mode_t mode);
 uint32_t
 ina228_get_mode(ina228_context_t *ctx, ina228_meas_mode_t *mode);
 
+/**
+ * @brief Poll DIAG_ALRT.CNVRF. When ALATCH = 1 (latched mode), the read
+ * itself clears CNVRF and the latched alert flags — inherent to the device.
+ */
 uint32_t
 ina228_conversion_ready(ina228_context_t *ctx, uint8_t *ready);
 
+/**
+ * @brief DIAG_ALRT bits 11:0. Mask with ina228_alert_type_t values. When
+ * ALATCH = 1 the read clears the latched flags.
+ */
 uint32_t
 ina228_alert_functions(ina228_context_t *ctx, uint16_t *functions);
 
