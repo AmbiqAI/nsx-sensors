@@ -1,4 +1,4 @@
-# `v0.1.0` compatibility
+# Compatibility
 
 ## What the declarations mean
 
