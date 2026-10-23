@@ -50,6 +50,8 @@ VENDOR_EXCLUDED = {
 }
 
 PUBLIC_HEADERS = (
+    "nsx_bme688.h",
+    "nsx_bme688_nsx.h",
     "nsx_icm45605.h",
     "nsx_ina228.h",
     "nsx_ledstick.h",

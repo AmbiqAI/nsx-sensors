@@ -35,6 +35,9 @@ set(nsx_sensors_vendor_sources
 )
 
 add_library(nsx_sensors STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_bme688.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_bme688_compensation.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_bme688_nsx.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_ina228.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_ledstick.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_max86150.c
@@ -68,4 +71,10 @@ install(TARGETS nsx_sensors EXPORT nsxTargets)
 install(
     DIRECTORY includes-api/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-sensors/includes-api
+)
+
+# Bosch's BSD notice must accompany binary redistributions of the adapted math.
+install(
+    FILES licenses/Bosch-BME68x-BSD-3-Clause.txt
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/nsx/modules/nsx-sensors/licenses
 )

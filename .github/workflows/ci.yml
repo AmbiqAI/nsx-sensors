@@ -22,6 +22,12 @@ jobs:
       - name: Run INA228 host unit tests
         run: tests/ina228_host_unit.sh cc
 
+      - name: Run BME688 native core and NSX adapter host tests
+        run: tests/bme688_host_unit.sh cc
+
+      - name: Run BME688 host tests with address and undefined-behavior sanitizers
+        run: tests/bme688_host_unit.sh cc --sanitize
+
       - name: Validate version coherence
         shell: bash
         run: |

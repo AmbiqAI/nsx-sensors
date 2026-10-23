@@ -3,13 +3,25 @@ Copyright (c) 2026, Ambiq
 
 This distribution contains the NSX external sensor and accessory drivers. The
 Ambiq-authored sources in `includes-api/` and `src/` are licensed under the
-BSD-3-Clause License in LICENSE. Those sources were ported from AmbiqAI's
+BSD-3-Clause License in LICENSE. The existing drivers were ported from AmbiqAI's
 neuralSPOT drivers; the exact upstream files and revisions are recorded in
 PROVENANCE.md.
 
 --------------------------------------------------------------------------------
 Third-party components
 --------------------------------------------------------------------------------
+
+src/nsx_bme688_compensation.c and adapted timing arithmetic in src/nsx_bme688.c
+    Bosch Sensortec BME68x Sensor API v4.4.8, commit
+    80ea120a8b8ac987d7d79eb68a9ed796736be845.
+
+    Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
+
+    Adapted under BSD-3-Clause. The full copyright, conditions, and disclaimer
+    are retained in licenses/Bosch-BME68x-BSD-3-Clause.txt and the compensation
+    source header. Include that license with binary redistributions; CMake
+    installs it under share/nsx/modules/nsx-sensors/licenses. The native driver
+    does not include the Bosch driver runtime or BSEC.
 
 vendor/tdk-icm45605/
     TDK InvenSense ICM-45605 eMD driver, version 2.1.0 (common files and basic

@@ -12,6 +12,7 @@ point at this project and should move to the immutable tag, not a branch.
 
 | Device | Bus | Public header |
 | --- | --- | --- |
+| Bosch BME688 T/P/H/raw gas (forced mode) | I2C / 4-wire SPI | `includes-api/nsx_bme688.h`, `includes-api/nsx_bme688_nsx.h` |
 | MAX86150 ECG/PPG | I2C | `includes-api/nsx_max86150.h` |
 | MPU6050 6-axis IMU | I2C | `includes-api/nsx_mpu6050.h` |
 | INA228 power/current monitor | I2C | `includes-api/nsx_ina228.h` |

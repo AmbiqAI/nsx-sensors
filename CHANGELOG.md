@@ -3,6 +3,25 @@
 All notable changes to `nsx-sensors` are documented here. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Native BME688 forced-mode temperature, pressure, humidity, and optional raw
+  gas resistance, using caller-owned per-device contexts and abstract register
+  transports. Separate start/collect calls permit sleeping during conversion;
+  a bounded blocking helper is also provided.
+- Typed oversampling/filter/heater configuration and readback, reset and device
+  validation, bounded sleep transitions, stale-sample rejection, and independent
+  gas-valid/heater-stable flags. NSX I2C and 4-wire SPI adapters reuse initialized
+  caller-owned buses with aligned/padded transfer storage.
+- Bosch v4.4.8-derived calibration, compensation, and heater calculations with
+  retained BSD-3-Clause terms and exact provenance; no vendor-driver dependency.
+- Offline host tests for the core and real NSX adapters, fixed Bosch golden
+  vectors, transport faults, and address/page handling, including sanitizer CI.
+  BME688 hardware is unqualified. Parallel heater-profile scanning remains
+  follow-up work for issue #14; no BSEC/IAQ/VOC outputs are implemented.
+
 ## [0.3.0] - 2026-08-12
 
 A full audit of the INA228 driver against the TI datasheet (SLYS021). Every
