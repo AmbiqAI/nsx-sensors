@@ -444,6 +444,41 @@ explicit opt-in with a removal plan rather than part of the core design.
    matrix, update release metadata coherently, and release an immutable v1.0
    through the repository's normal review and release workflow.
 
+### Foundation implementation status
+
+[Draft PR #18](https://github.com/AmbiqAI/nsx-sensors/pull/18), stacked on #16,
+implements the first portable foundation slice. It migrates BME688 and LED Stick
+to the shared transaction/status types, separates BME688 lifecycle operations,
+and adds selectable CMake targets, package exports and a fake-HAL consumer.
+The following choices are exercised by the prototype and remain reviewable
+before the v1 API freeze:
+
+- Headers use `include/nsx/sensors/`; portable targets use the names above.
+- TX/RX limits are inclusive; zero means that direction is unsupported.
+  BME688 requires TX >= 2 / RX >= 23 bytes; LED Stick requires TX >= 5 bytes.
+- Runtime `now_us` is optional. BME688 uses elapsed polling budgets when supplied,
+  otherwise documented requested-delay budgets; synchronous calls remain bounded
+  by the endpoint's own completion guarantee.
+- BME688 reset invalidates configuration/calibration until explicit init. LED
+  Stick init programs length and clears colors; address changes invalidate the
+  binding on success or error and require application-directed recovery.
+- Both portable drivers default on and are independently selectable. Installed
+  packages export enabled components and use exact version compatibility during
+  the pre-v1 transition. Public contexts retain typed implementation fields for
+  caller-owned allocation; callers must not access internal state.
+
+Local evidence includes host protocol/lifecycle/failure tests, ASan/UBSan,
+40 existing Python contracts, C/C++ consumer links, nested/relocated installation,
+single-driver/common-only builds and GCC compilation for all eight declared
+SoCs. Hardware, Zephyr, and representative NSX firmware links remain pending.
+
+The shared NSX port is not implemented. PR #18 removes the BME688-specific
+adapters and makes the remaining four NSX drivers an explicit transitional
+aggregate. It is not a drop-in update for NSX apps; keep the PR draft until the
+shared port and SDK prerequisites make the integration transition ready for
+review. Existing applications retain their immutable version pins. This is
+implementation progress, not acceptance of the full RFC or a v1 release.
+
 ### Delivery plan
 
 Use focused implementation PRs against this RFC. PR #16 supplies the native
