@@ -4,9 +4,11 @@ Ambiq maintains this repository and owns the release decision for
 `nsx-sensors`.
 
 `nsx-sensors` is a device-driver module, not a board-support package and not a
-transport. It owns:
+controller transport. It owns:
 
-- the `nsx_*` public driver APIs in `includes-api/`;
+- portable driver and transaction contracts in `include/nsx/sensors/`;
+- the remaining NSX-specific APIs in `includes-api/`;
+- framework adapters that map those contracts onto existing platform buses;
 - their implementations in `src/`;
 - the vendoring decision for `vendor/tdk-icm45605/`, including which upstream
   subset is carried and which modules are excluded;

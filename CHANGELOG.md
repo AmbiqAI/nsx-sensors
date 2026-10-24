@@ -5,7 +5,21 @@ All notable changes to `nsx-sensors` are documented here. This project follows
 
 ## [Unreleased]
 
-### Added
+### Portable foundation (draft, breaking)
+
+- Introduce shared synchronous bus/status/runtime contracts and portable BME688
+  and LED Stick targets, with selectable builds and relocatable CMake exports.
+- Split BME688 bind/probe/validate/init; reset now requires reinitialization.
+  Remove device-specific NSX adapters pending the shared port. Use common statuses.
+- Validate LED commands and invalidate bindings after attempted address changes.
+- Keep the four unmigrated drivers in an explicit `NSX_SENSORS_LEGACY_NSX`
+  aggregate. See the migration guide; this branch is not a drop-in v0 upgrade.
+- Add offline protocol, lifecycle, deadline, package-link and sanitizer checks.
+
+
+### Initial BME688 implementation (PR #16 baseline)
+
+The following describes the baseline before the portable migration above.
 
 - Native BME688 forced-mode temperature, pressure, humidity, and optional raw
   gas resistance, using caller-owned per-device contexts and abstract register

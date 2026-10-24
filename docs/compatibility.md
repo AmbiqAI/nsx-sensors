@@ -1,5 +1,18 @@
 # Compatibility
 
+## Unreleased portable foundation
+
+BME688 and LED Stick now have portable CMake targets and offline host tests.
+They have no shared NSX adapter or Zephyr wrapper yet. The remaining four drivers
+are still NSX-only, selected with `NSX_SENSORS_LEGACY_NSX=ON`. Metadata dependencies
+below describe that NSX integration, not portable-core requirements. No framework
+or hardware qualification is implied by portable compilation.
+
+| Drivers | Portable core | NSX integration | Zephyr wrapper | Hardware |
+| --- | --- | --- | --- | --- |
+| BME688, LED Stick | Implemented; host tested and linked | Application endpoint required; shared port pending | Pending | Unqualified |
+| INA228, MPU6050, MAX86150, ICM-45605 | Pending | Existing API via explicit legacy target | Pending | Unqualified |
+
 ## What the declarations mean
 
 `nsx-sensors` contains no SoC-conditional code. Every SoC and toolchain it can
@@ -154,7 +167,10 @@ proves nothing about sensor behavior.
 
 ## BME688 forced-mode addition (unreleased)
 
-The BME688 driver was added after the historical release qualification above.
+The original BME688 driver was added after the historical release qualification above.
+The following table records PR #16 before portable migration; its NSX adapter
+and Armclang/ATfE results are not claims about the new portable foundation.
+Current foundation evidence is listed separately below.
 It supports T/P/H and optional raw gas resistance in forced mode, over I2C and
 4-wire SPI. Parallel heater-profile scanning remains follow-up work for issue
 #14; BSEC, IAQ, and derived VOC outputs are excluded.
@@ -175,6 +191,13 @@ These new compile checks used `nsx-ambiq-sdk` commit
 payload. This records the evidence for the new driver; it does not replace the
 historical SDK pin above. The existing CI matrix will also compile the new
 sources against the pinned SDK on each PR.
+
+The portable foundation now passes synthetic BME688/LED Stick protocol and
+lifecycle tests, host ASan/UBSan, C/C++ consumer linkage, relocated package
+installation, selected-driver configurations and all eight GCC SoC compile
+checks. The foundation has 10 translation units (including the shared bus and
+retained TDK subset). The shared NSX port, real firmware link and hardware tests
+remain pending; Armclang and ATfE have not been rerun for this migration.
 
 Hardware qualification still needs a recorded board, sensor/module revision,
 SDK revision, toolchain, bus speed/mode, and results for:

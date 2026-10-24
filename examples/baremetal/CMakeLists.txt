@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.20)
+project(sensor_example LANGUAGES C CXX)
+if(NSX_SENSORS_SOURCE)
+    add_subdirectory("${NSX_SENSORS_SOURCE}" sensors)
+else()
+    find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 ledstick)
+endif()
+add_executable(sensor_example main.c)
+target_link_libraries(sensor_example PRIVATE nsx::sensor_bme688 nsx::sensor_ledstick)
+# Compile public headers as C++ and resolve their C linkage as a real consumer.
+add_executable(sensor_cpp ../../tests/portable/headers.cpp)
+target_link_libraries(sensor_cpp PRIVATE nsx::sensor_bme688 nsx::sensor_ledstick)

@@ -36,7 +36,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "nsx_bme688_private.h"
+#include "private.h"
 
 typedef struct {
     const bme688_calibration_t *calibration;

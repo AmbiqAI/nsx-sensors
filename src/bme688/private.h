@@ -3,7 +3,7 @@
  */
 #ifndef NSX_BME688_PRIVATE_H
 #define NSX_BME688_PRIVATE_H
-#include "nsx_bme688.h"
+#include <nsx/sensors/bme688.h>
 
 void bme688_decode_calibration(bme688_calibration_t *calibration, const uint8_t bytes[42]);
 void bme688_compensate(const bme688_calibration_t *calibration, const uint8_t field[17],

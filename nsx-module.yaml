@@ -9,7 +9,9 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: Reusable external sensor and accessory drivers built on NSX transport modules.
+summary: Portable BME688/LED Stick cores and transitional NSX-only sensor drivers.
+# Unreleased foundation: NSX builds explicitly enable NSX_SENSORS_LEGACY_NSX.
+# That aggregate contains the four unmigrated drivers; see docs/migration.
 
 capabilities:
   - sensors
