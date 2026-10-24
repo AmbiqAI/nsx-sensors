@@ -195,6 +195,7 @@ typedef struct {
 typedef struct {
     void *user;
     uint64_t (*now_us)(void *user);       /* Monotonic elapsed time. */
+    /* Wait at least duration_us of elapsed time; longer waits are permitted. */
     void (*delay_us)(void *user, uint32_t duration_us);
 } nsx_sensor_runtime_t;
 ```
@@ -249,7 +250,11 @@ blocking limits separately: a driver deadline cannot preempt a synchronous HAL
 call. An adapter must have a finite documented completion bound; do not advertise
 a hard end-to-end timeout until the controller path can enforce it. Blocking
 helpers should accept a timeout rather than use unbounded polling. FreeRTOS
-timing adapters must not round sub-tick waits down to zero.
+timing adapters must ensure `delay_us` waits at least the requested elapsed
+interval, including sub-tick requests and calls near a scheduler tick boundary.
+Rounding to a nonzero tick count alone does not guarantee this minimum. Select
+an appropriate platform delay or monotonic deadline loop and verify the minimum
+delay contract in adapter tests; longer waits are permitted.
 
 ## Device contexts and lifecycle
 
@@ -302,8 +307,14 @@ Reset invalidates configuration/calibration caches as required; init restores
 them. Do not silently resume measurements after reset.
 
 Use `status + output pointer` consistently. Scalar/sample outputs remain
-unchanged on failure. FIFO/batch APIs must separately specify partial progress
-and consumed hardware data, using explicit capacity and completed-count outputs.
+unchanged on failure. FIFO/batch APIs use explicit capacity and completed-count
+outputs; the completed count reports only complete frames successfully published
+to the caller, including any published before a later transfer fails. Drivers
+must separately document hardware consumption and recovery. A failed transfer
+may consume an unknown number of FIFO bytes, since the transport returns status
+without byte-level progress. Do not promise exact consumption on failure; require
+device-specific resynchronization or FIFO reset when necessary before reading
+again. No generic transport progress field is required for v1.
 Register reads that clear flags are named/documented as consuming operations.
 Getters must distinguish actual readback from cached requested settings.
 
@@ -327,6 +338,16 @@ select. They contain no BME688 register limits, calibration, or initialization
 calls. Constructors validate a binding and produce `nsx_sensor_bus_t` without
 device I/O. Bus configuration such as clock and SPI mode is already applied by
 the application and validated against the sensor's documented requirements.
+
+The initial NSX SPI binding supports fixed controller settings: every user of a
+shared controller must accept the configured mode and clock, and no user may
+change them while these bindings are active. Transaction serialization alone
+does not restore settings changed by another user. Supporting devices with
+different settings requires a platform endpoint that records each device's
+configuration and restores it under the same physical bus lock held through
+the transfer. Such configuration belongs in the platform binding, not the
+portable sensor context. Until that adapter exists, incompatible SPI settings
+on one controller are unsupported.
 
 ```c
 #include <nsx/sensors/bme688.h>
