@@ -29,7 +29,9 @@ not vendored copies and this release does not request a registry change.
 
 ## Ambiq-authored source lineage
 
-Every file under `includes-api/` and `src/` is an Ambiq-authored port. Ports are
+The five existing drivers listed below are Ambiq-authored ports. The new native
+BME688 driver and its Bosch-derived calculations are documented separately
+below. Ports are
 line-level derivations, not verbatim copies: the NSX ports drop `ns_core_api_t`
 version handshakes, retarget `ns_i2c`/`ns_spi` to `nsx_i2c`/`nsx_spi`, and move
 to a caller-owned context struct instead of passing a bus config and device
@@ -47,6 +49,54 @@ All listed revisions are reachable from the `main` branch of their repository.
 `AmbiqAI/neuralSPOT` and `AmbiqAI/ns-sensors` are both BSD-3-Clause and are
 Ambiq-owned, so the BSD-3-Clause `LICENSE` in this repository covers the ported
 result. No third-party copyright was absorbed by these ports.
+
+## Native BME688 and adapted Bosch calculations
+
+The BME688 register/state/transport implementation is native NSX code, based
+on the Bosch Sensortec **BME688 datasheet BST-BME688-DS000-03, rev 1.3,
+February 2024**. It does not compile or call the Bosch sensor API.
+
+| Item | Exact source |
+| --- | --- |
+| Upstream | `boschsensortec/BME68x_SensorAPI` |
+| Version | v4.4.8 |
+| Git commit | `80ea120a8b8ac987d7d79eb68a9ed796736be845` |
+| Adapted source | `bme68x.c` floating-point `calc_temperature`, `calc_pressure`, `calc_humidity`, `calc_gas_resistance_high`, `calc_res_heat`; calibration decoding from `get_calib_data` and coefficient indices in `bme68x_defs.h` |
+| NSX destination | `src/nsx_bme688_compensation.c` |
+| Other adapted arithmetic | Forced-mode conversion-time estimate and gas-wait duration encoding in `src/nsx_bme688.c` |
+| Copyright | Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved. |
+| License | BSD-3-Clause, retained in `licenses/Bosch-BME68x-BSD-3-Clause.txt` and the compensation source header |
+
+The original formulas are kept in small private helpers operating on typed
+per-device calibration. `t_fine` is local to each compensation call. Heater
+ambient temperature accepts a float; its public range is limited to -40..85 C.
+The heater target is validated at 0..400 C, and the computed resistance code is
+clamped to 0..255 before conversion to avoid undefined float-to-byte conversion
+on unusual calibration. The pressure denominator is compared directly with
+zero, removing the upstream float-to-int narrowing guard. Native code rejects
+unprogrammed calibration, requires temperature oversampling for compensated
+P/H, skips compensation for disabled P/H channels, and preserves zero numeric
+outputs with explicit validity flags. Gas resistance uses the BME688 high-gas
+variant only (variant ID 1); no BME680/engineering-sample fallback is assumed.
+
+The duration encoder and conversion-time estimate preserve Bosch's arithmetic.
+Every hardware write is a single register/value transaction. SPI page state is
+read on each access, with no mutable cache to become inconsistent after an
+ambiguous failed transfer. Mode changes, reset, and transport errors are handled
+by the native state machine; the upstream driver's unbounded mode polling and
+hidden forced-read retries are not carried over. No Bosch public header,
+upstream device object, polling loop, or third-party driver runtime is shipped.
+BSEC and its derived IAQ/VOC outputs are excluded.
+
+`tests/bme688_host_unit/generate_bosch_oracle.c` is an optional offline maintainer
+utility that runs the **unmodified upstream public APIs** against synthetic
+factory-coefficient/register fixtures. Its comments record a reproducible
+compile command; the exact commit above is required. Its three compensated
+output vectors and four heater results were captured into the host tests.
+Normal tests consume those fixed expected values and never clone/download or
+execute the upstream source. They also independently check the datasheet's
+100 ms heater example (`gas_wait_0 = 0x59`). None of these fixtures is a recorded
+hardware measurement.
 
 ## Vendored third-party source
 

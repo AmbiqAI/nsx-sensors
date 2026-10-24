@@ -17,12 +17,15 @@ capabilities:
   - spi_devices
   - measurement_devices
   - accessories
+  - bme688
+  - environmental_sensing
   - icm45605
   - 6dof
 
 use_cases:
   - imu bring-up
   - bio-sensor capture
+  - temperature, pressure, humidity, and raw gas resistance
   - current and voltage monitoring
   - simple i2c accessory control
   - 6dof imu bring-up
@@ -32,6 +35,7 @@ agent_keywords:
   - imu
   - max86150
   - mpu6050
+  - bme688
   - ina228
   - ledstick
   - icm45605

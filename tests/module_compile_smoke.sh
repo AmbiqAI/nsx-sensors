@@ -155,7 +155,7 @@ rm -rf "$out_dir"
 mkdir -p "$out_dir"
 
 sources=("$repo_root"/src/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
-[ "${#sources[@]}" -eq 7 ] || fail "expected 7 translation units, found ${#sources[@]}"
+[ "${#sources[@]}" -eq 10 ] || fail "expected 10 translation units, found ${#sources[@]}"
 
 for source in "${sources[@]}"; do
     echo "compiling $(basename "$source") [$toolchain/$soc/$soc_core]"

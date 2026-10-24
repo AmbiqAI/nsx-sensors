@@ -152,6 +152,48 @@ errors, so a future vendor intake that introduces one fails instead of passing
 green. That proves the vendored subset is self-contained and warning-clean. It
 proves nothing about sensor behavior.
 
+## BME688 forced-mode addition (unreleased)
+
+The BME688 driver was added after the historical release qualification above.
+It supports T/P/H and optional raw gas resistance in forced mode, over I2C and
+4-wire SPI. Parallel heater-profile scanning remains follow-up work for issue
+#14; BSEC, IAQ, and derived VOC outputs are excluded.
+
+| Evidence | Result |
+| --- | --- |
+| Synthetic host tests, native core and actual NSX adapters | pass, including fixed Bosch v4.4.8 golden vectors and register/failure paths |
+| AddressSanitizer + UndefinedBehaviorSanitizer | pass |
+| Module compile, all 8 declared SoCs, Arm GNU 15.2.Rel1 | pass, all 10 translation units, `-Wall -Wextra -Werror` |
+| Module compile, all 8 declared SoCs, Arm Compiler 6.23 (HSK early access) | pass, same sources/warnings |
+| Module compile, all 8 declared SoCs, ATfE 22.1.0 | pass, same sources/warnings |
+| Nested CMake/export contract | configure passed |
+| Real consumer firmware link with BME688 calls | not performed |
+| BME688 hardware runtime | **not performed; unqualified** |
+
+These new compile checks used `nsx-ambiq-sdk` commit
+`788b6fa3955a3aae3ac9e5d26783c36173207a34` with its locally staged AmbiqSuite
+payload. This records the evidence for the new driver; it does not replace the
+historical SDK pin above. The existing CI matrix will also compile the new
+sources against the pinned SDK on each PR.
+
+Hardware qualification still needs a recorded board, sensor/module revision,
+SDK revision, toolchain, bus speed/mode, and results for:
+
+- chip/variant IDs, reset, and calibration readback on each claimed bus;
+- I2C address/register traffic and SPI page/CS/read-command behavior on a logic
+  analyzer, including after reset and injected transfer failures;
+- T/P/H comparison with an independent reference and Bosch compensation of the
+  same part's raw ADC/calibration data;
+- heater target/duration programming, gas-valid versus heater-stable behavior,
+  repeated forced readings, and waiting/sleeping through conversions;
+- bounded mode transition/timeout recovery, reset during use, and more than
+  256 samples to cover measurement-index wraparound;
+- two devices and other users on a shared bus with application synchronization.
+
+Host fixtures are synthetic. Neither their golden-vector agreement nor a
+successful cross compile establishes a physical gas calibration or sensor
+accuracy. See [the BME688 guide](bme688.md) for API and timing contracts.
+
 ## Application responsibilities
 
 Applications own the board bring-up that this module deliberately does not

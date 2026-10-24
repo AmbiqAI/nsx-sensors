@@ -7,6 +7,7 @@ Current drivers:
 
 | Device | Bus | Public header |
 | --- | --- | --- |
+| Bosch BME688 temperature/pressure/humidity/raw gas | I2C / 4-wire SPI | `includes-api/nsx_bme688.h`, `includes-api/nsx_bme688_nsx.h` |
 | MAX86150 ECG/PPG sensor | I2C | `includes-api/nsx_max86150.h` |
 | MPU6050 IMU | I2C | `includes-api/nsx_mpu6050.h` |
 | INA228 power and current monitor | I2C | `includes-api/nsx_ina228.h` |
@@ -34,6 +35,12 @@ INT2 data-ready source.
 
 No driver in this module buffers samples. Sample storage, framing, and batching
 are the application's responsibility.
+
+BME688 uses a caller-owned context and transport binding, with separate start
+and collection calls so the application can sleep during conversion. See
+[the BME688 guide](docs/bme688.md) for I2C/SPI setup, heater settings, validity
+flags, time budgets, and the forced-mode scope. Parallel scanning and BSEC are
+not included.
 
 ## Contracts worth knowing
 
@@ -64,4 +71,6 @@ release. See `docs/compatibility.md` before relying on any device.
 Ambiq-authored code in `includes-api/` and `src/` is BSD-3-Clause; see
 `LICENSE`. `vendor/tdk-icm45605/` is third-party TDK InvenSense code
 redistributed under its own permissive terms and is **not** relicensed. See
-`NOTICE` and `PROVENANCE.md`.
+`NOTICE` and `PROVENANCE.md`. The native BME688 compensation/calibration/heater
+math is adapted from Bosch Sensortec BME68x Sensor API v4.4.8 under its
+BSD-3-Clause terms in `licenses/Bosch-BME68x-BSD-3-Clause.txt`.
