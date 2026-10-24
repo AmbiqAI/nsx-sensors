@@ -25,6 +25,9 @@ jobs:
       - name: Portable drivers, installed consumers, and sanitizers
         run: tests/portable_build.sh
 
+      - name: NSX adapter host contracts
+        run: tests/nsx_port_host.sh
+
       - name: Validate version coherence
         shell: bash
         run: |
@@ -125,11 +128,11 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
-      - name: Checkout the qualified NSX SDK
+      - name: Checkout the combined-I2C SDK prerequisite
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: AmbiqAI/nsx-ambiq-sdk
-          ref: v5.2.24
+          ref: 40b893d859672caf0b17b0e51db351a77b423e56 # combined I2C prerequisite, SDK PR #130
           path: .deps/nsx-ambiq-sdk
           persist-credentials: false
 
@@ -138,7 +141,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C "$NSX_AMBIQ_SDK_ROOT" rev-parse HEAD)" = \
-            "a9f4ec25a162f6f3700623feb691423bb5a51132"
+            "40b893d859672caf0b17b0e51db351a77b423e56"
       - name: Install Arm GNU
         run: |
           sudo apt-get update

@@ -155,8 +155,8 @@ esac
 rm -rf "$out_dir"
 mkdir -p "$out_dir"
 
-sources=("$repo_root"/src/*.c "$repo_root"/src/common/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
-[ "${#sources[@]}" -eq 10 ] || fail "expected 10 translation units, found ${#sources[@]}"
+sources=("$repo_root"/src/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
+[ "${#sources[@]}" -eq 11 ] || fail "expected 11 translation units, found ${#sources[@]}"
 
 for source in "${sources[@]}"; do
     echo "compiling $(basename "$source") [$toolchain/$soc/$soc_core]"
@@ -172,5 +172,17 @@ done
 produced="$(find "$out_dir" -name '*.o' | wc -l | tr -d '[:blank:]')"
 [ "$produced" -eq "${#sources[@]}" ] \
     || fail "expected ${#sources[@]} objects, produced $produced"
+
+# Compile the public adapter header as C++ against the same real SDK headers.
+cat > "$out_dir/port_header.cpp" <<'CPP'
+#include <nsx/sensors/port_nsx.h>
+nsx_sensor_status_t bind_port(nsx_sensor_nsx_context_t *ctx, nsx_i2c_config_t *bus)
+{
+    return nsx_sensor_nsx_bind_i2c(ctx, bus, 0x76, nullptr);
+}
+CPP
+"$compiler" -x c++ -c -std=c++11 -Wall -Wextra -Werror \
+    "${arch_flags[@]}" "${defines[@]}" "${includes[@]}" \
+    "$out_dir/port_header.cpp" -o "$out_dir/port_header.o"
 
 echo "module compile smoke passed: $toolchain / $soc (${#sources[@]} objects)"

@@ -16,7 +16,7 @@ typedef struct {
 } nsx_sensor_transfer_t;
 /* Synchronous: buffers are borrowed only until return. Both phases nonempty
  * mean repeated START without STOP on I2C, or CS held throughout on SPI.
- * SPI discards RX during TX; the adapter documents its RX fill byte.
+ * SPI discards RX during TX; the adapter documents RX MOSI behavior (fill byte or hardware-defined).
  * Never split a transfer or substitute STOP-separated reads. Unsupported
  * operations fail before I/O. Failures may consume data/change device state.
  * Endpoint bindings own addresses/CS, locking, native errors and bounded HAL

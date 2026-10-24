@@ -1,5 +1,14 @@
 @PACKAGE_INIT@
 include("${CMAKE_CURRENT_LIST_DIR}/nsxSensorTargets.cmake")
+if("port_nsx" IN_LIST nsx_sensors_FIND_COMPONENTS AND
+   EXISTS "${CMAKE_CURRENT_LIST_DIR}/nsxSensorNsxTargets.cmake")
+    if(NOT TARGET nsx::i2c OR NOT TARGET nsx::spi)
+        set(nsx_sensors_FOUND FALSE)
+        set(nsx_sensors_NOT_FOUND_MESSAGE "Load SDK nsx::i2c and nsx::spi before requesting port_nsx")
+        return()
+    endif()
+    include("${CMAKE_CURRENT_LIST_DIR}/nsxSensorNsxTargets.cmake")
+endif()
 foreach(component IN LISTS nsx_sensors_FIND_COMPONENTS)
     if(TARGET nsx::sensor_${component})
         set(nsx_sensors_${component}_FOUND TRUE)

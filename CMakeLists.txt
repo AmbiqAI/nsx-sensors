@@ -15,6 +15,7 @@ if(TARGET nsx::core AND TARGET nsx::i2c AND TARGET nsx::spi)
 endif()
 option(NSX_SENSORS_LEGACY_NSX "Build remaining NSX-only drivers (transitional)"
     ${nsx_sensors_legacy_default})
+option(NSX_SENSOR_PORT_NSX "Build the shared NSX transport adapter" ${nsx_sensors_legacy_default})
 option(NSX_SENSORS_TESTS "Build portable host tests" OFF)
 
 add_library(nsx_sensor_common STATIC src/common/bus.c)
@@ -65,8 +66,26 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nsx_sensorsConfig.cmake
 install(FILES LICENSE NOTICE licenses/Bosch-BME68x-BSD-3-Clause.txt
     DESTINATION ${CMAKE_INSTALL_DATADIR}/nsx/modules/nsx-sensors/licenses)
 
+# Keep SDK-dependent targets outside the portable package export closure.
+if(NSX_SENSOR_PORT_NSX)
+    foreach(dependency nsx::i2c nsx::spi)
+        if(NOT TARGET ${dependency})
+            message(FATAL_ERROR "NSX sensor port requires ${dependency}")
+        endif()
+    endforeach()
+    add_library(nsx_sensor_port_nsx STATIC src/ports/nsx.c)
+    add_library(nsx::sensor_port_nsx ALIAS nsx_sensor_port_nsx)
+    set_target_properties(nsx_sensor_port_nsx PROPERTIES EXPORT_NAME sensor_port_nsx)
+    target_link_libraries(nsx_sensor_port_nsx PUBLIC nsx_sensor_common nsx::i2c nsx::spi)
+    install(TARGETS nsx_sensor_port_nsx EXPORT nsxSensorNsxTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(EXPORT nsxSensorNsxTargets NAMESPACE nsx::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nsx_sensors)
+    install(FILES include/nsx/sensors/port_nsx.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
+endif()
+
 # Transitional NSX aggregate contains only the four unmigrated drivers.
-# BME688/LED Stick now use their portable targets; the shared NSX port follows.
+# BME688/LED Stick now use their portable targets; link nsx::sensor_port_nsx for NSX transport.
 if(NSX_SENSORS_LEGACY_NSX)
 foreach(nsx_sensors_dependency nsx::core nsx::i2c nsx::spi)
     if(NOT TARGET ${nsx_sensors_dependency})

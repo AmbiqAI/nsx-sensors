@@ -229,3 +229,9 @@ perform:
   ICM-45605;
 - own power, clock, and cache policy;
 - own sample storage and framing. No driver here buffers samples.
+
+## Shared NSX port (unreleased)
+
+The portable BME688 and LED Stick drivers now have a shared NSX adapter.
+It requires SDK PR #130; see [the adapter guide](nsx-port.md) for the exact
+CI revision, transfer limits, locking, and remaining hardware checks.

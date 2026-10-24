@@ -42,7 +42,8 @@ The remaining NSX drivers are enabled by default when the enclosing build
 already supplies `nsx::core`, `nsx::i2c`, and `nsx::spi`. Standalone builds keep
 that aggregate off. `NSX_SENSORS_LEGACY_NSX` can explicitly override this default. The transitional `nsx::sensors` target contains INA228, MPU6050,
 MAX86150 and ICM-45605 only. BME688 and LED Stick use the separate portable
-targets and require application endpoints until the shared NSX port lands.
+targets plus the shared `nsx::sensor_port_nsx` adapter. See the
+[NSX port guide](docs/nsx-port.md) for bindings and the SDK prerequisite.
 Existing apps remain pinned to v0 releases until deliberately migrated.
 
 Run `tests/portable_build.sh` for offline host tests and real consumer links.
