@@ -37,6 +37,8 @@ static uint32_t fake_read(void *user, uint8_t wire, uint8_t *data, size_t length
     }
     assert((unsigned)reg + length <= 256);
     memcpy(data, f->memory + reg, length);
+    /* Reading a complete field consumes its new-data indication. */
+    if (reg == 0x1d && length == 17) f->memory[0x1d] &= 0x7f;
     return 0;
 }
 
@@ -224,6 +226,31 @@ static void test_collection_state_and_channels(void)
     assert(bme688_start(&ctx, &wait) == BME688_OK);
     finish(&f, 2); f.memory[0x2d] &= (uint8_t)~0x10;
     assert(bme688_collect(&ctx, &sample) == BME688_OK && sample.gas_valid && !sample.heater_stable);
+}
+
+static void test_forced_mode_repeated_index(bme688_interface_t interface)
+{
+    fake_t f;
+    bme688_context_t ctx;
+    bme688_sample_t sample = { .temperature_c = 123.0f };
+    uint32_t wait;
+    prepare(&f, interface);
+    assert(initialize(&ctx, &f) == BME688_OK);
+    /* Forced mode does not promise index advancement. Exercise zero after
+     * reset and repeated zero/nonzero indices across successive triggers. */
+    const uint8_t indices[] = { 0, 0, 7, 7 };
+    for (unsigned i = 0; i < sizeof(indices); ++i) {
+        finish(&f, indices[i]); /* Unread data from before this trigger. */
+        assert(bme688_start(&ctx, &wait) == BME688_OK);
+        float previous = sample.temperature_c;
+        assert(bme688_collect(&ctx, &sample) == BME688_AGAIN);
+        assert(sample.temperature_c == previous);
+        finish(&f, indices[i]); /* A new completed conversion, same index. */
+        assert(bme688_collect(&ctx, &sample) == BME688_OK);
+        assert(sample.measurement_index == indices[i]);
+        close_float(sample.temperature_c, 25.1583958f);
+        assert(bme688_collect(&ctx, &sample) == BME688_E_STATE);
+    }
 }
 
 static void test_bounded_wait_and_recovery(void)
@@ -451,6 +478,7 @@ static void test_multiple_devices(void)
 int main(void)
 {
     test_configuration_and_protocol(BME688_I2C); test_configuration_and_protocol(BME688_SPI);
+    test_forced_mode_repeated_index(BME688_I2C); test_forced_mode_repeated_index(BME688_SPI);
     test_golden_compensation(); test_collection_state_and_channels(); test_bounded_wait_and_recovery();
     test_failures(BME688_I2C); test_failures(BME688_SPI); test_page_write_retry();
     test_validation_and_heater_boundaries(); test_nsx_adapters(); test_multiple_devices();

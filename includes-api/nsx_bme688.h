@@ -104,7 +104,6 @@ typedef struct {
     bme688_config_t _config;
     uint32_t _measurement_us;
     uint16_t _heater_ms;
-    uint8_t _baseline_index;
     bool _initialized, _config_valid, _heater_valid, _gas_enabled, _pending;
 } bme688_context_t;
 
@@ -135,12 +134,14 @@ bme688_status_t bme688_get_heater(bme688_context_t *ctx, bme688_heater_state_t *
 /** Trigger one forced conversion without waiting. wait_us is a conservative
  * Bosch conversion estimate + the actual encoded heater duration + 1 ms guard.
  * Sleeping the MCU for this interval is allowed. Start requires sleep mode and
- * no pending conversion; call sleep() to cancel one. No parallel scan/BSEC.
+ * no pending conversion; call sleep() to cancel one. Drains any unread previous
+ * field before triggering. No parallel scan/BSEC.
  */
 bme688_status_t bme688_start(bme688_context_t *ctx, uint32_t *wait_us);
 /** Single burst read, no delay or polling. AGAIN means no fresh completed
- * sample yet. Rejects the pre-trigger measurement index, including 255->0
- * wraparound. A successful read consumes this driver's pending conversion.
+ * sample yet, based on new_data and measuring flags. The measurement index
+ * need not advance in forced mode. A successful read consumes this driver's
+ * pending conversion.
  */
 bme688_status_t bme688_collect(bme688_context_t *ctx, bme688_sample_t *sample);
 /** Bounded blocking convenience: start, delay, collect. timeout_us bounds the

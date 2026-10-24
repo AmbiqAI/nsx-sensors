@@ -276,7 +276,7 @@ bme688_status_t bme688_get_heater(bme688_context_t *ctx, bme688_heater_state_t *
 
 bme688_status_t bme688_start(bme688_context_t *ctx, uint32_t *wait_us)
 {
-    uint8_t ctrl, baseline[2];
+    uint8_t ctrl, discarded_field[17];
     bme688_status_t status;
     if (!ready(ctx) || !ctx->_config_valid || !ctx->_heater_valid) return BME688_E_STATE;
     if (wait_us == NULL) return BME688_E_ARGUMENT;
@@ -284,11 +284,12 @@ bme688_status_t bme688_start(bme688_context_t *ctx, uint32_t *wait_us)
     status = read_reg(ctx, REG_CTRL_MEAS, &ctrl, 1);
     if (status != BME688_OK) return status;
     if ((ctrl & 3) != 0) return BME688_E_BUSY;
-    status = read_reg(ctx, REG_FIELD0, baseline, 2);
+    /* Drain any unread previous result before triggering. Freshness is the
+     * new_data flag, not sub_meas_index (documented for parallel mode only). */
+    status = read_reg(ctx, REG_FIELD0, discarded_field, sizeof(discarded_field));
     if (status != BME688_OK) return status;
     status = write_reg(ctx, REG_CTRL_MEAS, (uint8_t)((ctrl & ~3) | 1));
     if (status != BME688_OK) return status;
-    ctx->_baseline_index = baseline[1];
     ctx->_measurement_us = measurement_time(&ctx->_config) + (uint32_t)ctx->_heater_ms * 1000u + 1000u;
     ctx->_pending = true;
     *wait_us = ctx->_measurement_us;
@@ -304,8 +305,7 @@ bme688_status_t bme688_collect(bme688_context_t *ctx, bme688_sample_t *sample)
     if (sample == NULL) return BME688_E_ARGUMENT;
     status = read_reg(ctx, REG_FIELD0, field, sizeof(field));
     if (status != BME688_OK) return status;
-    if ((field[0] & 0x80) == 0 || (field[0] & 0x60) != 0 ||
-        field[1] == ctx->_baseline_index) return BME688_AGAIN;
+    if ((field[0] & 0x80) == 0 || (field[0] & 0x60) != 0) return BME688_AGAIN;
     result.measurement_index = field[1];
     result.gas_index = field[0] & 15;
     if (result.gas_index != 0) return BME688_E_STATE;
