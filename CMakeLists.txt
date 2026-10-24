@@ -6,7 +6,15 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 option(NSX_SENSOR_BME688 "Build portable BME688" ON)
 option(NSX_SENSOR_LEDSTICK "Build portable LED Stick" ON)
-option(NSX_SENSORS_LEGACY_NSX "Build remaining NSX-only drivers (transitional)" OFF)
+# NSX resolves and adds its declared dependencies before this module. Preserve
+# the metadata-advertised aggregate there, without requiring an SDK in portable
+# consumers or discovering dependencies from sibling directories.
+set(nsx_sensors_legacy_default OFF)
+if(TARGET nsx::core AND TARGET nsx::i2c AND TARGET nsx::spi)
+    set(nsx_sensors_legacy_default ON)
+endif()
+option(NSX_SENSORS_LEGACY_NSX "Build remaining NSX-only drivers (transitional)"
+    ${nsx_sensors_legacy_default})
 option(NSX_SENSORS_TESTS "Build portable host tests" OFF)
 
 add_library(nsx_sensor_common STATIC src/common/bus.c)

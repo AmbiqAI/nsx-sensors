@@ -6,6 +6,11 @@ out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
 cmake -S "$root" -B "$out/build" -DNSX_SENSORS_TESTS=ON -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$out/install" -DCMAKE_INSTALL_LIBDIR=lib
+# Standalone configuration must not enable the NSX aggregate implicitly.
+grep -q '^NSX_SENSORS_LEGACY_NSX:BOOL=OFF$' "$out/build/CMakeCache.txt"
+# The normal NSX entry point must provide its advertised target without overrides.
+cmake -S "$root/tests/nested_contract" -B "$out/nsx-default"
+grep -q '^NSX_SENSORS_LEGACY_NSX:BOOL=ON$' "$out/nsx-default/CMakeCache.txt"
 cmake --build "$out/build" --parallel
 ctest --test-dir "$out/build" --output-on-failure
 cmake --install "$out/build"

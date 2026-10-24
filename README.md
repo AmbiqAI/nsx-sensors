@@ -38,9 +38,9 @@ Caller-owned endpoints implement synchronous transfers using the board HAL.
 See [migration and transport contracts](docs/migration/portable-foundation.md)
 and the [BME688 guide](docs/bme688.md).
 
-To build the remaining NSX drivers, explicitly set `NSX_SENSORS_LEGACY_NSX=ON`
-before adding this module to a build that supplies `nsx::core`, `nsx::i2c`, and
-`nsx::spi`. The transitional `nsx::sensors` target contains INA228, MPU6050,
+The remaining NSX drivers are enabled by default when the enclosing build
+already supplies `nsx::core`, `nsx::i2c`, and `nsx::spi`. Standalone builds keep
+that aggregate off. `NSX_SENSORS_LEGACY_NSX` can explicitly override this default. The transitional `nsx::sensors` target contains INA228, MPU6050,
 MAX86150 and ICM-45605 only. BME688 and LED Stick use the separate portable
 targets and require application endpoints until the shared NSX port lands.
 Existing apps remain pinned to v0 releases until deliberately migrated.

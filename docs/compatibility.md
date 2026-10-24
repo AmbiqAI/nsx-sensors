@@ -4,14 +4,15 @@
 
 BME688 and LED Stick now have portable CMake targets and offline host tests.
 They have no shared NSX adapter or Zephyr wrapper yet. The remaining four drivers
-are still NSX-only, selected with `NSX_SENSORS_LEGACY_NSX=ON`. Metadata dependencies
+are still NSX-only; their aggregate defaults on when its NSX dependencies exist
+(and can be overridden with `NSX_SENSORS_LEGACY_NSX`). Metadata dependencies
 below describe that NSX integration, not portable-core requirements. No framework
 or hardware qualification is implied by portable compilation.
 
 | Drivers | Portable core | NSX integration | Zephyr wrapper | Hardware |
 | --- | --- | --- | --- | --- |
 | BME688, LED Stick | Implemented; host tested and linked | Application endpoint required; shared port pending | Pending | Unqualified |
-| INA228, MPU6050, MAX86150, ICM-45605 | Pending | Existing API via explicit legacy target | Pending | Unqualified |
+| INA228, MPU6050, MAX86150, ICM-45605 | Pending | Existing API via NSX aggregate | Pending | Unqualified |
 
 ## What the declarations mean
 

@@ -33,7 +33,6 @@ foreach(nsx_stub core i2c spi)
     install(TARGETS nsx_stub_${nsx_stub} EXPORT nsxTargets)
 endforeach()
 
-set(NSX_SENSORS_LEGACY_NSX ON CACHE BOOL "" FORCE)
 add_subdirectory("${NSX_SENSORS_ROOT}" nsx-sensors)
 
 if(NOT TARGET nsx_sensors)

@@ -32,6 +32,6 @@ The current registry lock already pins `nsx-sensors` at
 release-preparation branch.
 
 Unreleased foundation: BME688/LED Stick use portable per-driver targets. The
-transitional NSX aggregate is explicitly selected with `NSX_SENSORS_LEGACY_NSX`
-and contains the other four drivers. See `docs/migration/portable-foundation.md`;
+transitional NSX aggregate defaults on when its dependency targets exist and
+contains the other four drivers (`NSX_SENSORS_LEGACY_NSX` can override it). See `docs/migration/portable-foundation.md`;
 registry consumers must not repin automatically during this transition.

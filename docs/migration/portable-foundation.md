@@ -118,11 +118,14 @@ consumers use the same target names; `find_package` components are `bme688`,
 `ledstick`, and `common`. Package exports contain no SDK paths or implicit
 repository discovery. Until v1, package version compatibility is exact.
 
-The explicit `NSX_SENSORS_LEGACY_NSX=ON` option builds `nsx::sensors` with the
+The `NSX_SENSORS_LEGACY_NSX` option builds `nsx::sensors` with the
 four remaining NSX-only drivers, exported through the existing `nsxTargets` set.
 Portable targets have their own package export set. Both can coexist in one
-build; link portable drivers explicitly. NSX apps must opt into the transitional
-aggregate before `add_subdirectory`, and board/registry metadata remains pinned.
+build; link portable drivers explicitly. The aggregate defaults on when all three
+NSX dependency targets already exist, so the normal metadata-driven integration
+retains `nsx::sensors`. It defaults off for standalone builds; an explicit option
+overrides either default. No filesystem discovery occurs, and board/registry
+metadata remains pinned.
 
 Run `tests/portable_build.sh`: synthetic protocol/lifecycle tests, sanitizer
 runs, C/C++ linkage, relocated installed package, nested consumer, and driver

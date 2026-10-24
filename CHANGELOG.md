@@ -12,8 +12,8 @@ All notable changes to `nsx-sensors` are documented here. This project follows
 - Split BME688 bind/probe/validate/init; reset now requires reinitialization.
   Remove device-specific NSX adapters pending the shared port. Use common statuses.
 - Validate LED commands and invalidate bindings after attempted address changes.
-- Keep the four unmigrated drivers in an explicit `NSX_SENSORS_LEGACY_NSX`
-  aggregate. See the migration guide; this branch is not a drop-in v0 upgrade.
+- Keep the four unmigrated drivers in a `NSX_SENSORS_LEGACY_NSX` aggregate,
+  enabled by default when the enclosing build supplies the NSX dependencies. See the migration guide; this branch is not a drop-in v0 upgrade.
 - Add offline protocol, lifecycle, deadline, package-link and sanitizer checks.
 
 

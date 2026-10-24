@@ -78,7 +78,6 @@ rm -rf "$build_dir"
 
 cmake -S "$consumer_root" -B "$build_dir" \
     -DNSX_SENSORS_ROOT="$repo_root" \
-    -DNSX_SENSORS_LEGACY_NSX=ON \
     -DNSX_TOOLCHAIN="$toolchain" \
     -DNSX_BOARD="$board"
 

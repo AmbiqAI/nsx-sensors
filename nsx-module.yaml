@@ -10,7 +10,7 @@ support:
   zephyr: false
 
 summary: Portable BME688/LED Stick cores and transitional NSX-only sensor drivers.
-# Unreleased foundation: NSX builds explicitly enable NSX_SENSORS_LEGACY_NSX.
+# The NSX aggregate defaults on when its three declared dependency targets exist.
 # That aggregate contains the four unmigrated drivers; see docs/migration.
 
 capabilities:
