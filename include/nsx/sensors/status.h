@@ -1,0 +1,17 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+#ifndef NSX_SENSORS_STATUS_H
+#define NSX_SENSORS_STATUS_H
+typedef enum {
+    NSX_SENSOR_OK = 0,
+    NSX_SENSOR_AGAIN,
+    NSX_SENSOR_E_ARGUMENT,
+    NSX_SENSOR_E_IO,
+    NSX_SENSOR_E_DEVICE,
+    NSX_SENSOR_E_STATE,
+    NSX_SENSOR_E_BUSY,
+    NSX_SENSOR_E_TIMEOUT,
+    NSX_SENSOR_E_UNSUPPORTED,
+    NSX_SENSOR_E_CALIBRATION,
+    NSX_SENSOR_E_OVERFLOW
+} nsx_sensor_status_t;
+#endif

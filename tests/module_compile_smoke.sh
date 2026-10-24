@@ -84,6 +84,7 @@ done
 
 includes=(
     -I "$repo_root/includes-api"
+    -I "$repo_root/include"
     -I "$repo_root/vendor/tdk-icm45605"
     -isystem "$sdk_root/modules/nsx-core/includes-api"
     -isystem "$sdk_root/modules/nsx-i2c/includes-api"
@@ -154,7 +155,7 @@ esac
 rm -rf "$out_dir"
 mkdir -p "$out_dir"
 
-sources=("$repo_root"/src/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
+sources=("$repo_root"/src/*.c "$repo_root"/src/common/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
 [ "${#sources[@]}" -eq 10 ] || fail "expected 10 translation units, found ${#sources[@]}"
 
 for source in "${sources[@]}"; do

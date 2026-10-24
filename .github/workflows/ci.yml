@@ -22,11 +22,8 @@ jobs:
       - name: Run INA228 host unit tests
         run: tests/ina228_host_unit.sh cc
 
-      - name: Run BME688 native core and NSX adapter host tests
-        run: tests/bme688_host_unit.sh cc
-
-      - name: Run BME688 host tests with address and undefined-behavior sanitizers
-        run: tests/bme688_host_unit.sh cc --sanitize
+      - name: Portable drivers, installed consumers, and sanitizers
+        run: tests/portable_build.sh
 
       - name: Validate version coherence
         shell: bash
@@ -113,12 +110,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if cmake -S . -B build/unsatisfied; then
-            echo "standalone configure succeeded without nsx::core" >&2
+          if cmake -S . -B build/unsatisfied -DNSX_SENSORS_LEGACY_NSX=ON; then
+            echo "NSX integration configure succeeded without nsx::core" >&2
             exit 1
           fi
           grep -qF 'nsx-sensors requires the nsx::core target' \
-            <(cmake -S . -B build/unsatisfied 2>&1 || true)
+            <(cmake -S . -B build/unsatisfied -DNSX_SENSORS_LEGACY_NSX=ON 2>&1 || true)
 
   module-compile-smoke:
     name: Module compile smoke (all declared SoCs, Arm GNU)

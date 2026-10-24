@@ -50,11 +50,8 @@ VENDOR_EXCLUDED = {
 }
 
 PUBLIC_HEADERS = (
-    "nsx_bme688.h",
-    "nsx_bme688_nsx.h",
     "nsx_icm45605.h",
     "nsx_ina228.h",
-    "nsx_ledstick.h",
     "nsx_max86150.h",
     "nsx_mpu6050.h",
 )
@@ -220,7 +217,9 @@ class VendorSubsetTests(unittest.TestCase):
             self.assertNotIn('#include "imu/', path.read_text(errors="replace"))
 
     def test_no_cmsis_dsp_dependency_is_reintroduced(self) -> None:
-        for path in list(API.iterdir()) + list(SRC.iterdir()):
+        paths = [*API.rglob("*.h"), *SRC.rglob("*.c"), *SRC.rglob("*.h"),
+                 *(ROOT / "include").rglob("*.h")]
+        for path in paths:
             self.assertNotIn("arm_math.h", path.read_text(), path.name)
             self.assertNotIn("float32_t", path.read_text(), path.name)
 
@@ -279,8 +278,11 @@ class CMakeContractTests(unittest.TestCase):
 
 class PublicApiTests(unittest.TestCase):
     def test_headers_use_non_reserved_include_guards(self) -> None:
-        for name in PUBLIC_HEADERS:
-            text = (API / name).read_text()
+        headers = [API / name for name in PUBLIC_HEADERS]
+        headers.extend((ROOT / "include/nsx/sensors").glob("*.h"))
+        for path in headers:
+            name = path.name
+            text = path.read_text()
             guards = re.findall(r"(?m)^#(?:ifndef|define)\s+(\w+)$", text)
             self.assertTrue(guards, name)
             for guard in guards:

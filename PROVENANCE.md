@@ -43,7 +43,7 @@ address through every call.
 | `includes-api/nsx_mpu6050.h`, `src/nsx_mpu6050.c` | `neuralspot/ns-i2c/includes-api/ns_mpu6050_i2c_driver.h`, `neuralspot/ns-i2c/src/ns_mpu6050_i2c_driver.c` | `AmbiqAI/neuralSPOT` | `4264b9309e03064ffad13a0468d5d0c1110c5288` |
 | `includes-api/nsx_icm45605.h`, `src/nsx_icm45605.c` | `neuralspot/ns-imu/includes-api/ns_imu.h`, `neuralspot/ns-imu/src/ns_imu_icm45605_driver.c` | `AmbiqAI/neuralSPOT` | `69c58a11b8746dd6b72a0d6e7b2e796e1c1dd9c8` (driver), `6c0a87216c06a0f5692033f8bb0f5de86aa499b0` (header) |
 | `includes-api/nsx_ina228.h`, `src/nsx_ina228.c` | `includes-api/ina228.h`, `src/ina228.c` | `AmbiqAI/ns-sensors` | `a59b545ec6d630f10c1af0a7f25bb4d8457cc5c8` (header), `407679a7b034ae38647bdc16977fd388b717337a` (source) |
-| `includes-api/nsx_ledstick.h`, `src/nsx_ledstick.c` | `includes-api/ledstick.h`, `src/ledstick.c` | `AmbiqAI/ns-sensors` | `68a60afd713e0555fcd4f9322bc34ce29c7e984b` |
+| `include/nsx/sensors/ledstick.h`, `src/ledstick/ledstick.c` | `includes-api/ledstick.h`, `src/ledstick.c` | `AmbiqAI/ns-sensors` | `68a60afd713e0555fcd4f9322bc34ce29c7e984b` |
 
 All listed revisions are reachable from the `main` branch of their repository.
 `AmbiqAI/neuralSPOT` and `AmbiqAI/ns-sensors` are both BSD-3-Clause and are
@@ -62,8 +62,8 @@ February 2024**. It does not compile or call the Bosch sensor API.
 | Version | v4.4.8 |
 | Git commit | `80ea120a8b8ac987d7d79eb68a9ed796736be845` |
 | Adapted source | `bme68x.c` floating-point `calc_temperature`, `calc_pressure`, `calc_humidity`, `calc_gas_resistance_high`, `calc_res_heat`; calibration decoding from `get_calib_data` and coefficient indices in `bme68x_defs.h` |
-| NSX destination | `src/nsx_bme688_compensation.c` |
-| Other adapted arithmetic | Forced-mode conversion-time estimate and gas-wait duration encoding in `src/nsx_bme688.c` |
+| NSX destination | `src/bme688/compensation.c` |
+| Other adapted arithmetic | Forced-mode conversion-time estimate and gas-wait duration encoding in `src/bme688/bme688.c` |
 | Copyright | Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved. |
 | License | BSD-3-Clause, retained in `licenses/Bosch-BME68x-BSD-3-Clause.txt` and the compensation source header |
 
@@ -157,3 +157,12 @@ map, no scaling constant, and no license header was altered.
 | `float32_t` -> `float` across the INA228 public API and implementation, dropping the `arm_math.h` include | `includes-api/nsx_ina228.h`, `src/nsx_ina228.c`, commit `9a73d59` | Included. `float32_t` is a CMSIS-DSP typedef for `float`, and nsx-sensors never declared or linked CMSIS-DSP, so every consumer failed to build on a missing `arm_math.h`. The two types are identical, so this is source- and ABI-compatible for any consumer that could previously compile. |
 | ICM-45605 driver and TDK vendor subset added | commit `9a73d59` | Included, first appearance in a release. |
 | Removal of the unimplemented `frame_available_cb`, `frame_size`, and `frame_buffer` context fields | this release branch | Included. See `CHANGELOG.md`; the fields were never read or written by the driver. |
+
+## Portable foundation migration
+
+The BME688 calculations are unchanged; relocation does not change their Bosch
+provenance or licensing. LED Stick's existing `src/nsx_ledstick.c` port is now
+`src/ledstick/ledstick.c`, using the shared transaction interface. Command values
+and one-based numbering were cross-checked against SparkFun's
+[Qwiic LED Stick reference](https://github.com/sparkfun/SparkFun_Qwiic_LED_Stick_Arduino_Library/blob/master/src/Qwiic_LED_Stick.cpp).
+No additional vendor source was copied in this migration.
