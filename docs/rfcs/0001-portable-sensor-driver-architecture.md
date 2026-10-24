@@ -472,13 +472,14 @@ Local evidence includes host protocol/lifecycle/failure tests, ASan/UBSan,
 single-driver/common-only builds and GCC compilation for all eight declared
 SoCs. Hardware, Zephyr, and representative NSX firmware links remain pending.
 
-The shared NSX port is not implemented. PR #18 removes the BME688-specific
-adapters and retains the remaining four NSX drivers in a transitional aggregate.
+PR #18 removes the BME688-specific adapters and retains the remaining four
+NSX drivers in a transitional aggregate. The shared NSX port is implemented
+in [PR #19](https://github.com/AmbiqAI/nsx-sensors/pull/19), stacked on #18.
 Following independent review, commit `7e86936` enables that aggregate by default
 when all declared NSX dependency targets already exist; standalone builds keep
-it off. The default NSX consumer test no longer forces an option override. It is not a drop-in update for NSX apps; keep the PR draft until the
-shared port and SDK prerequisites make the integration transition ready for
-review. Existing applications retain their immutable version pins. This is
+it off. The default NSX consumer test no longer forces an option override.
+The transition is not a drop-in update for NSX apps: applications explicitly
+link each portable driver and `nsx::sensor_port_nsx`, then bind/init contexts. Existing applications retain their immutable version pins. This is
 implementation progress, not acceptance of the full RFC or a v1 release.
 
 The SDK prerequisite is now implemented in
@@ -490,9 +491,21 @@ and RX alignment before I/O, and preserves native HAL errors. Existing
 STOP-separated helpers are unchanged. Local evidence includes 1587 SDK tests
 passed (172 skipped), recording-HAL tests for both instruction layouts,
 ASan/UBSan, and real-header C/C++ GCC compilation for all eight I2C SoCs.
-Waveform and physical recovery qualification remain pending. The future shared
-sensor adapter must use this operation, enforce its per-operation limits, and
-supply the locking/alignment/status mapping; that adapter is not yet implemented.
+Waveform and physical recovery qualification remain pending.
+
+The shared adapter uses that combined operation and enforces its prefix limits.
+Caller-owned endpoint contexts retain addresses/nCE selectors, optional IOM
+lock hooks, aligned 256-byte staging buffers, and the last SDK helper status.
+SPI reads use one instruction/RX transaction; MOSI behavior during RX is
+hardware-defined rather than a selectable fill byte. Legacy helpers do not
+always retain native HAL errors, so the adapter records their available result
+and maps failures to `E_IO`. Its separate package export keeps portable consumers
+independent of the SDK. Host sanitizer tests cover both prefix limits, failed
+locks/transfers, padding, actual portable-driver calls, and relocated C/C++
+consumers; all module C sources and the port C++ header compile on eight SoCs.
+The SDK prerequisite must land before the shared adapter. The remaining four
+driver migrations, TDK per-instance feasibility, firmware links, and hardware
+qualification remain release gates.
 
 ### Delivery plan
 
