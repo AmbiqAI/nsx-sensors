@@ -176,3 +176,13 @@ v5.2.24 CI baseline above for this branch. It supplies the genuine combined
 I2C operation. Hardware protocol reasoning uses Apollo3 Blue SoC Datasheet
 DS-A3-1p3p0 sections 8.14.9/8.14.12 and 8.15.4; SDK limits come from each
 SoC's HAL headers. See `docs/nsx-port.md` for limits and validation scope.
+
+## Portable INA228 migration
+
+The Ambiq-authored INA228 implementation moved from `src/nsx_ina228.c` to
+`src/ina228/ina228.c`; its public header moved from `includes-api/nsx_ina228.h`
+to `include/nsx/sensors/ina228.h`. No vendor source was copied. Register and
+calibration semantics were cross-checked against TI INA228 SLYS021A (May 2022),
+https://www.ti.com/lit/ds/symlink/ina228.pdf. The portable migration preserves
+units/raw counters and tightens lifecycle, calibration, and error contracts;
+see `docs/migration/ina228.md`.

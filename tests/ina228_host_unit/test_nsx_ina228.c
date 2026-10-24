@@ -1,7 +1,7 @@
 /**
  * Host unit tests for the INA228 driver register math.
  *
- * The driver is compiled against the stub nsx_i2c.h in this directory; the
+ * The driver uses the portable transfer callback; the
  * fake below emulates the INA228 register map as big-endian byte arrays, the
  * same wire format the device uses. These tests pin down:
  *
@@ -15,14 +15,14 @@
  *     and ADC_CONFIG bit 4 is the middle bit of VTCT.
  *   - Conversion-ready polling reads DIAG_ALRT.CNVRF (bit 1), not MEMSTAT
  *     (bit 0), which reads 1 on every healthy part.
- *   - ina228_validate() masks DEVICE_ID.REV_ID off before comparing the die
+ *   - ina228_probe() masks DEVICE_ID.REV_ID off before comparing the die
  *     id, so a real part reading 0x2281 is accepted.
  */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "nsx_ina228.h"
+#include <nsx/sensors/ina228.h>
 
 #define REG_CONFIG 0x00
 #define REG_ADCCFG 0x01
@@ -47,50 +47,56 @@ static uint8_t fake_regs[NUM_REGS][MAX_REG_BYTES];
 // anything, modeling a write that never lands on the device.
 static int fail_reads = 0;
 static int drop_writes = 0;
+static int fail_write_nth, fail_read_nth;
+static bool apply_failed_write;
+static uint8_t (*active_regs)[MAX_REG_BYTES] = fake_regs;
 
 // Transfer counters, for pinning a function's transaction shape.
 static unsigned read_xfers = 0;
 static unsigned write_xfers = 0;
 
-uint32_t
-nsx_i2c_write(nsx_i2c_config_t *cfg, const void *buf, uint32_t size, uint16_t addr)
+static nsx_sensor_status_t fake_transfer(void *user, const nsx_sensor_transfer_t *t)
 {
-    (void)cfg;
-    (void)addr;
-    const uint8_t *bytes = buf;
-    // The driver only issues 16-bit register writes: [reg, msb, lsb].
-    if (size != 3 || bytes[0] >= NUM_REGS) {
-        return 1;
+    uint8_t (*regs)[MAX_REG_BYTES] = user;
+    if (!t->tx || t->tx_size < 1 || t->tx[0] >= NUM_REGS) return NSX_SENSOR_E_ARGUMENT;
+    uint8_t reg = t->tx[0];
+    if (t->rx_size) {
+        if (t->tx_size != 1 || t->rx_size > MAX_REG_BYTES) return NSX_SENSOR_E_ARGUMENT;
+        ++read_xfers;
+        if ((fail_reads > 0 && --fail_reads >= 0) || (fail_read_nth > 0 && --fail_read_nth == 0)) {
+            memset(t->rx, 0xa5, t->rx_size); /* Failed transport may partially fill scratch. */
+            return NSX_SENSOR_E_IO;
+        }
+        memcpy(t->rx, regs[reg], t->rx_size);
+        if (reg == REG_DIAGALRT && (regs[reg][0] & 0x80)) regs[reg][1] &= 1;
+        if (reg == REG_ENERGY) regs[REG_DIAGALRT][0] &= ~8u;
+        if (reg == REG_CHARGE) regs[REG_DIAGALRT][0] &= ~4u;
+        return NSX_SENSOR_OK;
     }
-    write_xfers++;
-    if (drop_writes > 0) {
-        drop_writes--;
-        return 0;
+    if (t->tx_size != 3) return NSX_SENSOR_E_ARGUMENT;
+    ++write_xfers;
+    bool failed = fail_write_nth > 0 && --fail_write_nth == 0;
+    if (failed && !apply_failed_write) return NSX_SENSOR_E_IO;
+    if (drop_writes > 0) { --drop_writes; return NSX_SENSOR_OK; }
+    uint16_t value = (uint16_t)((t->tx[1] << 8) | t->tx[2]);
+    if (reg == REG_CONFIG && (value & 0x8000)) {
+        memset(regs, 0, REG_MFG_UID * MAX_REG_BYTES);
+        regs[REG_SHUNTCAL][0] = 0x10;
+        regs[REG_ADCCFG][0] = 0xfb; regs[REG_ADCCFG][1] = 0x68;
+        regs[REG_DIAGALRT][1] = 1;
+    } else if (reg == REG_DIAGALRT) {
+        regs[reg][0] = (uint8_t)((regs[reg][0] & 0x0f) | (value >> 8 & 0xf0));
+    } else {
+        if (reg == REG_CONFIG && (value & 0x4000)) {
+            memset(regs[REG_ENERGY], 0, 5); memset(regs[REG_CHARGE], 0, 5);
+            regs[REG_DIAGALRT][0] &= ~2u;
+            value &= ~0x4000u;
+        }
+        regs[reg][0] = (uint8_t)(value >> 8); regs[reg][1] = (uint8_t)value;
     }
-    fake_regs[bytes[0]][0] = bytes[1];
-    fake_regs[bytes[0]][1] = bytes[2];
-    return 0;
+    return failed ? NSX_SENSOR_E_IO : NSX_SENSOR_OK;
 }
-
-uint32_t
-nsx_i2c_write_read(
-    nsx_i2c_config_t *cfg, uint16_t addr, const void *writeBuf, size_t numWrite, void *readBuf,
-    size_t numRead)
-{
-    (void)cfg;
-    (void)addr;
-    const uint8_t *reg = writeBuf;
-    if (numWrite != 1 || reg[0] >= NUM_REGS || numRead > MAX_REG_BYTES) {
-        return 1;
-    }
-    read_xfers++;
-    if (fail_reads > 0) {
-        fail_reads--;
-        return 1;
-    }
-    memcpy(readBuf, fake_regs[reg[0]], numRead);
-    return 0;
-}
+static const nsx_sensor_bus_ops_t fake_ops = { fake_transfer };
 
 static void
 set_reg16(uint8_t reg, uint16_t value)
@@ -127,14 +133,14 @@ static int failures = 0;
     do {                                                                                         \
         float _a = (actual);                                                                     \
         float _e = (expected);                                                                   \
-        if (fabsf(_a - _e) > (tol)) {                                                            \
+        if (!isfinite(_a) || fabsf(_a - _e) > (tol)) {                                                            \
             failures++;                                                                          \
             fprintf(stderr, "FAIL %s:%d: %s = %g, expected %g\n", __FILE__, __LINE__, #actual,   \
                     _a, _e);                                                                     \
         }                                                                                        \
     } while (0)
 
-static nsx_i2c_config_t i2c_stub;
+
 
 static ina228_context_t
 fresh_device(void)
@@ -143,11 +149,15 @@ fresh_device(void)
     memset(fake_regs, 0, sizeof(fake_regs));
     fail_reads = 0;
     drop_writes = 0;
+    fail_write_nth = fail_read_nth = 0; apply_failed_write = false;
+    active_regs = fake_regs;
     // Power-on defaults for the registers whose reset value is not zero.
     set_reg16(REG_ADCCFG, ADCCFG_RESET);
     set_reg16(REG_SHUNTCAL, 0x1000);
     set_reg16(REG_DIAGALRT, 0x0001); // MEMSTAT = 1 (trim memory healthy)
-    CHECK(ina228_init(&ctx, &i2c_stub, 0x40) == 0);
+    set_reg16(REG_MFG_UID, 0x5449); set_reg16(REG_DVC_UID, 0x2281);
+    nsx_sensor_bus_t bus = { &fake_ops, active_regs, NSX_SENSOR_BUS_I2C, 3, 5 };
+    CHECK(ina228_bind(&ctx, &bus) == 0);
     return ctx;
 }
 
@@ -248,11 +258,12 @@ test_set_shunt_transaction_shape(void)
 }
 
 // CHARGE is 40-bit two's complement scaled by CURRENT_LSB.
-// ina228_init defaults CURRENT_LSB to 0.0001 A.
+// Test calibration sets CURRENT_LSB to 0.0001 A.
 static void
 test_charge_positive(void)
 {
     ina228_context_t ctx = fresh_device();
+    CHECK(ina228_set_shunt(&ctx, 0.001f, 52.4288f) == NSX_SENSOR_OK);
     set_reg40(REG_CHARGE, 100000);
     float charge = -1.0f;
     CHECK(ina228_read_charge(&ctx, &charge) == 0);
@@ -263,6 +274,7 @@ static void
 test_charge_negative_sign_extends(void)
 {
     ina228_context_t ctx = fresh_device();
+    CHECK(ina228_set_shunt(&ctx, 0.001f, 52.4288f) == NSX_SENSOR_OK);
     // -3 as 40-bit two's complement
     set_reg40(REG_CHARGE, 0xFFFFFFFFFDULL);
     float charge = 0.0f;
@@ -359,11 +371,12 @@ test_energy_raw_is_exact(void)
     CHECK(end == (1ULL << 40) - 1);
 }
 
-// Joule conversion: 16 * 3.2 * CURRENT_LSB per LSB (init default LSB 0.0001).
+// Joule conversion: 16 * 3.2 * CURRENT_LSB per LSB (calibrated LSB 0.0001).
 static void
 test_energy_float_conversion(void)
 {
     ina228_context_t ctx = fresh_device();
+    CHECK(ina228_set_shunt(&ctx, 0.001f, 52.4288f) == NSX_SENSOR_OK);
     set_reg40(REG_ENERGY, 100000);
     float energy = -1.0f;
     CHECK(ina228_read_energy(&ctx, &energy) == 0);
@@ -396,10 +409,9 @@ test_write_bits_never_writes_after_a_failed_read(void)
     CHECK(get_reg16(REG_ADCCFG) == ADCCFG_RESET);
 }
 
-// A failed read must report the error and yield a defined output value, not
-// whatever was on the stack.
+// A failed read preserves the caller output, even if transport fills scratch.
 static void
-test_failed_read_reports_error_and_zeroes_output(void)
+test_failed_read_preserves_output(void)
 {
     ina228_context_t ctx = fresh_device();
     set_reg16(REG_CONFIG, 1 << 4);
@@ -407,7 +419,7 @@ test_failed_read_reports_error_and_zeroes_output(void)
     uint16_t range = 0xFF;
     fail_reads = 1;
     CHECK(ina228_get_adc_range(&ctx, &range) != 0);
-    CHECK(range == 0);
+    CHECK(range == 0xFF);
 
     // A register with a nonzero address (0x3E): composing the result from
     // the failed transfer's buffer would leak the address byte into the
@@ -416,14 +428,14 @@ test_failed_read_reports_error_and_zeroes_output(void)
     uint16_t mfg = 0xAA;
     fail_reads = 1;
     CHECK(ina228_get_manufacturer_id(&ctx, &mfg) != 0);
-    CHECK(mfg == 0);
+    CHECK(mfg == 0xAA);
 
     // And the same for a 40-bit read.
     set_reg40(REG_ENERGY, 12345);
     uint64_t energy = 0xFF;
     fail_reads = 1;
     CHECK(ina228_read_energy_raw(&ctx, &energy) != 0);
-    CHECK(energy == 0);
+    CHECK(energy == 0xFF);
 }
 
 // The alert masks must match the DIAG_ALRT bit map (Table 7-16). The old
@@ -473,33 +485,232 @@ test_conversion_ready_reads_cnvrf(void)
 static void
 test_validate(void)
 {
+    ina228_identity_t identity;
     ina228_context_t ctx = fresh_device();
     set_reg16(REG_MFG_UID, 0x5449);
     set_reg16(REG_DVC_UID, 0x2281);
-    CHECK(ina228_validate(&ctx) == 0);
+    CHECK(ina228_probe(&ctx, &identity) == 0);
 
     // Any silicon revision of the same die must pass.
     set_reg16(REG_DVC_UID, 0x2280);
-    CHECK(ina228_validate(&ctx) == 0);
+    CHECK(ina228_probe(&ctx, &identity) == 0);
     set_reg16(REG_DVC_UID, 0x228F);
-    CHECK(ina228_validate(&ctx) == 0);
+    CHECK(ina228_probe(&ctx, &identity) == 0);
 
     // The unshifted die id is not a valid DEVICE_ID and must be rejected.
     set_reg16(REG_DVC_UID, 0x0228);
-    CHECK(ina228_validate(&ctx) == 1);
+    CHECK(ina228_probe(&ctx, &identity) == NSX_SENSOR_E_DEVICE);
 
     // A different part must be rejected.
     set_reg16(REG_DVC_UID, 0x2261);
-    CHECK(ina228_validate(&ctx) == 1);
+    CHECK(ina228_probe(&ctx, &identity) == NSX_SENSOR_E_DEVICE);
 
     set_reg16(REG_DVC_UID, 0x2281);
     set_reg16(REG_MFG_UID, 0xDEAD);
-    CHECK(ina228_validate(&ctx) == 1);
+    CHECK(ina228_probe(&ctx, &identity) == NSX_SENSOR_E_DEVICE);
+}
+
+static ina228_config_t valid_config(void)
+{
+    ina228_config_t config = ina228_default_config();
+    config.shunt_ohms = 0.1f;
+    config.max_current_amps = 0.5f;
+    return config;
+}
+static void test_lifecycle(void)
+{
+    ina228_context_t ctx = fresh_device();
+    unsigned reads = read_xfers, writes = write_xfers;
+    nsx_sensor_bus_t bus = ctx.bus;
+    ina228_context_t copy = ctx;
+    bus.kind = NSX_SENSOR_BUS_SPI;
+    CHECK(ina228_bind(&ctx, &bus) == NSX_SENSOR_E_UNSUPPORTED);
+    CHECK(memcmp(&ctx, &copy, sizeof(ctx)) == 0);
+    bus = ctx.bus; bus.max_rx_size = 4;
+    CHECK(ina228_bind(&ctx, &bus) == NSX_SENSOR_E_UNSUPPORTED);
+    bus = ctx.bus; bus.max_tx_size = 2;
+    CHECK(ina228_bind(&ctx, &bus) == NSX_SENSOR_E_UNSUPPORTED);
+    CHECK(ina228_bind(&ctx, NULL) == NSX_SENSOR_E_ARGUMENT);
+    ina228_config_t cfg = ina228_default_config();
+    CHECK(ina228_validate_config(&cfg) == NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_validate_config(NULL) == NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_init(&ctx, &cfg) == NSX_SENSOR_E_ARGUMENT);
+    CHECK(read_xfers == reads && write_xfers == writes);
+    cfg = valid_config();
+    CHECK(ina228_init(&ctx, &cfg) == NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_CONFIG) == 0);
+    CHECK(get_reg16(REG_ADCCFG) == (ADCCFG_RESET & 0x0fff));
+    CHECK(get_reg16(REG_SHUNTCAL) == 1250 && ctx._calibrated);
+    cfg.adc_range=1;
+    cfg.current_conversion_time=INA228_TIME_150_us;
+    cfg.voltage_conversion_time=INA228_TIME_84_us;
+    cfg.temperature_conversion_time=INA228_TIME_50_us;
+    cfg.averaging_count=INA228_COUNT_16;
+    cfg.alert_latch=INA228_ALERT_LATCH_ENABLED;
+    cfg.alert_polarity=INA228_ALERT_POLARITY_INVERTED;
+    CHECK(ina228_init(&ctx, &cfg) == NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_ADCCFG) == 0x0282);
+    CHECK(ina228_set_mode(&ctx,INA228_MODE_TRIGGERED)==NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_ADCCFG) == 0x7282);
+    CHECK(ina228_init(&ctx,&cfg)==NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_ADCCFG) == 0x0282);
+    CHECK(ina228_set_mode(&ctx,INA228_MODE_CONTINUOUS)==NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_ADCCFG) == 0xf282);
+    CHECK(get_reg16(REG_CONFIG) == 0x10 && get_reg16(REG_SHUNTCAL) == 5000);
+    CHECK((get_reg16(REG_DIAGALRT) & 0xf000) == 0x9000);
+    CHECK(ina228_reset(&ctx) == NSX_SENSOR_OK && !ctx._calibrated);
+    float value = 123;
+    CHECK(ina228_read_current(&ctx,&value) == NSX_SENSOR_E_STATE && value==123);
+    CHECK(ina228_init(&ctx,&cfg) == NSX_SENSOR_OK && ctx._calibrated);
+    ina228_context_t unbound={0};
+    CHECK(ina228_read_bus_voltage(&unbound,&value)==NSX_SENSOR_E_STATE && value==123);
+    CHECK(ina228_read_bus_voltage(NULL,&value)==NSX_SENSOR_E_STATE);
+    CHECK(ina228_read_bus_voltage(&ctx,NULL)==NSX_SENSOR_E_ARGUMENT);
+}
+static void test_invalid_config_and_calibration(void)
+{
+    ina228_context_t ctx=fresh_device();
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+    unsigned reads=read_xfers, writes=write_xfers;
+    const float bad[] = {0, -1, NAN, INFINITY};
+    for(size_t i=0;i<sizeof(bad)/sizeof(bad[0]);++i) {
+        ina228_config_t cfg=valid_config(); cfg.shunt_ohms=bad[i];
+        CHECK(ina228_validate_config(&cfg)==NSX_SENSOR_E_ARGUMENT);
+        CHECK(ina228_set_shunt(&ctx,bad[i],0.5f)==NSX_SENSOR_E_ARGUMENT);
+        cfg=valid_config(); cfg.max_current_amps=bad[i];
+        CHECK(ina228_validate_config(&cfg)==NSX_SENSOR_E_ARGUMENT);
+        CHECK(ina228_set_shunt(&ctx,0.1f,bad[i])==NSX_SENSOR_E_ARGUMENT);
+    }
+    CHECK(ina228_set_adc_range(&ctx,2)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_set_mode(&ctx,(ina228_meas_mode_t)-1)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_set_mode(&ctx,(ina228_meas_mode_t)16)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_set_averaging_count(&ctx,(ina228_avg_count_t)8)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_set_current_conversion_time(&ctx,(ina228_conversion_time_t)8)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_set_alert_latch(&ctx,(ina228_alert_latch_t)2)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_set_alert_polarity(&ctx,(ina228_alert_polarity_t)-1)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(read_xfers==reads && write_xfers==writes && ctx._calibrated);
+    ina228_config_t cfg=valid_config(); cfg.max_current_amps=1e-20f;
+    CHECK(ina228_validate_config(&cfg)==NSX_SENSOR_E_CALIBRATION);
+    CHECK(ina228_set_shunt(&ctx,0.1f,1e-20f)==NSX_SENSOR_E_CALIBRATION);
+    CHECK(ctx._calibrated && write_xfers==writes); /* rejected before any write */
+}
+static void test_calibration_failure_invalidation(void)
+{
+    ina228_context_t ctx=fresh_device();
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+    fail_read_nth=2; /* range read succeeds, new calibration lands, verification fails */
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.4f)==NSX_SENSOR_E_IO);
+    CHECK(!ctx._calibrated && get_reg16(REG_SHUNTCAL)==1000);
+    float value=19;
+    CHECK(ina228_read_power(&ctx,&value)==NSX_SENSOR_E_STATE && value==19);
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+    fail_write_nth=1; apply_failed_write=true;
+    CHECK(ina228_set_adc_range(&ctx,1)==NSX_SENSOR_E_IO);
+    CHECK(!ctx._calibrated && get_reg16(REG_CONFIG)==0x10);
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+    fail_write_nth=2; /* range succeeds, calibration write fails */
+    CHECK(ina228_set_adc_range(&ctx,0)==NSX_SENSOR_E_IO && !ctx._calibrated);
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+    fail_write_nth=1;
+    CHECK(ina228_reset(&ctx)==NSX_SENSOR_E_IO && !ctx._calibrated);
+    /* Failure at every init read/write leaves scaled reads disabled. */
+    for(int phase=1;phase<=5;++phase) {
+        ctx=fresh_device(); ina228_config_t cfg=valid_config();
+        CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+        fail_write_nth=phase;
+        CHECK(ina228_init(&ctx,&cfg)==NSX_SENSOR_E_IO && !ctx._calibrated);
+        fail_write_nth=0;
+        CHECK(ina228_init(&ctx,&cfg)==NSX_SENSOR_OK && ctx._calibrated);
+    }
+    for(int phase=1;phase<=5;++phase) {
+        ctx=fresh_device(); ina228_config_t cfg=valid_config(); fail_read_nth=phase;
+        CHECK(ina228_init(&ctx,&cfg)==NSX_SENSOR_E_IO && !ctx._calibrated);
+    }
+}
+static void test_all_float_failures_and_signed_measurements(void)
+{
+    ina228_context_t ctx=fresh_device();
+    CHECK(ina228_set_shunt(&ctx,0.001f,52.4288f)==NSX_SENSOR_OK);
+    typedef nsx_sensor_status_t (*reader_t)(ina228_context_t *,float *);
+    reader_t readers[]={ina228_read_die_temp,ina228_read_current,ina228_read_bus_voltage,
+        ina228_read_shunt_voltage,ina228_read_power,ina228_read_energy,ina228_read_charge};
+    for(size_t i=0;i<sizeof(readers)/sizeof(readers[0]);++i) {
+        float value=17; fail_reads=1;
+        CHECK(readers[i](&ctx,&value)==NSX_SENSOR_E_IO && value==17);
+        CHECK(readers[i](&ctx,NULL)==NSX_SENSOR_E_ARGUMENT);
+    }
+    set_reg16(6,0xff80); float value;
+    CHECK(ina228_read_die_temp(&ctx,&value)==NSX_SENSOR_OK); CHECK_NEAR(value,-1,1e-7f);
+    /* CURRENT/VSHUNT are signed 20-bit left justified. Low nibble is undefined. */
+    fake_regs[7][0]=0xff; fake_regs[7][1]=0xff; fake_regs[7][2]=0xff;
+    CHECK(ina228_read_current(&ctx,&value)==NSX_SENSOR_OK); CHECK_NEAR(value,-0.1f,1e-7f);
+    fake_regs[4][0]=0xff; fake_regs[4][1]=0xff; fake_regs[4][2]=0xff;
+    CHECK(ina228_read_shunt_voltage(&ctx,&value)==NSX_SENSOR_OK); CHECK_NEAR(value,-0.0003125f,1e-9f);
+    fake_regs[7][0]=0x80; fake_regs[7][1]=0; fake_regs[7][2]=0x0f;
+    CHECK(ina228_read_current(&ctx,&value)==NSX_SENSOR_OK); CHECK_NEAR(value,-52428.8f,0.01f);
+}
+static void test_side_effects_and_two_instances(void)
+{
+    ina228_context_t first=fresh_device(), second;
+    uint8_t second_regs[NUM_REGS][MAX_REG_BYTES]={{0}};
+    nsx_sensor_bus_t other={&fake_ops,second_regs,NSX_SENSOR_BUS_I2C,3,5};
+    CHECK(ina228_bind(&second,&other)==NSX_SENSOR_OK);
+    CHECK(ina228_set_shunt(&first,0.1f,0.5f)==NSX_SENSOR_OK);
+    CHECK(ina228_set_shunt(&second,0.05f,0.1f)==NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_SHUNTCAL)==1250);
+    CHECK(((second_regs[REG_SHUNTCAL][0]<<8)|second_regs[REG_SHUNTCAL][1])==125);
+    CHECK(first._current_lsb!=second._current_lsb);
+    set_reg16(REG_DIAGALRT,0x8e83); /* latched, energy/charge/math overflow + temp/ready */
+    uint16_t flags=0;
+    CHECK(ina228_alert_functions(&first,&flags)==NSX_SENSOR_OK && flags==0xe83);
+    CHECK((get_reg16(REG_DIAGALRT)&0xff)==1);
+    set_reg40(REG_ENERGY,9); set_reg40(REG_CHARGE,7);
+    CHECK(ina228_reset_accumulators(&first)==NSX_SENSOR_OK && first._calibrated);
+    CHECK((get_reg16(REG_DIAGALRT)&0xe00)==0xc00); /* reset doesn't clear accumulator overflow */
+    uint64_t energy; int64_t charge;
+    CHECK(ina228_read_energy_raw(&first,&energy)==NSX_SENSOR_OK && energy==0);
+    CHECK(ina228_read_charge_raw(&first,&charge)==NSX_SENSOR_OK && charge==0);
+    CHECK((get_reg16(REG_DIAGALRT)&0xc00)==0);
+    set_reg16(REG_DIAGALRT,0xe083);
+    CHECK(ina228_set_alert_polarity(&first,INA228_ALERT_POLARITY_INVERTED)==NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_DIAGALRT)==0xf001); /* preserves controls, read clears flags */
+    CHECK(ina228_reset(&first)==NSX_SENSOR_OK && !first._calibrated && second._calibrated);
+}
+
+static void test_identity_and_counter_failures(void)
+{
+    ina228_context_t ctx=fresh_device();
+    ina228_identity_t id={0xaaaa,0xbbbb};
+    fail_read_nth=2;
+    CHECK(ina228_probe(&ctx,&id)==NSX_SENSOR_E_IO);
+    CHECK(id.manufacturer_id==0xaaaa && id.device_id==0xbbbb);
+    int64_t charge=42; fail_reads=1;
+    CHECK(ina228_read_charge_raw(&ctx,&charge)==NSX_SENSOR_E_IO && charge==42);
+    set_reg40(REG_CHARGE,UINT64_C(0x8000000000));
+    CHECK(ina228_read_charge_raw(&ctx,&charge)==NSX_SENSOR_OK && charge==-INT64_C(549755813888));
+    set_reg40(REG_CHARGE,UINT64_C(0x7fffffffff));
+    CHECK(ina228_read_charge_raw(&ctx,&charge)==NSX_SENSOR_OK && charge==INT64_C(549755813887));
+    ina228_meas_mode_t mode=INA228_MODE_TRIGGERED; fail_reads=1;
+    CHECK(ina228_get_mode(&ctx,&mode)==NSX_SENSOR_E_IO && mode==INA228_MODE_TRIGGERED);
+    uint8_t ready=0xaa; fail_reads=1;
+    CHECK(ina228_conversion_ready(&ctx,&ready)==NSX_SENSOR_E_IO && ready==0xaa);
+    /* A representable calibration can still overflow a float output at an
+     * extreme scale. Do not return success with infinity. */
+    CHECK(ina228_set_shunt(&ctx,1e-35f,1e35f)==NSX_SENSOR_OK);
+    fake_regs[8][0]=0xff; fake_regs[8][1]=0xff; fake_regs[8][2]=0xff;
+    float power=42;
+    CHECK(ina228_read_power(&ctx,&power)==NSX_SENSOR_E_OVERFLOW && power==42);
 }
 
 int
 main(void)
 {
+    test_identity_and_counter_failures();
+    test_lifecycle();
+    test_invalid_config_and_calibration();
+    test_calibration_failure_invalidation();
+    test_all_float_failures_and_signed_measurements();
+    test_side_effects_and_two_instances();
     test_shunt_cal_adcrange_0();
     test_shunt_cal_adcrange_1();
     test_shunt_cal_ignores_adc_config_bit_4();
@@ -518,7 +729,7 @@ main(void)
     test_adc_range_before_calibration_leaves_shunt_cal();
     test_adc_range_recalibration_overflow_is_an_error();
     test_write_bits_never_writes_after_a_failed_read();
-    test_failed_read_reports_error_and_zeroes_output();
+    test_failed_read_preserves_output();
     test_alert_masks_match_diag_alrt_bits();
     test_conversion_ready_reads_cnvrf();
     test_validate();

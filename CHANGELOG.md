@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased INA228 portable migration
+
+- Move INA228 to `include/nsx/sensors/ina228.h` / `src/ina228/ina228.c` and
+  `nsx::sensor_ina228`; remove it from the legacy aggregate.
+- Replace binding-only init with shared-bus bind, identity probe, pure config
+  validation, and explicit initialization into shutdown. Start conversions
+  separately with `ina228_set_mode`. Return common sensor statuses.
+- Preserve units and exact raw accumulators. Failed reads preserve output;
+  scaled reads require verified calibration. Reject invalid enums/nonfinite or
+  zero calibration and invalidate cached scaling on uncertain writes/reset.
+- Preflight range recalibration, ignore undefined low measurement bits, correct
+  alert-polarity documentation, and document read-to-clear behavior.
+- Extend portable host, sanitizer, package, adapter, and SoC compile coverage.
+
+
 All notable changes to `nsx-sensors` are documented here. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
