@@ -539,9 +539,9 @@ static void test_lifecycle(void)
     cfg = valid_config();
     CHECK(ina228_init(&ctx, &cfg) == NSX_SENSOR_OK);
     CHECK(get_reg16(REG_CONFIG) == 0);
-    CHECK(get_reg16(REG_ADCCFG) == ADCCFG_RESET);
+    CHECK(get_reg16(REG_ADCCFG) == (ADCCFG_RESET & 0x0fff));
     CHECK(get_reg16(REG_SHUNTCAL) == 1250 && ctx._calibrated);
-    cfg.adc_range=1; cfg.mode=INA228_MODE_TRIGGERED;
+    cfg.adc_range=1;
     cfg.current_conversion_time=INA228_TIME_150_us;
     cfg.voltage_conversion_time=INA228_TIME_84_us;
     cfg.temperature_conversion_time=INA228_TIME_50_us;
@@ -549,7 +549,13 @@ static void test_lifecycle(void)
     cfg.alert_latch=INA228_ALERT_LATCH_ENABLED;
     cfg.alert_polarity=INA228_ALERT_POLARITY_INVERTED;
     CHECK(ina228_init(&ctx, &cfg) == NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_ADCCFG) == 0x0282);
+    CHECK(ina228_set_mode(&ctx,INA228_MODE_TRIGGERED)==NSX_SENSOR_OK);
     CHECK(get_reg16(REG_ADCCFG) == 0x7282);
+    CHECK(ina228_init(&ctx,&cfg)==NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_ADCCFG) == 0x0282);
+    CHECK(ina228_set_mode(&ctx,INA228_MODE_CONTINUOUS)==NSX_SENSOR_OK);
+    CHECK(get_reg16(REG_ADCCFG) == 0xf282);
     CHECK(get_reg16(REG_CONFIG) == 0x10 && get_reg16(REG_SHUNTCAL) == 5000);
     CHECK((get_reg16(REG_DIAGALRT) & 0xf000) == 0x9000);
     CHECK(ina228_reset(&ctx) == NSX_SENSOR_OK && !ctx._calibrated);
@@ -608,7 +614,7 @@ static void test_calibration_failure_invalidation(void)
     fail_write_nth=1;
     CHECK(ina228_reset(&ctx)==NSX_SENSOR_E_IO && !ctx._calibrated);
     /* Failure at every init read/write leaves scaled reads disabled. */
-    for(int phase=1;phase<=6;++phase) {
+    for(int phase=1;phase<=5;++phase) {
         ctx=fresh_device(); ina228_config_t cfg=valid_config();
         CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
         fail_write_nth=phase;

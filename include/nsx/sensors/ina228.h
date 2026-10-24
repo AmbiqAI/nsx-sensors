@@ -165,7 +165,6 @@ typedef struct {
   float shunt_ohms;        /* Required: finite and positive. */
   float max_current_amps; /* Required: finite and positive. */
   uint16_t adc_range;     /* 0 = +/-163.84 mV; 1 = +/-40.96 mV. */
-  ina228_meas_mode_t mode;
   ina228_conversion_time_t current_conversion_time;
   ina228_conversion_time_t voltage_conversion_time;
   ina228_conversion_time_t temperature_conversion_time;
@@ -178,7 +177,7 @@ typedef struct {
   uint16_t device_id; /* DIEID in bits 15:4, silicon revision in bits 3:0. */
 } ina228_identity_t;
 
-/* Defaults match ADC power-on settings; shunt/current are zero and MUST be set
+/* Defaults match ADC power-on timing/averaging; shunt/current are zero and MUST be set
  * by the application. Validation is pure and checks calibration representability. */
 ina228_config_t ina228_default_config(void);
 nsx_sensor_status_t ina228_validate_config(const ina228_config_t *config);
@@ -187,8 +186,8 @@ nsx_sensor_status_t ina228_bind(ina228_context_t *ctx, const nsx_sensor_bus_t *b
 /* Reads identity only; no reset or configuration writes. Failure preserves id. */
 nsx_sensor_status_t ina228_probe(ina228_context_t *ctx, ina228_identity_t *identity);
 /* Validate, probe, stop conversions, apply explicit config/calibration, clear
- * accumulators, configure alerts, then start the requested mode. No conversion
- * wait. Disables shunt temperature compensation and conversion delay; leaves
+ * accumulators and configure alerts. Success leaves the ADC in shutdown.
+ * Start conversions explicitly with set_mode. No conversion wait. Disables shunt temperature compensation and conversion delay; leaves
  * alert thresholds unchanged. Does not issue a device reset. Failed I/O may
  * partially configure hardware and invalidates cached calibration; retry init.
  * Direct register APIs below are also usable after bind. Scaled current/power/

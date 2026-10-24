@@ -510,7 +510,8 @@ qualification remain release gates.
 ### INA228 migration status
 
 INA228 now implements the shared portable bus/status contract with bind, probe,
-pure config validation, and explicit init. `nsx::sensor_ina228` is independently
+pure config validation, and explicit init into shutdown; `ina228_set_mode`
+starts acquisition separately. `nsx::sensor_ina228` is independently
 selectable; the legacy aggregate contains three remaining drivers. Existing
 units and exact signed/unsigned 40-bit accumulators are retained. Failed reads
 preserve outputs, scaled reads require verified calibration, and uncertain

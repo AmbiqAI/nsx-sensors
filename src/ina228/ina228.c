@@ -571,14 +571,14 @@ ina228_set_averaging_count(ina228_context_t *ctx, ina228_avg_count_t count)
 
 ina228_config_t ina228_default_config(void)
 {
-    return (ina228_config_t){ .mode = INA228_MODE_CONTINUOUS,
+    return (ina228_config_t){
         .current_conversion_time = INA228_TIME_1052_us,
         .voltage_conversion_time = INA228_TIME_1052_us,
         .temperature_conversion_time = INA228_TIME_1052_us };
 }
 nsx_sensor_status_t ina228_validate_config(const ina228_config_t *config)
 {
-    if (!config || config->adc_range > 1 || (unsigned)config->mode > 15 ||
+    if (!config || config->adc_range > 1 ||
         (unsigned)config->current_conversion_time > 7 ||
         (unsigned)config->voltage_conversion_time > 7 ||
         (unsigned)config->temperature_conversion_time > 7 ||
@@ -609,8 +609,6 @@ nsx_sensor_status_t ina228_init(ina228_context_t *ctx, const ina228_config_t *co
     if (status == NSX_SENSOR_OK)
         status = ina228_write_register(ctx, INA228_REG_DIAGALRT,
             (uint16_t)((copy.alert_latch << 15) | (copy.alert_polarity << 12)), 0xffff);
-    if (status == NSX_SENSOR_OK)
-        status = ina228_write_register(ctx, INA228_REG_ADCCFG, (uint16_t)(adc | (copy.mode << 12)), 0xffff);
     if (status != NSX_SENSOR_OK) ctx->_calibrated = false;
     return status;
 }

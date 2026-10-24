@@ -5,7 +5,8 @@
 - Move INA228 to `include/nsx/sensors/ina228.h` / `src/ina228/ina228.c` and
   `nsx::sensor_ina228`; remove it from the legacy aggregate.
 - Replace binding-only init with shared-bus bind, identity probe, pure config
-  validation, and explicit initialization. Return common sensor statuses.
+  validation, and explicit initialization into shutdown. Start conversions
+  separately with `ina228_set_mode`. Return common sensor statuses.
 - Preserve units and exact raw accumulators. Failed reads preserve output;
   scaled reads require verified calibration. Reject invalid enums/nonfinite or
   zero calibration and invalidate cached scaling on uncertain writes/reset.
