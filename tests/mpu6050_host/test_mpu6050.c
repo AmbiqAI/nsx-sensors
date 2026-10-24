@@ -12,6 +12,7 @@ typedef struct {
     bool stuck_reset, stuck_fifo, auto_ready, frozen_clock, fail_after_read;
     unsigned sample_reads, delay_calls;
     uint32_t transfer_us, oversleep_us;
+    size_t i2c_clocks, overflow_fifo_read;
     int16_t bias_accel[3], bias_gyro[3];
     bool simulate_offsets;
 } fake_t;
@@ -37,6 +38,7 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *t)
 {
     fake_t *f = user;
     ++f->calls; f->time += f->transfer_us;
+    f->i2c_clocks += 9 * (t->rx_size ? 2 + t->tx_size + t->rx_size : 1 + t->tx_size);
     assert(t->tx && t->tx_size >= 1 && t->tx_size <= 3);
     uint8_t reg = t->tx[0];
     bool fail = f->calls == f->fail_at;
@@ -44,11 +46,16 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *t)
     if (t->rx_size) {
         assert(t->tx_size == 1 && t->rx && t->rx_size <= 14);
         if (reg == 0x74) {
+            if (!(f->regs[0x6a] & 0x40)) {
+                memset(t->rx, 0, t->rx_size); /* Disabled FIFO cannot consume data. */
+                return NSX_SENSOR_OK;
+            }
             ++f->fifo_reads;
             assert(f->fifo_pos + t->rx_size <= f->fifo_len);
             memcpy(t->rx, f->fifo + f->fifo_pos, t->rx_size);
             f->fifo_pos += t->rx_size;
             if (f->fifo_reads == f->fail_fifo_read) fail = true;
+            if (f->fifo_reads == f->overflow_fifo_read) f->regs[0x3a] |= 0x10;
         } else if (reg == 0x72) {
             assert(t->rx_size == 2);
             size_t count = f->fifo_len - f->fifo_pos;
@@ -236,6 +243,7 @@ static void test_fifo(void)
     size_t calls = f.calls;
     assert(mpu6050_read_fifo(&ctx, frames, 4, &completed) == NSX_SENSOR_E_STATE && completed == 0 && f.calls == calls);
     assert(mpu6050_reset_fifo(&ctx) == NSX_SENSOR_OK && !ctx._fifo_enabled);
+    assert(mpu6050_set_fifo_enable(&ctx, 1) == NSX_SENSOR_OK);
     fill_fifo(&f, 1);
     int16_t v = 123;
     assert(mpu6050_fifo_pop(&ctx, &v) == NSX_SENSOR_OK && v == -2 && f.fifo_pos == 2);
@@ -257,6 +265,7 @@ static void test_fifo(void)
     assert(mpu6050_set_sample_rate(&ctx, 50) == NSX_SENSOR_OK);
     assert(mpu6050_read_fifo(&ctx, frames, 4, &completed) == NSX_SENSOR_E_STATE);
     assert(mpu6050_reset_fifo(&ctx) == NSX_SENSOR_OK);
+    assert(mpu6050_set_fifo_enable(&ctx, 1) == NSX_SENSOR_OK);
     fill_fifo(&f, 1);
     uint8_t bytes[16];
     assert(mpu6050_read_fifo_bytes(&ctx, bytes, sizeof(bytes), &completed) == NSX_SENSOR_OK && completed == 14);
@@ -273,6 +282,7 @@ static void test_fifo_formats(void)
             (channels >> 3)&1, (channels >> 4)&1, channels&1, 0,0,0};
         assert(mpu6050_configure_fifo(&ctx, &c) == NSX_SENSOR_OK);
         assert(mpu6050_reset_fifo(&ctx) == NSX_SENSOR_OK);
+        assert(mpu6050_set_fifo_enable(&ctx, 1) == NSX_SENSOR_OK);
         size_t size = 0;
         if (c.accelEnable) for (unsigned i = 0; i < 3; ++i) { put_word(f.fifo + size, (int16_t)(100+i)); size += 2; }
         if (c.tempEnable) { put_word(f.fifo + size, 200); size += 2; }
@@ -368,10 +378,122 @@ static void test_instances_and_recovery(void)
     assert(mpu6050_configure_fifo(&x, &fifo) == NSX_SENSOR_E_STATE);
     assert(mpu6050_set_interrupt_enable(&x, 1, 1) == NSX_SENSOR_OK && a.regs[0x38] == 0x11);
 }
+static void test_fifo_enable_and_batches(void)
+{
+    fake_t f; mpu6050_context_t ctx; setup_fifo(&ctx, &f);
+    assert(mpu6050_set_fifo_enable(&ctx, 0) == NSX_SENSOR_OK);
+    mpu6050_raw_sample_t frames[15];
+    memset(frames, 0x5a, sizeof(frames));
+    mpu6050_raw_sample_t saved = frames[0];
+    size_t done = 99, calls = f.calls;
+    int16_t value = 77; uint8_t bytes[4] = {1,2,3,4};
+    assert(mpu6050_read_fifo(&ctx, frames, 15, &done) == NSX_SENSOR_E_STATE && done == 0);
+    assert(mpu6050_read_fifo_bytes(&ctx, bytes, 4, &done) == NSX_SENSOR_E_STATE && done == 0);
+    assert(mpu6050_fifo_pop(&ctx, &value) == NSX_SENSOR_E_STATE && value == 77);
+    assert(!memcmp(frames, &saved, sizeof(saved)) && bytes[0] == 1 && bytes[3] == 4);
+    assert(f.calls == calls && f.fifo_pos == 0);
+    /* Disabling preserves queued data; re-enable permits consuming it. */
+    assert(mpu6050_set_fifo_enable(&ctx, 1) == NSX_SENSOR_OK);
+    assert(mpu6050_read_fifo(&ctx, frames, 1, &done) == NSX_SENSOR_OK && done == 1);
+
+    const mpu6050_fifo_config_t config = {.xgEnable = 1};
+    assert(mpu6050_configure_fifo(&ctx, &config) == NSX_SENSOR_OK);
+    assert(mpu6050_set_lowpass_filter(&ctx, DLPF_260HZ) == NSX_SENSOR_OK);
+    assert(mpu6050_set_sample_rate(&ctx, 8000) == NSX_SENSOR_OK);
+    for (unsigned failure = 0; failure < 3; ++failure) {
+        assert(mpu6050_reset_fifo(&ctx) == NSX_SENSOR_OK);
+        assert(mpu6050_set_fifo_enable(&ctx, 1) == NSX_SENSOR_OK);
+        for (size_t i = 0; i < 15; ++i) put_word(f.fifo + 2*i, (int16_t)((int)i - 7));
+        f.fifo_len = 30; f.fifo_reads = 0;
+        f.fail_fifo_read = failure == 1 ? 2 : 0;
+        f.overflow_fifo_read = failure == 2 ? 2 : 0;
+        memset(frames, 0x5a, sizeof(frames));
+        nsx_sensor_status_t result = mpu6050_read_fifo(&ctx, frames, 15, &done);
+        if (!failure) {
+            assert(result == NSX_SENSOR_OK && done == 15 && f.fifo_pos == 30);
+            for (size_t i = 0; i < done; ++i)
+                assert(frames[i].gyro[0] == (int)i - 7 && frames[i].valid == MPU6050_DATA_GYRO_X);
+        } else {
+            assert(result == (failure == 1 ? NSX_SENSOR_E_IO : NSX_SENSOR_E_OVERFLOW));
+            assert(done == 7 && f.fifo_pos == 28 && !ctx._fifo_valid);
+            for (size_t i = 0; i < done; ++i) assert(frames[i].gyro[0] == (int)i - 7);
+            for (size_t i = done; i < 15; ++i) assert(!memcmp(&frames[i], &saved, sizeof(saved)));
+        }
+    }
+    assert(mpu6050_reset_fifo(&ctx) == NSX_SENSOR_OK);
+    assert(mpu6050_set_fifo_enable(&ctx, 1) == NSX_SENSOR_OK);
+    f.overflow_fifo_read = f.fail_fifo_read = 0; f.fifo_reads = 0;
+    f.fifo_len = 15; /* Seven words and an incomplete tail. */
+    f.i2c_clocks = 0;
+    assert(mpu6050_read_fifo(&ctx, frames, 15, &done) == NSX_SENSOR_OK && done == 7 && f.fifo_pos == 14);
+    /* Include snapshot/status overhead: bus demand must fit 400kHz even when
+     * each call has just seven 8kHz gyro samples. Excludes software delays. */
+    assert(f.i2c_clocks * 8000 / done < 400000);
+    assert(mpu6050_read_fifo(&ctx, frames, 15, &done) == NSX_SENSOR_AGAIN && done == 0 && f.fifo_pos == 14);
+    assert(mpu6050_reset_fifo(&ctx) == NSX_SENSOR_OK);
+    assert(mpu6050_read_fifo(&ctx, frames, 15, &done) == NSX_SENSOR_E_STATE);
+}
+typedef struct {
+    fake_t device;
+    uint64_t epoch;
+    unsigned produced, reads;
+    int16_t samples[4];
+} timed_fake_t;
+static void tick_conversion(timed_fake_t *t)
+{
+    unsigned n = (unsigned)((t->device.time - t->epoch) / 10000);
+    if (n > t->produced) {
+        t->produced = n;
+        put_word(t->device.regs + 0x3b, (int16_t)(100*n));
+        t->device.regs[0x3a] |= 1;
+    }
+}
+static void conversion_delay(void *user, uint32_t us)
+{
+    timed_fake_t *t = user;
+    t->device.time += us;
+    tick_conversion(t);
+}
+static nsx_sensor_status_t conversion_transfer(void *user, const nsx_sensor_transfer_t *transfer_desc)
+{
+    timed_fake_t *t = user;
+    if (transfer_desc->tx[0] == 0x3b && transfer_desc->rx_size) {
+        /* Conversion advances independently while the task waits for the bus. */
+        if (!t->reads) t->device.time += 10000;
+        tick_conversion(t);
+        assert(t->reads < 4);
+        t->samples[t->reads++] = word(t->device.regs + 0x3b);
+    }
+    return transfer(&t->device, transfer_desc);
+}
+static void test_fresh_average(void)
+{
+    for (unsigned any_read_clear = 0; any_read_clear < 2; ++any_read_clear) {
+        timed_fake_t t = {0}; mpu6050_context_t ctx;
+        init_fake(&ctx, &t.device);
+        const mpu6050_int_config_t intr = {.rdClear = (uint8_t)any_read_clear};
+        assert(mpu6050_configure_interrupt(&ctx, &intr) == NSX_SENSOR_OK);
+        assert(mpu6050_set_interrupt_enable(&ctx, 0, 1) == NSX_SENSOR_OK);
+        static const nsx_sensor_bus_ops_t timed_ops = {conversion_transfer};
+        ctx.bus.ops = &timed_ops; ctx.bus.user = &t;
+        ctx.runtime.delay_us = conversion_delay; ctx.runtime.user = &t;
+        t.epoch = t.device.time;
+        mpu6050_raw_sample_t mean;
+        assert(mpu6050_mean_sensors(&ctx, 2, 100000, &mean) == NSX_SENSOR_OK);
+        assert(t.reads == 2 && t.samples[0] == 200 && t.samples[1] == 300);
+        assert(mean.accel[0] == 250 && t.device.time - t.epoch == 30000);
+        /* Clearing pending DRDY does not extend the timeout to obtain freshness. */
+        t.device.regs[0x3a] = 1;
+        mpu6050_raw_sample_t saved = mean;
+        assert(mpu6050_mean_sensors(&ctx, 1, 5000, &mean) == NSX_SENSOR_E_TIMEOUT);
+        assert(!memcmp(&mean, &saved, sizeof(mean)));
+    }
+}
 int main(void)
 {
     test_lifecycle(); test_config_and_data(); test_failures(); test_fifo();
     test_fifo_formats(); test_offsets_and_calibration(); test_instances_and_recovery();
+    test_fifo_enable_and_batches(); test_fresh_average();
     puts("MPU6050: lifecycle, register fields, samples, FIFO recovery, offsets and bounded calibration passed");
     return 0;
 }

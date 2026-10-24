@@ -500,7 +500,7 @@ static nsx_sensor_status_t fifo_snapshot(mpu6050_context_t *ctx, uint16_t *count
 {
     nsx_sensor_status_t s = ready(ctx);
     if (s != NSX_SENSOR_OK) return s;
-    if (!ctx->_fifo_valid || ctx->_any_read_clear) return NSX_SENSOR_E_STATE;
+    if (!ctx->_fifo_enabled || !ctx->_fifo_valid || ctx->_any_read_clear) return NSX_SENSOR_E_STATE;
     s = check_overflow(ctx);
     return s == NSX_SENSOR_OK ? mpu6050_get_fifo_count(ctx, count) : s;
 }
@@ -532,12 +532,16 @@ nsx_sensor_status_t mpu6050_read_fifo(mpu6050_context_t *ctx, mpu6050_raw_sample
     size_t count = available / frame_size;
     if (!count) return NSX_SENSOR_AGAIN;
     if (count > capacity) count = capacity;
-    for (size_t i = 0; i < count; ++i) {
+    while (*completed < count) {
         uint8_t bytes[14];
-        s = consume(ctx, bytes, frame_size);
+        size_t batch = count - *completed;
+        if (batch > sizeof(bytes) / frame_size) batch = sizeof(bytes) / frame_size;
+        /* Publish only after the entire burst and its overflow check succeed. */
+        s = consume(ctx, bytes, batch * frame_size);
         if (s != NSX_SENSOR_OK) return s;
-        frames[i] = decode(bytes, ctx->_fifo_mask);
-        ++*completed;
+        for (size_t i = 0; i < batch; ++i)
+            frames[*completed + i] = decode(bytes + i * frame_size, ctx->_fifo_mask);
+        *completed += batch;
     }
     return NSX_SENSOR_OK;
 }
@@ -656,11 +660,15 @@ static nsx_sensor_status_t mean_samples(mpu6050_context_t *ctx, uint16_t samples
                                        mpu6050_raw_sample_t *mean)
 {
     uint8_t status;
-    nsx_sensor_status_t s = mpu6050_get_interrupt_status(ctx, &status); /* Discard stale DRDY. */
-    if (s != NSX_SENSOR_OK) return s;
+    nsx_sensor_status_t s;
     int64_t accel[3] = {0}, gyro[3] = {0}, temp = 0;
     mpu6050_raw_sample_t r = {0};
     for (unsigned n = 0; n < samples; ++n) {
+        /* A conversion between the previous status check and burst can leave
+         * DRDY set for data already consumed. Discard it before each wait.
+         * This may skip a conversion, but never counts that stale flag twice. */
+        s = mpu6050_get_interrupt_status(ctx, &status);
+        if (s != NSX_SENSOR_OK) return s;
         do {
             s = pause_for(ctx, b, 1000);
             if (s != NSX_SENSOR_OK) return s;

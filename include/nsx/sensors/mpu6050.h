@@ -173,9 +173,12 @@ nsx_sensor_status_t mpu6050_configure_fifo(mpu6050_context_t *ctx, const mpu6050
 nsx_sensor_status_t mpu6050_set_fifo_enable(mpu6050_context_t *ctx, uint8_t enable);
 nsx_sensor_status_t mpu6050_reset_fifo(mpu6050_context_t *ctx);
 nsx_sensor_status_t mpu6050_get_fifo_count(mpu6050_context_t *ctx, uint16_t *count);
-/* Snapshot reads, bounded by available bytes and caller capacity. Empty FIFO or
+/* FIFO must be enabled for typed, byte, or word consumption.
+ * Snapshot reads, bounded by available bytes and caller capacity. Empty FIFO or
  * no complete frame returns AGAIN. Overflow or ambiguous consumption on failure
- * requires reset_fifo; no automatic retry. Published frames remain usable, but
+ * requires reset_fifo; no automatic retry. Complete frames are read in bursts
+ * of up to 14 bytes; a failed burst publishes none of its frames.
+ * Published frames remain usable, but
  * transport errors may consume additional unknown bytes. INT_STATUS reads clear
  * flags; the driver remembers observed overflow until reset. rdClear=1 is rejected
  * while FIFO is in use because unrelated reads could erase overflow evidence. */
@@ -202,7 +205,9 @@ nsx_sensor_status_t mpu6050_set_gyro_offset(mpu6050_context_t *ctx, uint8_t axis
 nsx_sensor_status_t mpu6050_get_accel_offset(mpu6050_context_t *ctx, uint8_t axis, int16_t *offset);
 nsx_sensor_status_t mpu6050_get_gyro_offset(mpu6050_context_t *ctx, uint8_t axis, int16_t *offset);
 /* Fresh DRDY-paced burst samples, no FIFO or low-power mode. Discards stale
- * DRDY at entry. samples=1..4096; bounded by timeout and finite sample count. */
+ * DRDY before each sample wait, so conversions may be skipped but a consumed
+ * sample is not accepted again from a pending flag. samples=1..4096; bounded by
+ * timeout and finite sample count. */
 nsx_sensor_status_t mpu6050_mean_sensors(mpu6050_context_t *ctx, uint16_t samples,
                                        uint32_t timeout_us, mpu6050_raw_sample_t *mean);
 typedef struct {
