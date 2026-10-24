@@ -473,11 +473,26 @@ single-driver/common-only builds and GCC compilation for all eight declared
 SoCs. Hardware, Zephyr, and representative NSX firmware links remain pending.
 
 The shared NSX port is not implemented. PR #18 removes the BME688-specific
-adapters and makes the remaining four NSX drivers an explicit transitional
-aggregate. It is not a drop-in update for NSX apps; keep the PR draft until the
+adapters and retains the remaining four NSX drivers in a transitional aggregate.
+Following independent review, commit `7e86936` enables that aggregate by default
+when all declared NSX dependency targets already exist; standalone builds keep
+it off. The default NSX consumer test no longer forces an option override. It is not a drop-in update for NSX apps; keep the PR draft until the
 shared port and SDK prerequisites make the integration transition ready for
 review. Existing applications retain their immutable version pins. This is
 implementation progress, not acceptance of the full RFC or a v1 release.
+
+The SDK prerequisite is now implemented in
+[draft SDK PR #130](https://github.com/AmbiqAI/nsx-ambiq-sdk/pull/130), commit
+`40b893d`: `nsx_i2c_write_read_combined` uses a single IOM instruction-plus-RX
+transaction with repeated START and final STOP. It supports HAL-defined short
+prefix limits (3 bytes on Apollo3/3p, 5 on newer supported IOMs), validates bounds
+and RX alignment before I/O, and preserves native HAL errors. Existing
+STOP-separated helpers are unchanged. Local evidence includes 1587 SDK tests
+passed (172 skipped), recording-HAL tests for both instruction layouts,
+ASan/UBSan, and real-header C/C++ GCC compilation for all eight I2C SoCs.
+Waveform and physical recovery qualification remain pending. The future shared
+sensor adapter must use this operation, enforce its per-operation limits, and
+supply the locking/alignment/status mapping; that adapter is not yet implemented.
 
 ### Delivery plan
 
