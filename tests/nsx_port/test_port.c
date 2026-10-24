@@ -3,6 +3,7 @@
 #include <nsx/sensors/ledstick.h>
 #include <nsx/sensors/bme688.h>
 #include <nsx/sensors/ina228.h>
+#include <nsx/sensors/mpu6050.h>
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -39,6 +40,7 @@ uint32_t nsx_i2c_read(nsx_i2c_config_t *c, const void *b, uint32_t n, uint16_t a
 }
 uint32_t nsx_i2c_write_read_combined(nsx_i2c_config_t *c, uint16_t a, const void *t, size_t nt, void *r, size_t nr) {
     assert(c->iomHandle); selector=a; uint32_t status=record(3,t,nt,r,nr);
+    if(nt==1 && nr==1 && *(const uint8_t *)t==0x75) *(uint8_t *)r=0x68;
     if(nt==1 && *(const uint8_t *)t==0xf0) memset(r,1,nr);
     if(nt==1 && nr==2 && *(const uint8_t *)t==0x3e) { ((uint8_t *)r)[0]=0x54; ((uint8_t *)r)[1]=0x49; }
     if(nt==1 && nr==2 && *(const uint8_t *)t==0x3f) { ((uint8_t *)r)[0]=0x22; ((uint8_t *)r)[1]=0x81; }
@@ -120,6 +122,11 @@ int main(void) {
     assert(ina228_bind(&monitor,&a.bus)==NSX_SENSOR_OK);
     assert(ina228_probe(&monitor,&monitor_id)==NSX_SENSOR_OK);
     assert(monitor_id.manufacturer_id==0x5449 && monitor_id.device_id==0x2281);
+    assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,MPU_I2CADDRESS_AD0_HIGH,&lock)==NSX_SENSOR_OK);
+    mpu6050_context_t motion; uint8_t motion_id;
+    assert(mpu6050_bind(&motion,&a.bus,NULL)==NSX_SENSOR_OK);
+    assert(mpu6050_probe(&motion,&motion_id)==NSX_SENSOR_OK && motion_id==0x68);
+    assert(route==3 && selector==0x69 && sent_size==1 && sent[0]==0x75);
     /* Explicitly serialized application can omit hooks. Binding still has no I/O. */
     before=calls; assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,0x20,NULL)==NSX_SENSOR_OK);
     assert(calls==before); held=1;

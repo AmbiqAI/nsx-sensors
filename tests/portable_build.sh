@@ -23,12 +23,13 @@ cmake -S "$root/examples/baremetal" -B "$out/nested" -DNSX_SENSORS_SOURCE="$root
 cmake --build "$out/nested" --parallel
 "$out/nested/sensor_example"
 "$out/nested/sensor_cpp"
-for driver in BME688 LEDSTICK INA228 NONE; do
-    bme=OFF; led=OFF; ina=OFF
+for driver in BME688 LEDSTICK INA228 MPU6050 NONE; do
+    bme=OFF; led=OFF; ina=OFF; mpu=OFF
     if [[ "$driver" == BME688 ]]; then bme=ON; fi
     if [[ "$driver" == LEDSTICK ]]; then led=ON; fi
     if [[ "$driver" == INA228 ]]; then ina=ON; fi
-    cmake -S "$root" -B "$out/$driver" -DNSX_SENSOR_BME688="$bme" -DNSX_SENSOR_LEDSTICK="$led" -DNSX_SENSOR_INA228="$ina" \
+    if [[ "$driver" == MPU6050 ]]; then mpu=ON; fi
+    cmake -S "$root" -B "$out/$driver" -DNSX_SENSOR_BME688="$bme" -DNSX_SENSOR_LEDSTICK="$led" -DNSX_SENSOR_INA228="$ina" -DNSX_SENSOR_MPU6050="$mpu" \
         -DNSX_SENSORS_TESTS=ON
     cmake --build "$out/$driver" --parallel
     if [[ "$driver" != NONE ]]; then ctest --test-dir "$out/$driver" --output-on-failure; fi

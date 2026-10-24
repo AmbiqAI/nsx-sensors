@@ -2,8 +2,8 @@
 
 ## Unreleased portable foundation
 
-BME688, LED Stick and INA228 now have portable CMake targets and offline host tests.
-They share the NSX adapter; Zephyr wrappers remain pending. The remaining three drivers
+BME688, LED Stick, INA228 and MPU6050 now have portable CMake targets and offline host tests.
+They share the NSX adapter; Zephyr wrappers remain pending. The remaining two drivers
 are still NSX-only; their aggregate defaults on when its NSX dependencies exist
 (and can be overridden with `NSX_SENSORS_LEGACY_NSX`). Metadata dependencies
 below describe that NSX integration, not portable-core requirements. No framework
@@ -11,8 +11,8 @@ or hardware qualification is implied by portable compilation.
 
 | Drivers | Portable core | NSX integration | Zephyr wrapper | Hardware |
 | --- | --- | --- | --- | --- |
-| BME688, LED Stick, INA228 | Implemented; host tested and linked | Shared NSX adapter | Pending | Unqualified |
-| MPU6050, MAX86150, ICM-45605 | Pending | Existing API via NSX aggregate | Pending | Unqualified |
+| BME688, LED Stick, INA228, MPU6050 | Implemented; host tested and linked | Shared NSX adapter | Pending | Unqualified |
+| MAX86150, ICM-45605 | Pending | Existing API via NSX aggregate | Pending | Unqualified |
 
 ## What the declarations mean
 
@@ -238,3 +238,8 @@ CI revision, transfer limits, locking, and remaining hardware checks.
 
 INA228 migration and its failure/precision tests are documented in
 [the INA228 guide](migration/ina228.md).
+
+MPU6050's portable migration has host coverage for lifecycle, all native FIFO
+formats, fault recovery, signed scaling, preserved compensation bits, and bounded
+calibration. See [the MPU6050 guide](migration/mpu6050.md). Physical FIFO timing,
+interrupt behavior and calibration convergence still require hardware testing.

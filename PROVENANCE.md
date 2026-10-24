@@ -186,3 +186,19 @@ calibration semantics were cross-checked against TI INA228 SLYS021A (May 2022),
 https://www.ti.com/lit/ds/symlink/ina228.pdf. The portable migration preserves
 units/raw counters and tightens lifecycle, calibration, and error contracts;
 see `docs/migration/ina228.md`.
+
+## Portable MPU6050 migration
+
+The Ambiq-authored MPU6050 port listed in the lineage table moved from
+`src/nsx_mpu6050.c` / `includes-api/nsx_mpu6050.h` to
+`src/mpu6050/mpu6050.c` / `include/nsx/sensors/mpu6050.h`, with native portable
+transport, bounded timing, and corrected register/FIFO/calibration behavior.
+No external implementation was copied. The InvenSense MPU-6000/MPU-6050
+Product Specification PS-MPU-6000A-00 revision 3.4 (2013-08-19), available as
+[the original manufacturer PDF mirrored by MikroElektronika](https://download.mikroe.com/documents/datasheets/MPU-6000_datasheet.pdf),
+was consulted for sensitivities, temperature conversion, and operating modes.
+The [i2cdevlib MPU6050 reference](https://github.com/jrowberg/i2cdevlib/blob/master/Arduino/MPU6050/MPU6050.cpp)
+was consulted for register-map annotations and existing offset compensation
+semantics. This is a rewrite of the existing Ambiq port, not a vendored import;
+`vendor/tdk-icm45605` and its license are unchanged.
+See `docs/migration/mpu6050.md` for behavior changes and qualification limits.
