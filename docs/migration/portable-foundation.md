@@ -11,11 +11,10 @@ BME688 and LED Stick use the same portable bus/status types. BME688 additionally
 uses runtime timing hooks. Cores compile without NSX, an RTOS, or a vendor HAL.
 No generic sensor object, heap allocation, queues, or framework wrapper is added.
 
-The next required changes are a genuine combined I2C SDK operation and a shared
-NSX adapter, plus the TDK per-instance callback feasibility work. These are not
-implemented here. Do not release this transition before replacing the NSX
-integration: existing BME688 and LED Stick NSX call sites need the new endpoint
-and lifecycle below. The remaining four drivers retain their old APIs.
+The shared [NSX adapter](../nsx-port.md) supplies endpoints using the genuine
+combined I2C operation from SDK PR #130. The TDK per-instance callback work
+and migration of the remaining four drivers are still pending. Existing BME688
+and LED Stick NSX call sites need the endpoint and lifecycle changes below.
 
 ## Shared contracts
 
@@ -29,14 +28,14 @@ not remain held while waiting for a conversion.
 A transfer sends `tx_size` bytes then receives `rx_size` bytes synchronously.
 At least one length is nonzero. I2C combined transfers use repeated START;
 SPI holds CS across both phases and discards receive data during transmit.
-The SPI endpoint documents the receive fill byte. Unsupported operations return
+The SPI endpoint documents receive-phase MOSI behavior. Unsupported operations return
 `NSX_SENSOR_E_UNSUPPORTED` before I/O. Do not split transactions silently.
 
 Limits are explicit inclusive byte counts; zero means the direction is
 unsupported, never unlimited. BME688 requires TX >= 2 and RX >= 23; LED Stick
 requires TX >= 5 and does not need RX. Common validation rejects oversized or
-invalid requests before invoking a callback. The endpoint retains native HAL
-errors and returns a shared status. Failed transfers may have hardware effects.
+invalid requests before invoking a callback. The endpoint retains available transport
+diagnostics and returns a shared status. Failed transfers may have hardware effects.
 
 Adapters own alignment, scratch storage and bounded completion. They must use
 compatible fixed SPI settings or restore endpoint settings while holding the
@@ -55,7 +54,7 @@ by elapsed-time budgets; no additional wait is issued after expiry.
 | `#include "nsx_bme688.h"` | `#include <nsx/sensors/bme688.h>` |
 | `bme688_transport_t` register callbacks | `nsx_sensor_bus_t` complete transactions plus `nsx_sensor_runtime_t` |
 | `bme688_init(ctx, transport)` | `bme688_bind(ctx, bus, runtime)` then `bme688_init(ctx, config)` |
-| `bme688_init_i2c` / `bme688_init_spi` | Application endpoint today; common NSX binding in the follow-up port |
+| `bme688_init_i2c` / `bme688_init_spi` | `nsx_sensor_nsx_bind_i2c` / `nsx_sensor_nsx_bind_spi`, then portable bind/init |
 | `BME688_OK`, device status enum | `NSX_SENSOR_OK`, `nsx_sensor_status_t` |
 | Reset restores default configuration | Reset invalidates state; initialize explicitly before sampling |
 | `context.transport_status` | Native diagnostics retained by the endpoint |

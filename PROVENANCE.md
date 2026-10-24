@@ -166,3 +166,13 @@ provenance or licensing. LED Stick's existing `src/nsx_ledstick.c` port is now
 and one-based numbering were cross-checked against SparkFun's
 [Qwiic LED Stick reference](https://github.com/sparkfun/SparkFun_Qwiic_LED_Stick_Arduino_Library/blob/master/src/Qwiic_LED_Stick.cpp).
 No additional vendor source was copied in this migration.
+
+## Shared NSX adapter dependency
+
+The unreleased portable adapter is new Ambiq-authored code with no copied
+vendor implementation. Its CI SDK prerequisite is
+`1f18f01555897ed8e06437ff9727f2bb61771e70` (SDK PR #130), superseding the
+v5.2.24 CI baseline above for this branch. It supplies the genuine combined
+I2C operation. Hardware protocol reasoning uses Apollo3 Blue SoC Datasheet
+DS-A3-1p3p0 sections 8.14.9/8.14.12 and 8.15.4; SDK limits come from each
+SoC's HAL headers. See `docs/nsx-port.md` for limits and validation scope.
