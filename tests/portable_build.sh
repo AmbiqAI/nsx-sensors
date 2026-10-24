@@ -23,11 +23,12 @@ cmake -S "$root/examples/baremetal" -B "$out/nested" -DNSX_SENSORS_SOURCE="$root
 cmake --build "$out/nested" --parallel
 "$out/nested/sensor_example"
 "$out/nested/sensor_cpp"
-for driver in BME688 LEDSTICK NONE; do
-    bme=OFF; led=OFF
+for driver in BME688 LEDSTICK INA228 NONE; do
+    bme=OFF; led=OFF; ina=OFF
     if [[ "$driver" == BME688 ]]; then bme=ON; fi
     if [[ "$driver" == LEDSTICK ]]; then led=ON; fi
-    cmake -S "$root" -B "$out/$driver" -DNSX_SENSOR_BME688="$bme" -DNSX_SENSOR_LEDSTICK="$led" \
+    if [[ "$driver" == INA228 ]]; then ina=ON; fi
+    cmake -S "$root" -B "$out/$driver" -DNSX_SENSOR_BME688="$bme" -DNSX_SENSOR_LEDSTICK="$led" -DNSX_SENSOR_INA228="$ina" \
         -DNSX_SENSORS_TESTS=ON
     cmake --build "$out/$driver" --parallel
     if [[ "$driver" != NONE ]]; then ctest --test-dir "$out/$driver" --output-on-failure; fi
@@ -42,7 +43,7 @@ for driver in BME688 LEDSTICK NONE; do
         grep -q 'nsx_sensors_FOUND to FALSE' "$out/missing-component.log"
     fi
 done
-# Sanitizers cover the shared bus and both actual portable driver libraries.
+# Sanitizers cover the shared bus and all actual portable driver libraries.
 cmake -S "$root" -B "$out/sanitize" -DNSX_SENSORS_TESTS=ON \
     -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -pedantic -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie' \
     -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined -no-pie'

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Host unit tests for the INA228 driver register math.
 #
-# Compiles src/nsx_ina228.c against the stub transport in
+# Compiles src/ina228/ina228.c against the portable fake transport in
 # tests/ina228_host_unit/ and runs the resulting binary on the host, so the
 # compiler must be a native one (default cc), never a bare-metal cross. This
 # checks the driver's arithmetic against the datasheet; it proves nothing
@@ -29,8 +29,9 @@ mkdir -p "$out_dir"
     -Wextra \
     -Werror \
     -I "$test_dir" \
-    -I "$repo_root/includes-api" \
-    "$repo_root/src/nsx_ina228.c" \
+    -I "$repo_root/include" \
+    "$repo_root/src/common/bus.c" \
+    "$repo_root/src/ina228/ina228.c" \
     "$test_dir/test_nsx_ina228.c" \
     -lm \
     -o "$out_dir/test_nsx_ina228"

@@ -2,6 +2,7 @@
 #include <nsx/sensors/port_nsx.h>
 #include <nsx/sensors/ledstick.h>
 #include <nsx/sensors/bme688.h>
+#include <nsx/sensors/ina228.h>
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -39,6 +40,8 @@ uint32_t nsx_i2c_read(nsx_i2c_config_t *c, const void *b, uint32_t n, uint16_t a
 uint32_t nsx_i2c_write_read_combined(nsx_i2c_config_t *c, uint16_t a, const void *t, size_t nt, void *r, size_t nr) {
     assert(c->iomHandle); selector=a; uint32_t status=record(3,t,nt,r,nr);
     if(nt==1 && *(const uint8_t *)t==0xf0) memset(r,1,nr);
+    if(nt==1 && nr==2 && *(const uint8_t *)t==0x3e) { ((uint8_t *)r)[0]=0x54; ((uint8_t *)r)[1]=0x49; }
+    if(nt==1 && nr==2 && *(const uint8_t *)t==0x3f) { ((uint8_t *)r)[0]=0x22; ((uint8_t *)r)[1]=0x81; }
     return status;
 }
 uint32_t nsx_spi_write(nsx_spi_config_t *c, const void *b, uint32_t n, uint64_t p, uint32_t np, uint32_t cs) {
@@ -113,6 +116,10 @@ int main(void) {
     bme688_identity_t identity;
     assert(bme688_probe(&sensor,&identity)==NSX_SENSOR_OK);
     assert(route==3 && sent[0]==0xf0);
+    ina228_context_t monitor; ina228_identity_t monitor_id;
+    assert(ina228_bind(&monitor,&a.bus)==NSX_SENSOR_OK);
+    assert(ina228_probe(&monitor,&monitor_id)==NSX_SENSOR_OK);
+    assert(monitor_id.manufacturer_id==0x5449 && monitor_id.device_id==0x2281);
     /* Explicitly serialized application can omit hooks. Binding still has no I/O. */
     before=calls; assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,0x20,NULL)==NSX_SENSOR_OK);
     assert(calls==before); held=1;

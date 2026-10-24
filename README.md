@@ -10,13 +10,13 @@ Current drivers:
 | Bosch BME688 temperature/pressure/humidity/raw gas | I2C / 4-wire SPI | `include/nsx/sensors/bme688.h` |
 | MAX86150 ECG/PPG sensor | I2C | `includes-api/nsx_max86150.h` |
 | MPU6050 IMU | I2C | `includes-api/nsx_mpu6050.h` |
-| INA228 power and current monitor | I2C | `includes-api/nsx_ina228.h` |
+| INA228 power and current monitor | I2C | `include/nsx/sensors/ina228.h` |
 | SparkFun Qwiic LED Stick | I2C | `include/nsx/sensors/ledstick.h` |
 | TDK ICM-45605 6-axis IMU | SPI | `includes-api/nsx_icm45605.h` |
 
 This branch implements the first stage of [RFC 0001 (PR #17)](https://github.com/AmbiqAI/nsx-sensors/pull/17).
-BME688 and LED Stick have portable cores. The other four drivers still require
-NSX; framework wrappers and the shared NSX port are follow-up work. This is an
+BME688, LED Stick and INA228 have portable cores. The other three drivers still require
+NSX. The shared NSX port is available; Zephyr wrappers remain follow-up work. This is an
 unreleased API transition, not a v1 release or a drop-in v0 replacement.
 
 ## Usage
@@ -25,23 +25,24 @@ Portable CMake builds need no SDK, RTOS, network, or sibling repository:
 
 ```cmake
 add_subdirectory(third_party/nsx-sensors)
-target_link_libraries(my_app PRIVATE nsx::sensor_bme688 nsx::sensor_ledstick)
+target_link_libraries(my_app PRIVATE nsx::sensor_bme688 nsx::sensor_ledstick nsx::sensor_ina228)
 ```
 
-Both drivers are enabled by default. Set `NSX_SENSOR_BME688=OFF` or
-`NSX_SENSOR_LEDSTICK=OFF` to omit a driver. Installed consumers use
-`find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 ledstick)` and the
+All three portable drivers are enabled by default. Set `NSX_SENSOR_BME688=OFF`,
+`NSX_SENSOR_LEDSTICK=OFF`, or `NSX_SENSOR_INA228=OFF` to omit a driver. Installed consumers use
+`find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 ledstick ina228)` and the
 same targets. The runnable [fake-HAL example](examples/baremetal/) exercises
 binding/probing and command writes without pretending to read physical sensors.
 
 Caller-owned endpoints implement synchronous transfers using the board HAL.
 See [migration and transport contracts](docs/migration/portable-foundation.md)
-and the [BME688 guide](docs/bme688.md).
+and the [BME688 guide](docs/bme688.md). INA228 users should follow
+the [INA228 migration guide](docs/migration/ina228.md).
 
 The remaining NSX drivers are enabled by default when the enclosing build
 already supplies `nsx::core`, `nsx::i2c`, and `nsx::spi`. Standalone builds keep
-that aggregate off. `NSX_SENSORS_LEGACY_NSX` can explicitly override this default. The transitional `nsx::sensors` target contains INA228, MPU6050,
-MAX86150 and ICM-45605 only. BME688 and LED Stick use the separate portable
+that aggregate off. `NSX_SENSORS_LEGACY_NSX` can explicitly override this default. The transitional `nsx::sensors` target contains MPU6050,
+MAX86150 and ICM-45605 only. BME688, LED Stick and INA228 use the separate portable
 targets plus the shared `nsx::sensor_port_nsx` adapter. See the
 [NSX port guide](docs/nsx-port.md) for bindings and the SDK prerequisite.
 Existing apps remain pinned to v0 releases until deliberately migrated.

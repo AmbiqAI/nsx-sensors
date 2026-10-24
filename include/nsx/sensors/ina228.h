@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef NSX_INA228_H
-#define NSX_INA228_H
+#ifndef NSX_SENSORS_INA228_H
+#define NSX_SENSORS_INA228_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,14 +19,19 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-#include "nsx_i2c.h"
+#include <stdbool.h>
+#include <nsx/sensors/bus.h>
 
+/* Caller-owned context. Serialize whole driver operations per physical device.
+ * The bus descriptor is copied; its callback/user storage must outlive ctx.
+ * Fields prefixed with _ are private. No controller or device I/O during bind. */
 typedef struct {
-  nsx_i2c_config_t *i2c_config;
-  uint16_t addr;
+  nsx_sensor_bus_t bus;
   float _shunt_res;
+  float _max_current;
   float _current_lsb;
-  uint8_t _calibrated; ///< Nonzero once ina228_set_shunt() has programmed SHUNT_CAL
+  bool _bound;
+  bool _calibrated;
 } ina228_context_t;
 
 
@@ -139,8 +144,8 @@ typedef enum  {
  * Allowed values for setAlertPolarity.
  */
 typedef enum {
-  INA228_ALERT_POLARITY_NORMAL = 0x0, ///< Active high open-collector (Default)
-  INA228_ALERT_POLARITY_INVERTED = 0x1, ///< Active low open-collector
+  INA228_ALERT_POLARITY_NORMAL = 0x0, ///< Active low open-drain (Default)
+  INA228_ALERT_POLARITY_INVERTED = 0x1, ///< Active high open-drain
 } ina228_alert_polarity_t;
 
 /**
@@ -156,34 +161,58 @@ typedef enum {
 } ina228_alert_latch_t;
 
 
-/**
- * @brief Bind a context to an I2C bus and address. Performs no I2C traffic.
- *
- * The device powers up with SHUNT_CAL = 0x1000, which does not correspond to
- * any calibration this driver knows about, so current, power, energy, and
- * charge readings are not meaningful until ina228_set_shunt() has been
- * called. The same applies again after ina228_reset().
- */
-uint32_t
-ina228_init(ina228_context_t *ctx, nsx_i2c_config_t *i2c_config, uint16_t addr);
+typedef struct {
+  float shunt_ohms;        /* Required: finite and positive. */
+  float max_current_amps; /* Required: finite and positive. */
+  uint16_t adc_range;     /* 0 = +/-163.84 mV; 1 = +/-40.96 mV. */
+  ina228_meas_mode_t mode;
+  ina228_conversion_time_t current_conversion_time;
+  ina228_conversion_time_t voltage_conversion_time;
+  ina228_conversion_time_t temperature_conversion_time;
+  ina228_avg_count_t averaging_count;
+  ina228_alert_latch_t alert_latch;
+  ina228_alert_polarity_t alert_polarity;
+} ina228_config_t;
+typedef struct {
+  uint16_t manufacturer_id;
+  uint16_t device_id; /* DIEID in bits 15:4, silicon revision in bits 3:0. */
+} ina228_identity_t;
 
-uint32_t
+/* Defaults match ADC power-on settings; shunt/current are zero and MUST be set
+ * by the application. Validation is pure and checks calibration representability. */
+ina228_config_t ina228_default_config(void);
+nsx_sensor_status_t ina228_validate_config(const ina228_config_t *config);
+/* I2C only; requires TX >= 3, RX >= 5. Failure leaves ctx unchanged. */
+nsx_sensor_status_t ina228_bind(ina228_context_t *ctx, const nsx_sensor_bus_t *bus);
+/* Reads identity only; no reset or configuration writes. Failure preserves id. */
+nsx_sensor_status_t ina228_probe(ina228_context_t *ctx, ina228_identity_t *identity);
+/* Validate, probe, stop conversions, apply explicit config/calibration, clear
+ * accumulators, configure alerts, then start the requested mode. No conversion
+ * wait. Disables shunt temperature compensation and conversion delay; leaves
+ * alert thresholds unchanged. Does not issue a device reset. Failed I/O may
+ * partially configure hardware and invalidates cached calibration; retry init.
+ * Direct register APIs below are also usable after bind. Scaled current/power/
+ * energy/charge require verified calibration (init or set_shunt). Raw counters,
+ * voltage, temperature and diagnostics do not. All failed reads preserve output.
+ * Units: current mA, bus/shunt voltage mV, power mW, temperature degC,
+ * energy J, charge C. No read promises a fresh conversion or atomic snapshot. */
+nsx_sensor_status_t ina228_init(ina228_context_t *ctx, const ina228_config_t *config);
+
+nsx_sensor_status_t
 ina228_get_manufacturer_id(ina228_context_t *ctx, uint16_t *value);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_device_id(ina228_context_t *ctx, uint16_t *value);
-
-uint32_t
-ina228_validate(ina228_context_t *ctx);
 
 /**
  * @brief Reset the device to power-on defaults (CONFIG.RST).
  *
  * This reverts SHUNT_CAL to its reset value, so ina228_set_shunt() must be
- * called again before current, power, energy, or charge readings are
- * meaningful.
+ * called again before scaled current, power, energy, or charge reads.
+ * Calibration is invalidated before attempting the reset, even on bus failure.
+ * This issues the reset command only; it does not wait for a new conversion.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_reset(ina228_context_t *ctx);
 
 /**
@@ -197,20 +226,22 @@ ina228_reset(ina228_context_t *ctx);
  * mode, so MATHOF can be raised again immediately while SHUNT_CAL is still
  * zero, before ina228_set_shunt() has run.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_reset_accumulators(ina228_context_t *ctx);
 
 /**
  * @brief Program SHUNT_CAL for a shunt resistance (ohms) and the maximum
  * expected current (amperes).
  *
- * Fails without touching the device or the cached calibration if either
- * input is not positive, or if the computed SHUNT_CAL exceeds the register's
+ * Fails without writing the device or changing cached calibration if either
+ * input is not finite and positive, or if the computed SHUNT_CAL exceeds the register's
  * 15-bit field (13107.2e6 * (max_current / 2^19) * shunt_res, x4 when
- * ADCRANGE = 1, must be <= 32767) — in that case pick a smaller shunt or a
- * larger range.
+ * ADCRANGE = 1, must produce a nonzero value <= 32767) — in that case pick a smaller shunt or a
+ * larger range. A write/readback failure invalidates cached calibration.
+ * Stop conversions and reset accumulators when changing scaling for a new
+ * accumulation window; set_shunt does not clear old accumulated history.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current);
 
 /**
@@ -218,30 +249,29 @@ ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current);
  * mV, 1 = +/-40.96 mV.
  *
  * SHUNT_CAL depends on ADCRANGE, so if ina228_set_shunt() has already run,
- * this reprograms SHUNT_CAL for the new range. That reprogramming can fail
- * (see ina228_set_shunt()); on failure the range has changed but SHUNT_CAL
- * still holds the old range's value, and ina228_set_shunt() must be called
- * before measurements are trusted.
+ * this reprograms SHUNT_CAL for the new range. An unrepresentable calibration
+ * is rejected before I/O. Any attempted range/calibration write failure
+ * invalidates cached scaling; reinitialize or call set_shunt before scaled reads.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_set_adc_range(ina228_context_t *ctx, uint16_t adc_range);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_adc_range(ina228_context_t *ctx, uint16_t *adc_range);
 
-uint32_t
+nsx_sensor_status_t
 ina228_read_die_temp(ina228_context_t *ctx, float *temp);
 
-uint32_t
+nsx_sensor_status_t
 ina228_read_current(ina228_context_t *ctx, float *current);
 
-uint32_t
+nsx_sensor_status_t
 ina228_read_bus_voltage(ina228_context_t *ctx, float *bus_voltage);
 
-uint32_t
+nsx_sensor_status_t
 ina228_read_shunt_voltage(ina228_context_t *ctx, float *shunt_voltage);
 
-uint32_t
+nsx_sensor_status_t
 ina228_read_power(ina228_context_t *ctx, float *power);
 
 /**
@@ -250,88 +280,90 @@ ina228_read_power(ina228_context_t *ctx, float *power);
  * (delta) measurements subtract two ina228_read_energy_raw() readings
  * instead, which stay exact over the full 40-bit range.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_read_energy(ina228_context_t *ctx, float *energy);
 
 /**
  * @brief Raw unsigned 40-bit ENERGY register, exact. Multiply by
  * 16 * 3.2 * CURRENT_LSB for joules. Reading clears DIAG_ALRT.ENERGYOF.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_read_energy_raw(ina228_context_t *ctx, uint64_t *energy);
 
 /**
  * @brief Charge in coulombs. See ina228_read_energy() for float precision;
  * windowed measurements should subtract ina228_read_charge_raw() readings.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_read_charge(ina228_context_t *ctx, float *charge);
 
 /**
  * @brief Raw sign-extended 40-bit CHARGE register, exact. Multiply by
  * CURRENT_LSB for coulombs. Reading clears DIAG_ALRT.CHARGEOF.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_read_charge_raw(ina228_context_t *ctx, int64_t *charge);
 
-uint32_t
+nsx_sensor_status_t
 ina228_set_mode(ina228_context_t *ctx, ina228_meas_mode_t mode);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_mode(ina228_context_t *ctx, ina228_meas_mode_t *mode);
 
 /**
  * @brief Poll DIAG_ALRT.CNVRF. When ALATCH = 1 (latched mode), the read
  * itself clears CNVRF and the latched alert flags — inherent to the device.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_conversion_ready(ina228_context_t *ctx, uint8_t *ready);
 
 /**
  * @brief DIAG_ALRT bits 11:0. Mask with ina228_alert_type_t values. When
  * ALATCH = 1 the read clears the latched flags.
  */
-uint32_t
+nsx_sensor_status_t
 ina228_alert_functions(ina228_context_t *ctx, uint16_t *functions);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_alert_latch(ina228_context_t *ctx, ina228_alert_latch_t *latch);
 
-uint32_t
+/* These setters read DIAG_ALRT to preserve other control bits; that read can
+ * clear latched flags. Getters have the same read-to-clear side effects. */
+nsx_sensor_status_t
 ina228_set_alert_latch(ina228_context_t *ctx, ina228_alert_latch_t latch);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_alert_polarity(ina228_context_t *ctx, ina228_alert_polarity_t *polarity);
 
-uint32_t
+nsx_sensor_status_t
 ina228_set_alert_polarity(ina228_context_t *ctx, ina228_alert_polarity_t polarity);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_current_conversion_time(ina228_context_t *ctx, ina228_conversion_time_t *time);
 
-uint32_t
+nsx_sensor_status_t
 ina228_set_current_conversion_time(ina228_context_t *ctx, ina228_conversion_time_t time);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_voltage_conversion_time(ina228_context_t *ctx, ina228_conversion_time_t *time);
 
-uint32_t
+nsx_sensor_status_t
 ina228_set_voltage_conversion_time(ina228_context_t *ctx, ina228_conversion_time_t time);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_temperature_conversion_time(ina228_context_t *ctx, ina228_conversion_time_t *time);
 
-uint32_t
+nsx_sensor_status_t
 ina228_set_temperature_conversion_time(ina228_context_t *ctx, ina228_conversion_time_t time);
 
-uint32_t
+nsx_sensor_status_t
 ina228_get_averaging_count(ina228_context_t *ctx, ina228_avg_count_t *count);
 
-uint32_t
+nsx_sensor_status_t
 ina228_set_averaging_count(ina228_context_t *ctx, ina228_avg_count_t count);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // NSX_INA228_H
+#endif // NSX_SENSORS_INA228_H
