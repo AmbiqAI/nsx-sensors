@@ -4,6 +4,7 @@
 #include <nsx/sensors/bme688.h>
 #include <nsx/sensors/ina228.h>
 #include <nsx/sensors/mpu6050.h>
+#include <nsx/sensors/max86150.h>
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -40,6 +41,7 @@ uint32_t nsx_i2c_read(nsx_i2c_config_t *c, const void *b, uint32_t n, uint16_t a
 }
 uint32_t nsx_i2c_write_read_combined(nsx_i2c_config_t *c, uint16_t a, const void *t, size_t nt, void *r, size_t nr) {
     assert(c->iomHandle); selector=a; uint32_t status=record(3,t,nt,r,nr);
+    if(nt==1 && nr==1 && *(const uint8_t *)t==0xff) *(uint8_t *)r=0x1e;
     if(nt==1 && nr==1 && *(const uint8_t *)t==0x75) *(uint8_t *)r=0x68;
     if(nt==1 && *(const uint8_t *)t==0xf0) memset(r,1,nr);
     if(nt==1 && nr==2 && *(const uint8_t *)t==0x3e) { ((uint8_t *)r)[0]=0x54; ((uint8_t *)r)[1]=0x49; }
@@ -127,6 +129,11 @@ int main(void) {
     assert(mpu6050_bind(&motion,&a.bus,NULL)==NSX_SENSOR_OK);
     assert(mpu6050_probe(&motion,&motion_id)==NSX_SENSOR_OK && motion_id==0x68);
     assert(route==3 && selector==0x69 && sent_size==1 && sent[0]==0x75);
+    assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,MAX86150_I2C_ADDRESS,&lock)==NSX_SENSOR_OK);
+    max86150_context_t optical; uint8_t optical_id;
+    assert(max86150_bind(&optical,&a.bus,NULL)==NSX_SENSOR_OK);
+    assert(max86150_probe(&optical,&optical_id)==NSX_SENSOR_OK && optical_id==0x1e);
+    assert(route==3 && selector==0x5e && sent_size==1 && sent[0]==0xff);
     /* Explicitly serialized application can omit hooks. Binding still has no I/O. */
     before=calls; assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,0x20,NULL)==NSX_SENSOR_OK);
     assert(calls==before); held=1;

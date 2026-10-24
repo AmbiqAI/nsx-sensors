@@ -9,9 +9,9 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: Portable BME688/LED Stick/INA228/MPU6050 cores and transitional NSX-only sensor drivers.
+summary: Portable BME688/LED Stick/INA228/MPU6050/MAX86150 cores and transitional NSX-only sensor drivers.
 # The NSX aggregate defaults on when its three declared dependency targets exist.
-# That aggregate contains the two unmigrated drivers; see docs/migration.
+# That aggregate contains the unmigrated ICM-45605 driver; see docs/migration.
 
 capabilities:
   - sensors
