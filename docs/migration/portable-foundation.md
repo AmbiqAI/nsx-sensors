@@ -13,7 +13,7 @@ No generic sensor object, heap allocation, queues, or framework wrapper is added
 
 The shared [NSX adapter](../nsx-port.md) supplies endpoints using the genuine
 combined I2C operation from SDK PR #130. The TDK per-instance callback work
-and migration of the remaining three drivers are still pending. Existing BME688
+and migration of the remaining two drivers are still pending. Existing BME688
 and LED Stick NSX call sites need the endpoint and lifecycle changes below.
 
 ## Shared contracts
@@ -111,14 +111,14 @@ configuration; set the length successfully or initialize before other commands.
 ## Build and migration status
 
 Portable default targets are `nsx::sensor_common`, `nsx::sensor_bme688`,
-`nsx::sensor_ledstick`, and `nsx::sensor_ina228`. Disable individual drivers with `NSX_SENSOR_*` options.
+`nsx::sensor_ledstick`, `nsx::sensor_ina228`, and `nsx::sensor_mpu6050`. Disable individual drivers with `NSX_SENSOR_*` options.
 Only enabled driver headers/libraries are installed. Installed and nested
 consumers use the same target names; `find_package` components are `bme688`,
-`ledstick`, `ina228`, and `common`. Package exports contain no SDK paths or implicit
+`ledstick`, `ina228`, `mpu6050`, and `common`. Package exports contain no SDK paths or implicit
 repository discovery. Until v1, package version compatibility is exact.
 
 The `NSX_SENSORS_LEGACY_NSX` option builds `nsx::sensors` with the
-three remaining NSX-only drivers, exported through the existing `nsxTargets` set.
+two remaining NSX-only drivers, exported through the existing `nsxTargets` set.
 Portable targets have their own package export set. Both can coexist in one
 build; link portable drivers explicitly. The aggregate defaults on when all three
 NSX dependency targets already exist, so the normal metadata-driven integration
@@ -137,4 +137,11 @@ not prove electrical timing, physical sensor accuracy, or hardware operation.
 INA228 now uses `nsx::sensor_ina228` and `<nsx/sensors/ina228.h>` with the shared
 NSX port. Its binding-only legacy init is replaced by bind/probe/validate/init;
 see [INA228 migration](ina228.md) for calibration, units, and recovery semantics.
-The remaining aggregate contains MPU6050, MAX86150, and ICM-45605.
+The remaining aggregate contains MAX86150 and ICM-45605.
+
+## MPU6050 follow-up
+
+MPU6050 now uses `nsx::sensor_mpu6050` and `<nsx/sensors/mpu6050.h>` with shared
+bus/runtime descriptors. Initialization ends asleep; wake and calibration are
+explicit. See [MPU6050 migration](mpu6050.md) for sample units, bounded operations,
+FIFO format/overflow/partial-read recovery, and the NSX example.

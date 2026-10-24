@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased MPU6050 portable migration
+
+- Address review findings: clear stale DRDY before each averaged sample, reject
+  FIFO consumption while disabled, and batch complete FIFO frames to reduce I2C
+  overhead. Add independently timed conversion, disabled-read, multi-frame burst,
+  failure/overflow publication, and bus-clock-budget regressions.
+
+- Move MPU6050 to `<nsx/sensors/mpu6050.h>` and `nsx::sensor_mpu6050`;
+  the transitional aggregate now contains only MAX86150 and ICM-45605.
+- Separate pure binding/validation, identity probe, initialization into sleep,
+  and explicit acquisition start. Use caller-owned common bus/runtime descriptors.
+- Correct full-scale register bit positions, signed decoding, FIFO data register
+  access, temperature/axis scaling, and accelerometer offset compensation-bit handling.
+- Add typed raw/physical samples and capacity-aware FIFO reads with explicit
+  overflow/partial-consumption recovery. Bound resets, averaging and calibration;
+  calibration remains explicit and preserves +1g on Z.
+- Add host fault injection, every native FIFO format, independent CMake selection,
+  relocated C/C++ consumers and shared NSX adapter coverage. Hardware qualification
+  remains pending. See `docs/migration/mpu6050.md` for breaking API changes.
+
 ## Unreleased INA228 portable migration
 
 - Move INA228 to `include/nsx/sensors/ina228.h` / `src/ina228/ina228.c` and

@@ -512,7 +512,7 @@ qualification remain release gates.
 INA228 now implements the shared portable bus/status contract with bind, probe,
 pure config validation, and explicit init into shutdown; `ina228_set_mode`
 starts acquisition separately. `nsx::sensor_ina228` is independently
-selectable; the legacy aggregate contains three remaining drivers. Existing
+selectable; with the subsequent MPU6050 migration the legacy aggregate contains two remaining drivers. Existing
 units and exact signed/unsigned 40-bit accumulators are retained. Failed reads
 preserve outputs, scaled reads require verified calibration, and uncertain
 calibration/range/reset writes invalidate cached scaling. See
@@ -532,7 +532,7 @@ Branches may stack on the needed prerequisite and clearly identify their base.
 | SDK combined I2C operation | Add a documented synchronous write/read operation in `nsx-ambiq-sdk`, preserving existing helpers until consumers migrate; define size limits, bus ownership, failure cleanup and completion bounds | HAL descriptor tests for repeated START and final STOP; error-path recovery; supported-SoC compile checks; waveform confirmation remains a hardware task |
 | TDK instance feasibility | Introduce a narrowly scoped context-aware transport patch or qualified upstream replacement; preserve `inv_imu_device_t` transport layout assumptions; route read/write/delay through each instance | Two devices route all callbacks independently, including indirect register access and delays; vendor tests and provenance/license review; no global current-device switch |
 | Shared NSX port | Add `ports/nsx/` and `include/nsx/sensors/ports/nsx.h`; replace BME688-specific adapters; provide endpoint validation, scratch limits/alignment, native error retention and bus serialization policy | Depends on combined I2C support; real adapter tests assert transaction semantics, bounds, failure mapping and fixed SPI settings; NSX example links against explicit SDK revision |
-| Remaining driver migrations | Migrate INA228, MPU6050, MAX86150 and ICM-45605 in individually reviewable changes; update each application's migration example with its driver | Preserve INA228 precision/regressions; FIFO capacity and recovery tests; explicit calibration/timeouts; ICM depends on the instance feasibility change |
+| Remaining driver migrations | INA228 and MPU6050 are migrated. Migrate MAX86150 and ICM-45605 in individually reviewable changes; update each application's migration example with its driver | Preserve INA228 precision/regressions; FIFO capacity and recovery tests; explicit calibration/timeouts; ICM depends on the instance feasibility change |
 | Framework integration and release preparation | Add bare-metal/FreeRTOS examples, Zephyr BME688 wrapper, platform coverage matrix, resource measurements and final metadata updates | Pinned integration builds and representative links; all acceptance gates below; v1 release only after API review |
 
 The first implementation slice should prove BME688 and LED Stick with fake
@@ -608,3 +608,14 @@ framework); introduce a universal sensor/channel object (premature for this smal
 mixed collection); rewrite every vendor implementation (unnecessary maintenance
 for complex vendor code). The proposal instead shares protocol implementations
 and transport contracts while allowing framework-specific presentation.
+
+### MPU6050 migration status
+
+MPU6050 now implements the portable bus/runtime/status contract, pure binding and
+validation, identity probe, and initialization into sleep. Acquisition starts with
+`mpu6050_set_sleep(ctx, 0)`. Typed raw/physical samples, capacity-aware FIFO reads,
+explicit recovery, bounded reset/averaging/calibration, and caller-owned state are
+implemented. `nsx::sensor_mpu6050` is independently selectable and uses the shared
+NSX adapter. The legacy aggregate now contains MAX86150 and ICM-45605.
+See [the migration guide](../migration/mpu6050.md). Hardware validation is pending;
+this does not publish v1 or change the released registry pin.

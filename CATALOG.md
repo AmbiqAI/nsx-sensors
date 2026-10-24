@@ -14,7 +14,7 @@ point at this project and should move to the immutable tag, not a branch.
 | --- | --- | --- |
 | Bosch BME688 T/P/H/raw gas (forced mode) | I2C / 4-wire SPI | `include/nsx/sensors/bme688.h` |
 | MAX86150 ECG/PPG | I2C | `includes-api/nsx_max86150.h` |
-| MPU6050 6-axis IMU | I2C | `includes-api/nsx_mpu6050.h` |
+| MPU6050 6-axis IMU | I2C | `include/nsx/sensors/mpu6050.h` |
 | INA228 power/current monitor | I2C | `include/nsx/sensors/ina228.h` |
 | SparkFun Qwiic LED Stick | I2C | `include/nsx/sensors/ledstick.h` |
 | TDK ICM-45605 6-axis IMU | SPI | `includes-api/nsx_icm45605.h` |
@@ -31,7 +31,7 @@ The current registry lock already pins `nsx-sensors` at
 `neuralSPOT`, `ns-sensors`, or application repository is changed by this
 release-preparation branch.
 
-Unreleased foundation: BME688/LED Stick/INA228 use portable per-driver targets. The
+Unreleased foundation: BME688/LED Stick/INA228/MPU6050 use portable per-driver targets. The
 transitional NSX aggregate defaults on when its dependency targets exist and
-contains the other three drivers (`NSX_SENSORS_LEGACY_NSX` can override it). See `docs/migration/portable-foundation.md`;
+contains the other two drivers (`NSX_SENSORS_LEGACY_NSX` can override it). See `docs/migration/portable-foundation.md`;
 registry consumers must not repin automatically during this transition.
