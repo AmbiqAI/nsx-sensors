@@ -7,9 +7,9 @@ and future drivers using the common synchronous bus API.
 
 This unreleased adapter requires the combined-read addition in
 [SDK PR #130](https://github.com/AmbiqAI/nsx-ambiq-sdk/pull/130).
-CI pins SDK commit `40b893d859672caf0b17b0e51db351a77b423e56`.
-SDK v5.2.24 does not provide that API. Merge the SDK prerequisite before this
-adapter; repin to its released revision during the coordinated v1 integration.
+CI pins SDK commit `1f18f01555897ed8e06437ff9727f2bb61771e70`.
+SDK v5.2.24 does not provide that API. The SDK prerequisite has merged. Repin to its released revision during the
+coordinated v1 integration.
 No fallback to the old STOP-separated `nsx_i2c_write_read` is provided.
 
 ## Binding and lifetime
@@ -93,8 +93,13 @@ explicitly enabled with I2C/SPI dependency targets supplied. No sibling checkout
 is discovered. Link the port and each desired portable driver explicitly;
 `nsx::sensors` still contains the four unmigrated legacy drivers.
 
-The port has a separate install export so portable consumers do not acquire
-SDK dependencies. Installed consumers load their SDK targets first, then use:
+Firmware builds do not emit an install export for the port. Package producers
+explicitly enable `NSX_SENSOR_INSTALL_NSX_PORT=ON` and must supply the SDK's
+install export closure (or preinstalled imported SDK targets). This avoids
+requiring SDK package exports in ordinary source-based NSX applications.
+When enabled, the port has a separate install export so portable consumers do
+not acquire SDK dependencies. Installed consumers load their SDK targets first,
+then use:
 
 ```cmake
 find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 port_nsx)

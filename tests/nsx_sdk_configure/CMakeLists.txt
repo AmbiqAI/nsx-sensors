@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_sensor_sdk_configure LANGUAGES C)
+include(GNUInstallDirs)
+if(NOT NSX_SDK_ROOT)
+    message(FATAL_ERROR "Set NSX_SDK_ROOT to the SDK prerequisite checkout")
+endif()
+# Configure-only stand-ins for prerequisites; use the real SDK transport modules
+# and their source-target install declarations. Ordinary firmware applications
+# do not emit install(EXPORT nsxTargets), and must not be required to do so.
+add_library(nsx::core INTERFACE IMPORTED)
+add_library(nsx::soc_hal INTERFACE IMPORTED)
+function(nsx_require_target target consumer)
+    if(NOT TARGET ${target})
+        message(FATAL_ERROR "${consumer} requires ${target}")
+    endif()
+endfunction()
+add_subdirectory("${NSX_SDK_ROOT}/modules/nsx-i2c" i2c)
+add_subdirectory("${NSX_SDK_ROOT}/modules/nsx-spi" spi)
+add_subdirectory(../.. sensors)
+if(NOT TARGET nsx::sensor_port_nsx OR NOT TARGET nsx::sensors)
+    message(FATAL_ERROR "Expected automatic NSX transport and aggregate targets")
+endif()

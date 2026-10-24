@@ -11,7 +11,11 @@ for prefix in 3 5; do
         "$root/tests/nsx_port/test_port.c" -lm -o "$out/port-$prefix"
     "$out/port-$prefix"
 done
-cmake -S "$root/tests/nsx_port" -B "$out/build" \
+# Ordinary firmware builds do not emit an SDK package export.
+cmake -S "$root/tests/nsx_port" -B "$out/firmware"
+cmake --build "$out/firmware" --parallel
+"$out/firmware/port_contract"
+cmake -S "$root/tests/nsx_port" -B "$out/build" -DNSX_PORT_PACKAGE_TEST=ON \
     -DCMAKE_INSTALL_PREFIX="$out/install" -DCMAKE_INSTALL_LIBDIR=lib
 cmake --build "$out/build" --parallel
 "$out/build/port_contract"

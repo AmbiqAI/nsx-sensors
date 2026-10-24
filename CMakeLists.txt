@@ -16,6 +16,7 @@ endif()
 option(NSX_SENSORS_LEGACY_NSX "Build remaining NSX-only drivers (transitional)"
     ${nsx_sensors_legacy_default})
 option(NSX_SENSOR_PORT_NSX "Build the shared NSX transport adapter" ${nsx_sensors_legacy_default})
+option(NSX_SENSOR_INSTALL_NSX_PORT "Export the NSX port (requires SDK package exports)" OFF)
 option(NSX_SENSORS_TESTS "Build portable host tests" OFF)
 
 add_library(nsx_sensor_common STATIC src/common/bus.c)
@@ -77,11 +78,16 @@ if(NSX_SENSOR_PORT_NSX)
     add_library(nsx::sensor_port_nsx ALIAS nsx_sensor_port_nsx)
     set_target_properties(nsx_sensor_port_nsx PROPERTIES EXPORT_NAME sensor_port_nsx)
     target_link_libraries(nsx_sensor_port_nsx PUBLIC nsx_sensor_common nsx::i2c nsx::spi)
-    install(TARGETS nsx_sensor_port_nsx EXPORT nsxSensorNsxTargets
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    install(EXPORT nsxSensorNsxTargets NAMESPACE nsx::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nsx_sensors)
-    install(FILES include/nsx/sensors/port_nsx.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
+    # Firmware builds consume SDK source targets without exporting an SDK
+    # package. Emitting this export there makes CMake reject its dependencies.
+    # Package producers opt in after providing the SDK install export closure.
+    if(NSX_SENSOR_INSTALL_NSX_PORT)
+        install(TARGETS nsx_sensor_port_nsx EXPORT nsxSensorNsxTargets
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        install(EXPORT nsxSensorNsxTargets NAMESPACE nsx::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nsx_sensors)
+        install(FILES include/nsx/sensors/port_nsx.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
+    endif()
 endif()
 
 # Transitional NSX aggregate contains only the four unmigrated drivers.
