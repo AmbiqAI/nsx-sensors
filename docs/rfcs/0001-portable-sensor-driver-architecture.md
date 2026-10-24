@@ -51,13 +51,16 @@ requires `nsx::core`, `nsx::i2c`, and `nsx::spi` and compiles every driver.
 | MAX86150 | I2C | Native context; mixed value-returning, `void`, and status-returning APIs | Make failures distinguishable from valid zero values; define FIFO frames, capacity, overflow and partial-read behavior |
 | ICM-45605 | SPI | NSX wrapper around vendored TDK; global device and bus binding | Make state and callbacks instance-specific; retain TDK implementation; change context-free interrupt interface |
 | Qwiic LED Stick | I2C | Native command-based accessory | Reuse command transport, standardize errors, define address-change recovery; no artificial measurement API |
-| BME688 | I2C/SPI | Proposed portable core, adapted Bosch calculations, device-specific NSX adapters | Adopt shared transport/status/lifecycle; preserve calculation provenance; resolve forced-mode freshness finding |
+| BME688 | I2C/SPI | Proposed portable core, adapted Bosch calculations, device-specific NSX adapters | Adopt shared transport/status/lifecycle; preserve calculation provenance and forced-mode freshness regression |
 
 The BME688 review identified a forced-mode dependency on `sub_meas_index`
-advancement that the Bosch datasheet only documents for parallel mode. Resolve
-that finding with a regression test before using BME688 as the architecture's
-reference implementation. Hardware behavior has not been measured; the review
-evidence is specification analysis and synthetic reproduction.
+advancement that the Bosch datasheet only documents for parallel mode. PR #16 commit
+`b600b2d` removes that dependency, drains the previous field before triggering,
+and adds I2C/SPI regressions for repeated and zero indices. The regression failed
+before the fix; host tests, sanitizers, and GCC compilation for all eight declared
+SoCs passed afterward. The fix remains in the draft PR, not a released version.
+Hardware behavior has not been measured; evidence remains specification analysis
+and synthetic reproduction.
 
 ## Architecture and ownership
 
@@ -440,6 +443,46 @@ explicit opt-in with a removal plan rather than part of the core design.
 6. Freeze the documented API after review, publish the migration/compatibility
    matrix, update release metadata coherently, and release an immutable v1.0
    through the repository's normal review and release workflow.
+
+### Delivery plan
+
+Use focused implementation PRs against this RFC. PR #16 supplies the native
+BME688 baseline and PR #17 carries this proposal; neither implements the v1
+migration. Do not merge either PR merely to create the implementation branches.
+Branches may stack on the needed prerequisite and clearly identify their base.
+
+| Change | Concrete scope | Completion evidence / dependency |
+| --- | --- | --- |
+| Portable foundation and first two drivers | Add `include/nsx/sensors/{status,bus,runtime}.h`; move BME688 into `src/bme688/`; port LED Stick commands into `src/ledstick/`; implement bind/validate/probe/init where applicable; add per-driver CMake targets and package exports | No NSX headers in selected portable targets; preserve Bosch vectors and freshness tests; exact LED command bytes, bounds and address-change recovery; two independent instances; linked add-subdirectory and installed-package consumers |
+| SDK combined I2C operation | Add a documented synchronous write/read operation in `nsx-ambiq-sdk`, preserving existing helpers until consumers migrate; define size limits, bus ownership, failure cleanup and completion bounds | HAL descriptor tests for repeated START and final STOP; error-path recovery; supported-SoC compile checks; waveform confirmation remains a hardware task |
+| TDK instance feasibility | Introduce a narrowly scoped context-aware transport patch or qualified upstream replacement; preserve `inv_imu_device_t` transport layout assumptions; route read/write/delay through each instance | Two devices route all callbacks independently, including indirect register access and delays; vendor tests and provenance/license review; no global current-device switch |
+| Shared NSX port | Add `ports/nsx/` and `include/nsx/sensors/ports/nsx.h`; replace BME688-specific adapters; provide endpoint validation, scratch limits/alignment, native error retention and bus serialization policy | Depends on combined I2C support; real adapter tests assert transaction semantics, bounds, failure mapping and fixed SPI settings; NSX example links against explicit SDK revision |
+| Remaining driver migrations | Migrate INA228, MPU6050, MAX86150 and ICM-45605 in individually reviewable changes; update each application's migration example with its driver | Preserve INA228 precision/regressions; FIFO capacity and recovery tests; explicit calibration/timeouts; ICM depends on the instance feasibility change |
+| Framework integration and release preparation | Add bare-metal/FreeRTOS examples, Zephyr BME688 wrapper, platform coverage matrix, resource measurements and final metadata updates | Pinned integration builds and representative links; all acceptance gates below; v1 release only after API review |
+
+The first implementation slice should prove BME688 and LED Stick with fake
+transports and plain CMake while the SDK and TDK prerequisites are developed.
+It must not make a STOP-separated NSX helper appear to satisfy the new combined
+transfer contract. The existing BME688 adapter remains a v0 implementation until
+the shared NSX port can replace it with tested semantics.
+
+Current source inspection supports the TDK patch approach: transport helpers
+already receive an `inv_imu_transport_t *`, but read/write/delay callbacks discard
+that instance information. Add an explicit user pointer and propagate it through
+all callback sites; keep typed vendor storage per device. This is a proposed
+implementation choice, not a completed feasibility result.
+
+The build transition also changes tests: the current standalone configuration
+intentionally fails without `nsx::core`. Replace that expectation with a portable
+build-and-link test, and retain the missing-dependency check only when the NSX
+port is explicitly enabled. Keep the nested-project guard, explicit source
+lists, license installation and release-version coherence checks. Test both
+portable-only and NSX integration configurations throughout migration.
+
+Keep the existing v0 API available on its immutable releases. Transitional
+implementation branches must state which drivers are migrated and which still
+require NSX; do not label an aggregate portable until every selected driver is.
+Do not automatically repin the NSX registry or downstream vendored applications.
 
 V1 acceptance requires:
 
