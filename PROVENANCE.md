@@ -241,3 +241,13 @@ historical NSX wrapper listed above. The Ambiq wrapper uses the retained TDK
 basic subset with caller-owned typed state, checked callbacks, native range
 validation, separate raw/scaled types and explicit fresh-sample calibration.
 Hardware remains unqualified. Future expansion is tracked in issue #23.
+
+## Native Spark additions (unreleased)
+
+`src/tsl254x/` and `src/t5838/` are original implementations under the repository
+BSD-3-Clause license; no additional vendor code is imported. Register/protocol
+references are ams OSRAM DS000564 v2-00 (2022-12-05), DS000570 v2-00
+(2023-03-10) and TDK DS-000383 rev1.2 (2025-09-04). The device guides link those
+documents and explain variant, calibration and timing limits. Zephyr's TSL2540
+implementation was inspected for comparison; no source or empirical lux formula
+was incorporated. Existing TDK ICM vendor files and notices are unchanged.

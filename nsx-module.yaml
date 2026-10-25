@@ -9,7 +9,7 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: Six portable sensor cores with a shared NSX transport adapter; ICM-45605 basic SPI support.
+summary: Eight portable driver cores; shared NSX I2C/SPI adapter and separate T5838 AAD control.
 # nsx::sensors aggregates the selected portable cores. NSX endpoints use the
 # separate nsx::sensor_port_nsx target; see docs/migration/icm45605.md.
 
@@ -21,6 +21,10 @@ capabilities:
   - accessories
   - bme688
   - environmental_sensing
+  - tsl254x
+  - ambient_light
+  - t5838
+  - acoustic_activity_detection
   - icm45605
   - 6dof
 
@@ -30,6 +34,7 @@ use_cases:
   - temperature, pressure, humidity, and raw gas resistance
   - current and voltage monitoring
   - simple i2c accessory control
+  - ambient light counts and microphone activity control
   - 6dof imu bring-up
 
 agent_keywords:
@@ -39,6 +44,9 @@ agent_keywords:
   - mpu6050
   - bme688
   - ina228
+  - tsl2540
+  - tsl2541
+  - t5838
   - ledstick
   - icm45605
   - 6dof

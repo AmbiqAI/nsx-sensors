@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased Spark device support
+
+- Add native TSL2540/TSL2541 I2C core with explicit variant identity, configurable
+  gain/integration/interrupts, raw channels, saturation and factory visible scale.
+- Add native T5838 Analog/D1/D2 AAD control with a timed THSEL waveform endpoint;
+  keep PDM/PCM capture in the audio layer. Add shared-clock pair orchestration.
+- Cover both cores with fault-injection tests, selected/installed C/C++ builds
+  and the SoC compile matrix. Board wiring, pulse delivery and hardware
+  qualification remain explicit integration work.
+
+
 ## Unreleased API cleanup
 
 - Prefix MPU6050 enums and I2C address constants consistently; rename MAX86150
