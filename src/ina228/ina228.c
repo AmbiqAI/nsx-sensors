@@ -287,6 +287,15 @@ static nsx_sensor_status_t scaled_result(double value, float *out)
     return NSX_SENSOR_OK;
 }
 
+nsx_sensor_status_t ina228_get_current_lsb(const ina228_context_t *ctx,
+                                         float *amperes_per_lsb)
+{
+    if (!ctx || !amperes_per_lsb) return NSX_SENSOR_E_ARGUMENT;
+    if (!ctx->_bound || !ctx->_calibrated) return NSX_SENSOR_E_STATE;
+    *amperes_per_lsb = ctx->_current_lsb;
+    return NSX_SENSOR_OK;
+}
+
 nsx_sensor_status_t
 ina228_read_current(ina228_context_t *ctx, float *current)
 {

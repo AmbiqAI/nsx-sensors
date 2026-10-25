@@ -123,7 +123,9 @@ nsx_sensor_status_t bme688_start(bme688_context_t *ctx, uint32_t *wait_us);
 /** Single burst read, no delay or polling. AGAIN means no fresh completed
  * sample yet, based on new_data and measuring flags. The measurement index
  * need not advance in forced mode. A successful read consumes this driver's
- * pending conversion.
+ * pending conversion. A failed bus read may still consume the hardware's
+ * freshness flag; the pending conversion remains but retries may return AGAIN.
+ * Call sleep() to cancel, then start() a new conversion if freshness was lost.
  */
 nsx_sensor_status_t bme688_collect(bme688_context_t *ctx, bme688_sample_t *sample);
 /** Bounded blocking convenience: start, delay, collect. timeout_us bounds the

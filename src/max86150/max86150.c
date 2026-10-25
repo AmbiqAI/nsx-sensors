@@ -35,22 +35,25 @@ static nsx_sensor_status_t update(max86150_context_t *c, uint8_t reg, uint8_t ma
 static unsigned slot_count(const max86150_config_t *c)
 {
     unsigned n=0;
-    while (n<4 && c->slots[n]!=Max86150SlotOff) ++n;
+    while (n<4 && c->slots[n]!=MAX86150_SLOT_OFF) ++n;
     return n;
 }
 max86150_config_t max86150_default_config(void)
 {
     max86150_config_t c={0};
-    c.slots[0]=Max86150SlotPpgLed1; c.slots[1]=Max86150SlotPpgLed2; c.slots[2]=Max86150SlotEcg;
-    c.ppg_sample_rate=6; c.ppg_pulse_width=1; c.ecg_sample_rate=2; c.ecg_ia_gain=2;
+    c.slots[0]=MAX86150_SLOT_PPG_LED1; c.slots[1]=MAX86150_SLOT_PPG_LED2; c.slots[2]=MAX86150_SLOT_ECG;
+    c.ppg_sample_rate=MAX86150_PPG_SAMPLE_RATE_400_HZ;
+    c.ppg_pulse_width=MAX86150_PPG_PULSE_WIDTH_100_US;
+    c.ecg_sample_rate=MAX86150_ECG_SAMPLE_RATE_400_HZ_CLK0;
+    c.ecg_ia_gain=MAX86150_ECG_IA_GAIN_20;
     c.almost_full_threshold=15;
     return c;
 }
 nsx_sensor_status_t max86150_validate_config(const max86150_config_t *c)
 {
-    if (!c || c->ppg_adc_range>3 || c->ppg_sample_rate>15 || c->ppg_pulse_width>3 ||
-        c->ppg_sample_average>7 || c->led_range[0]>1 || c->led_range[1]>1 ||
-        c->ecg_sample_rate>7 || c->ecg_pga_gain>3 || c->ecg_ia_gain>3 || c->almost_full_threshold>15)
+    if (!c || (unsigned)c->ppg_adc_range>3 || (unsigned)c->ppg_sample_rate>15 || (unsigned)c->ppg_pulse_width>3 ||
+        (unsigned)c->ppg_sample_average>7 || (unsigned)c->led_range[0]>1 || (unsigned)c->led_range[1]>1 ||
+        (unsigned)c->ecg_sample_rate>7 || (unsigned)c->ecg_pga_gain>3 || (unsigned)c->ecg_ia_gain>3 || c->almost_full_threshold>15)
         return NSX_SENSOR_E_ARGUMENT;
     bool off=false, ecg=false; unsigned seen=0;
     for (unsigned i=0;i<4;++i) {
@@ -324,7 +327,7 @@ static nsx_sensor_status_t read_fifo(max86150_context_t *c,
                 const uint8_t *b=bytes+i*frame_size+j*3;
                 uint32_t v=(uint32_t)b[0]<<16|(uint32_t)b[1]<<8|b[2];
                 f.slots[j]=c->_config.slots[j];
-                if (f.slots[j]==Max86150SlotEcg) {
+                if (f.slots[j]==MAX86150_SLOT_ECG) {
                     v &= 0x3ffff; f.value[j]=(int32_t)(v&0x1ffff)-(int32_t)(v&0x20000);
                 } else f.value[j]=(int32_t)(v&0x7ffff);
             }
@@ -359,7 +362,7 @@ static nsx_sensor_status_t set_field(max86150_context_t *c, const max86150_confi
     if (s==NSX_SENSOR_OK) { c->_config=*v; invalidate_fifo(c); }
     return s;
 }
-nsx_sensor_status_t max86150_set_fifo_slots(max86150_context_t *c, const max86150_slot_type slots[4])
+nsx_sensor_status_t max86150_set_fifo_slots(max86150_context_t *c, const max86150_slot_t slots[4])
 {
     if (!slots) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s;
@@ -373,7 +376,7 @@ nsx_sensor_status_t max86150_set_fifo_slots(max86150_context_t *c, const max8615
     if (s==NSX_SENSOR_OK) c->_config=v;
     return s;
 }
-nsx_sensor_status_t max86150_set_fifo_slot(max86150_context_t *c, uint8_t slot, max86150_slot_type type)
+nsx_sensor_status_t max86150_set_fifo_slot(max86150_context_t *c, uint8_t slot, max86150_slot_t type)
 {
     if (slot>=4) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s;
@@ -382,22 +385,23 @@ nsx_sensor_status_t max86150_set_fifo_slot(max86150_context_t *c, uint8_t slot, 
 }
 nsx_sensor_status_t max86150_disable_slots(max86150_context_t *c)
 {
-    const max86150_slot_type slots[4]={0}; return max86150_set_fifo_slots(c,slots);
+    const max86150_slot_t slots[4]={0}; return max86150_set_fifo_slots(c,slots);
 }
-#define SETTER(name,field,reg,mask,shift) \
-nsx_sensor_status_t max86150_set_##name(max86150_context_t *c, uint8_t value) \
+#define SETTER(name,type,field,reg,mask,shift) \
+nsx_sensor_status_t max86150_set_##name(max86150_context_t *c, type value) \
 { nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s; \
   max86150_config_t v=c->_config; v.field=value; \
+  s=max86150_validate_config(&v); if (s!=NSX_SENSOR_OK) return s; \
   return set_field(c,&v,reg,mask,(uint8_t)(value<<shift)); }
-SETTER(ppg_adc_range,ppg_adc_range,PPG1,0xc0,6)
-SETTER(ppg_sample_rate,ppg_sample_rate,PPG1,0x3c,2)
-SETTER(ppg_pulse_width,ppg_pulse_width,PPG1,3,0)
-SETTER(ppg_sample_average,ppg_sample_average,PPG2,7,0)
-SETTER(proximity_threshold,proximity_threshold,PROX,0xff,0)
-SETTER(ecg_sample_rate,ecg_sample_rate,ECG1,7,0)
-SETTER(ecg_pga_gain,ecg_pga_gain,ECG3,12,2)
-SETTER(ecg_ia_gain,ecg_ia_gain,ECG3,3,0)
-SETTER(almost_full_threshold,almost_full_threshold,FIFO_CFG,15,0)
+SETTER(ppg_adc_range,max86150_ppg_adc_range_t,ppg_adc_range,PPG1,0xc0,6)
+SETTER(ppg_sample_rate,max86150_ppg_sample_rate_t,ppg_sample_rate,PPG1,0x3c,2)
+SETTER(ppg_pulse_width,max86150_ppg_pulse_width_t,ppg_pulse_width,PPG1,3,0)
+SETTER(ppg_sample_average,max86150_ppg_sample_average_t,ppg_sample_average,PPG2,7,0)
+SETTER(proximity_threshold,uint8_t,proximity_threshold,PROX,0xff,0)
+SETTER(ecg_sample_rate,max86150_ecg_sample_rate_t,ecg_sample_rate,ECG1,7,0)
+SETTER(ecg_pga_gain,max86150_ecg_pga_gain_t,ecg_pga_gain,ECG3,12,2)
+SETTER(ecg_ia_gain,max86150_ecg_ia_gain_t,ecg_ia_gain,ECG3,3,0)
+SETTER(almost_full_threshold,uint8_t,almost_full_threshold,FIFO_CFG,15,0)
 #undef SETTER
 #define BOOL_SETTER(name,field,mask,shift) \
 nsx_sensor_status_t max86150_set_##name(max86150_context_t *c, uint8_t value) \
@@ -416,9 +420,9 @@ nsx_sensor_status_t max86150_set_led_pulse_amplitude(max86150_context_t *c, uint
     if (led==2) v.pilot_amplitude=value; else v.led_amplitude[led]=value;
     return set_field(c,&v,led==2?PILOT:(uint8_t)(LED1+led),0xff,value);
 }
-nsx_sensor_status_t max86150_set_led_current_range(max86150_context_t *c, uint8_t led, uint8_t value)
+nsx_sensor_status_t max86150_set_led_current_range(max86150_context_t *c, uint8_t led, max86150_led_range_t value)
 {
-    if (led>1) return NSX_SENSOR_E_ARGUMENT;
+    if (led>1 || (unsigned)value>1) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s;
     max86150_config_t v=c->_config; v.led_range[led]=value;
     return set_field(c,&v,RANGE,(uint8_t)(3<<(2*led)),(uint8_t)(value<<(2*led)));

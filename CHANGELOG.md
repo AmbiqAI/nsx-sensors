@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased API cleanup
+
+- Prefix MPU6050 enums and I2C address constants consistently; rename MAX86150
+  slot names/type and add typed configuration selections without changing native
+  encodings. Source-breaking: update callers before recompiling; no old aliases.
+- Reject invalid MAX86150 enum casts before bit shifts or I/O. Preserve existing
+  settings and outputs on validation failures.
+- Add INA228 cached current-scale access without exposing private context fields.
+- Document lifecycle/recovery differences, BME688 consuming-read cancellation,
+  and per-device versus per-transaction locking. See the API cleanup guide.
+
 ## Unreleased deep-review fixes
 
 - Require MAX86150 reinitialization after a failed consuming interrupt-status

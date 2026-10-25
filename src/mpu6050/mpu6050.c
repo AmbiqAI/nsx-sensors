@@ -45,11 +45,11 @@ static nsx_sensor_status_t active(const mpu6050_context_t *ctx)
 {
     nsx_sensor_status_t s = ready(ctx);
     if (s != NSX_SENSOR_OK) return s;
-    return ctx->_sleeping || ctx->_config.clock_src == CLOCK_KEEP_RESET ? NSX_SENSOR_E_STATE : NSX_SENSOR_OK;
+    return ctx->_sleeping || ctx->_config.clock_src == MPU6050_CLOCK_KEEP_RESET ? NSX_SENSOR_E_STATE : NSX_SENSOR_OK;
 }
 static bool clock_valid(mpu6050_clock_src_t clock)
 {
-    return (unsigned)clock <= 5 || clock == CLOCK_KEEP_RESET;
+    return (unsigned)clock <= 5 || clock == MPU6050_CLOCK_KEEP_RESET;
 }
 static int16_t signed_word(const uint8_t *p)
 {
@@ -110,7 +110,7 @@ static void invalidate_fifo(mpu6050_context_t *ctx)
 }
 mpu6050_config_t mpu6050_default_config(void)
 {
-    const mpu6050_config_t c = {CLOCK_GX_PLL, DLPF_044HZ, GYRO_FS_250DPS, ACCEL_FS_2G, 9};
+    const mpu6050_config_t c = {MPU6050_CLOCK_GX_PLL, MPU6050_DLPF_044HZ, MPU6050_GYRO_FS_250DPS, MPU6050_ACCEL_FS_2G, 9};
     return c;
 }
 nsx_sensor_status_t mpu6050_validate_config(const mpu6050_config_t *c)
@@ -202,7 +202,7 @@ nsx_sensor_status_t mpu6050_set_clock_source(mpu6050_context_t *ctx, mpu6050_clo
     if (!clock_valid(clock)) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s = ready(ctx);
     if (s != NSX_SENSOR_OK) return s;
-    if (ctx->_lowpower && clock != CLOCK_INTERNAL) return NSX_SENSOR_E_STATE;
+    if (ctx->_lowpower && clock != MPU6050_CLOCK_INTERNAL) return NSX_SENSOR_E_STATE;
     s = update(ctx, POWER1, 7, (uint8_t)clock);
     if (s == NSX_SENSOR_OK) { ctx->_config.clock_src = clock; invalidate_fifo(ctx); }
     return s;
@@ -233,7 +233,7 @@ nsx_sensor_status_t mpu6050_set_lowpower_accel_mode(mpu6050_context_t *ctx, uint
     if (s == NSX_SENSOR_OK) {
         ctx->_lowpower = ctx->_temp_disabled = true;
         ctx->_sleeping = false;
-        ctx->_config.clock_src = CLOCK_INTERNAL;
+        ctx->_config.clock_src = MPU6050_CLOCK_INTERNAL;
     }
     return s;
 }
@@ -271,7 +271,7 @@ nsx_sensor_status_t mpu6050_set_sample_rate(mpu6050_context_t *ctx, uint16_t hz)
     if (!hz) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s = ready(ctx);
     if (s != NSX_SENSOR_OK) return s;
-    unsigned base = ctx->_config.dlpf_cfg == DLPF_260HZ ? 8000 : 1000;
+    unsigned base = ctx->_config.dlpf_cfg == MPU6050_DLPF_260HZ ? 8000 : 1000;
     if (hz > base || base % hz || base / hz > 256) return NSX_SENSOR_E_ARGUMENT;
     return mpu6050_set_sample_rate_divider(ctx, (uint8_t)(base / hz - 1));
 }
@@ -716,8 +716,8 @@ nsx_sensor_status_t mpu6050_calibrate(mpu6050_context_t *ctx,
         !config->accel_deadzone || !config->gyro_deadzone) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s = averaging_ready(ctx);
     if (s != NSX_SENSOR_OK) return s;
-    if (ctx->_config.accel_fullscale_range != ACCEL_FS_2G ||
-        ctx->_config.gyro_fullscale_range != GYRO_FS_250DPS || ctx->_config.dlpf_cfg == DLPF_260HZ)
+    if (ctx->_config.accel_fullscale_range != MPU6050_ACCEL_FS_2G ||
+        ctx->_config.gyro_fullscale_range != MPU6050_GYRO_FS_250DPS || ctx->_config.dlpf_cfg == MPU6050_DLPF_260HZ)
         return NSX_SENSOR_E_STATE;
     budget_t b = budget_start(ctx, config->timeout_us);
     mpu6050_offsets_t offsets = {0};

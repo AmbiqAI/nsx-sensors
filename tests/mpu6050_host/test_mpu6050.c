@@ -175,7 +175,7 @@ static void test_config_and_data(void)
     assert(mpu6050_set_accel_full_scale(&ctx, (mpu6050_accel_fs_t)-1) == NSX_SENSOR_E_ARGUMENT);
     assert(mpu6050_set_sample_rate(&ctx, 333) == NSX_SENSOR_E_ARGUMENT);
     assert(mpu6050_set_sample_rate(&ctx, 100) == NSX_SENSOR_OK && f.regs[0x19] == 9);
-    assert(mpu6050_set_lowpass_filter(&ctx, DLPF_260HZ) == NSX_SENSOR_OK);
+    assert(mpu6050_set_lowpass_filter(&ctx, MPU6050_DLPF_260HZ) == NSX_SENSOR_OK);
     float hz = -1;
     assert(mpu6050_get_sample_rate(&ctx, &hz) == NSX_SENSOR_OK && hz == 800);
     assert(mpu6050_set_sample_rate(&ctx, 8000) == NSX_SENSOR_OK && f.regs[0x19] == 0);
@@ -188,10 +188,10 @@ static void test_config_and_data(void)
     assert(raw.accel[0] == -2 && raw.accel[1] == 32767 && raw.accel[2] == -32768);
     assert(raw.temperature == 340 && raw.gyro[0] == 1 && raw.gyro[1] == -1 && raw.gyro[2] == 3 && raw.valid == 31);
     mpu6050_sample_t scaled;
-    assert(mpu6050_convert_sample(&raw, ACCEL_FS_2G, GYRO_FS_250DPS, &scaled) == NSX_SENSOR_OK);
+    assert(mpu6050_convert_sample(&raw, MPU6050_ACCEL_FS_2G, MPU6050_GYRO_FS_250DPS, &scaled) == NSX_SENSOR_OK);
     assert(fabsf(scaled.temperature_c - 37.53f) < 0.0001f && scaled.accel_g[2] == -2);
     float value = 7;
-    assert(mpu6050_gyro_to_deg_per_sec(131, GYRO_FS_250DPS, &value) == NSX_SENSOR_OK && value == 1);
+    assert(mpu6050_gyro_to_deg_per_sec(131, MPU6050_GYRO_FS_250DPS, &value) == NSX_SENSOR_OK && value == 1);
     assert(mpu6050_gyro_resolution((mpu6050_gyro_fs_t)4, &value) == NSX_SENSOR_E_ARGUMENT && value == 1);
     assert(mpu6050_set_temperature_disable(&ctx, 1) == NSX_SENSOR_OK);
     assert(mpu6050_read_raw(&ctx, &raw) == NSX_SENSOR_OK && !(raw.valid & MPU6050_DATA_TEMP) && !raw.temperature);
@@ -217,11 +217,11 @@ static void test_failures(void)
     f.fail_at = f.calls + 1; f.fail_after_read = true;
     assert(mpu6050_read_raw(&ctx, &raw) == NSX_SENSOR_E_IO && !memcmp(&raw, &saved, sizeof(raw)));
     f.fail_at = f.calls + 2;
-    assert(mpu6050_set_gyro_full_scale(&ctx, GYRO_FS_500DPS) == NSX_SENSOR_E_IO);
+    assert(mpu6050_set_gyro_full_scale(&ctx, MPU6050_GYRO_FS_500DPS) == NSX_SENSOR_E_IO);
     assert(mpu6050_read_raw(&ctx, &raw) == NSX_SENSOR_E_STATE);
     init_fake(&ctx, &f);
     f.fail_at = f.calls + 1;
-    assert(mpu6050_set_accel_full_scale(&ctx, ACCEL_FS_4G) == NSX_SENSOR_E_IO && ctx._configured);
+    assert(mpu6050_set_accel_full_scale(&ctx, MPU6050_ACCEL_FS_4G) == NSX_SENSOR_E_IO && ctx._configured);
     /* A failed RMW read never attempts the write. */
     assert(f.regs[0x1c] == 0);
 }
@@ -340,7 +340,7 @@ static void test_instances_and_recovery(void)
 {
     fake_t a, b; mpu6050_context_t x, y;
     init_fake(&x, &a); init_fake(&y, &b);
-    assert(mpu6050_set_accel_full_scale(&y, ACCEL_FS_8G) == NSX_SENSOR_OK);
+    assert(mpu6050_set_accel_full_scale(&y, MPU6050_ACCEL_FS_8G) == NSX_SENSOR_OK);
     put_word(a.regs + 0x3b, 4096); put_word(b.regs + 0x3b, 4096);
     mpu6050_sample_t sx, sy;
     assert(mpu6050_read_sample(&x, &sx) == NSX_SENSOR_OK);
@@ -398,7 +398,7 @@ static void test_fifo_enable_and_batches(void)
 
     const mpu6050_fifo_config_t config = {.xgEnable = 1};
     assert(mpu6050_configure_fifo(&ctx, &config) == NSX_SENSOR_OK);
-    assert(mpu6050_set_lowpass_filter(&ctx, DLPF_260HZ) == NSX_SENSOR_OK);
+    assert(mpu6050_set_lowpass_filter(&ctx, MPU6050_DLPF_260HZ) == NSX_SENSOR_OK);
     assert(mpu6050_set_sample_rate(&ctx, 8000) == NSX_SENSOR_OK);
     for (unsigned failure = 0; failure < 3; ++failure) {
         assert(mpu6050_reset_fifo(&ctx) == NSX_SENSOR_OK);
