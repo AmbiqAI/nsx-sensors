@@ -1,31 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-
-# Nested-consumer contract harness for nsx-sensors.
-#
-# This stands in for an NSX application so the nesting contract can be checked
-# without an SDK, a board, or a cross toolchain. It asserts what a real NSX
-# build depends on:
-#
-#   * add_subdirectory() of the module works and does not open a nested project
-#     scope, so PROJECT_NAME stays the consumer's;
-#   * the nsx::sensors alias, the nsx_sensors target, and EXPORT_NAME sensors
-#     all exist;
-#   * the target exports into the shared nsxTargets export set;
-#   * the public include interface resolves the installed header layout.
-#
-# It deliberately does NOT compile the drivers: they need real NSX transport and
-# AmbiqSuite headers. Compiling is the job of tests/configure_target_smoke.sh
-# (real consumer, real toolchain) and tests/vendor_compile_smoke.sh (vendored
-# subset). Keeping this harness dependency-free is what lets it run everywhere.
-
+# Configure the portable aggregate nested in an NSX-like target graph.
+# Consumer-link tests live in portable_build.sh; real SDK tests remain separate.
 project(nsx_sensors_nested_contract LANGUAGES C)
 
 set(NSX_SENSORS_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." CACHE PATH "nsx-sensors source root")
 
-# Minimal stand-ins for the transport modules an NSX build supplies. INTERFACE
-# libraries are enough because this harness only configures. They install into
-# the same shared nsxTargets export set that the real nsx-i2c and nsx-spi use,
-# so the export closure below is representative.
+# SDK stand-ins for automatic NSX adapter selection.
 foreach(nsx_stub core i2c spi)
     add_library(nsx_stub_${nsx_stub} INTERFACE)
     set_target_properties(nsx_stub_${nsx_stub} PROPERTIES EXPORT_NAME ${nsx_stub})
@@ -70,21 +50,13 @@ if(NOT nsx_sensors_export_name STREQUAL "sensors")
 endif()
 
 get_target_property(nsx_sensors_type nsx_sensors TYPE)
-if(NOT nsx_sensors_type STREQUAL "STATIC_LIBRARY")
-    message(FATAL_ERROR "expected a STATIC_LIBRARY, got '${nsx_sensors_type}'")
+if(NOT nsx_sensors_type STREQUAL "INTERFACE_LIBRARY")
+    message(FATAL_ERROR "expected a INTERFACE_LIBRARY, got '${nsx_sensors_type}'")
 endif()
 
-get_target_property(nsx_sensors_includes nsx_sensors INTERFACE_INCLUDE_DIRECTORIES)
-if(NOT nsx_sensors_includes MATCHES "includes-api")
-    message(FATAL_ERROR
-        "public include interface does not expose includes-api: "
-        "'${nsx_sensors_includes}'"
-    )
+get_target_property(nsx_sensors_links nsx_sensors INTERFACE_LINK_LIBRARIES)
+if(NOT nsx_sensors_links MATCHES "nsx_sensor_icm45605")
+    message(FATAL_ERROR "aggregate omits portable ICM-45605")
 endif()
-
-# The module must be exportable through the shared nsxTargets set a real NSX
-# package config installs. This fails at generate time if the module used a
-# private export set instead.
-install(EXPORT nsxTargets NAMESPACE nsx:: DESTINATION lib/cmake/nsx)
 
 message(STATUS "nsx-sensors nested contract harness configured")

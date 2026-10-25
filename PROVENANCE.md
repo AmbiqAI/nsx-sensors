@@ -143,12 +143,32 @@ explicitly in `CMakeLists.txt`.
 
 ### Local modifications
 
-The only change from the upstream copies is the removal of the `imu/` include
-path prefix, so that `#include "imu/inv_imu_defs.h"` becomes
-`#include "inv_imu_defs.h"`. This affects the include lines of `inv_imu_defs.h`,
-`inv_imu_driver.h`, `inv_imu_driver.c`, and `inv_imu_transport.c` only. The
-remaining five files are byte-identical to the intake path above. No register
-map, no scaling constant, and no license header was altered.
+The original intake removed the `imu/` include prefix in `inv_imu_defs.h`,
+`inv_imu_driver.h`, `inv_imu_driver.c` and `inv_imu_transport.c`.
+
+The unreleased portable ICM-45605 migration adds these narrow local patches:
+
+- `inv_imu_transport.h`: add a caller-owned `void *user` and pass it to read,
+  write and sleep callbacks. Device layout still starts with the typed transport.
+- `inv_imu_transport.c`: propagate that pointer through direct/indirect register
+  accesses and all delays. Initialize indirect-read output before the address
+  write so early failure cannot expose uninitialized vendor temporaries. No
+  global current-device switch.
+- `inv_imu_driver.c`: propagate the pointer through `inv_imu_sleep_us`; initialize
+  the interrupt configuration struct so unused/reserved bits are deterministic.
+
+No register map, scaling constant, vendor version string or license header was
+changed. The remaining files are unchanged from the documented intake except
+for the original include-prefix adjustment. The application wrapper suppresses
+later physical transfers after a transport failure and initializes read buffers
+because the retained vendor implementation can continue after errors.
+
+License assessment for this patch: the existing InvenSense grant expressly
+permits modification and redistribution. Every vendor notice is retained; the
+installed typed-storage headers carry the same terms and NOTICE is installed
+with the package. Vendor code is not relicensed as BSD-3-Clause. Maintainer
+licensing review remains part of PR review per OWNERS.md. There is no new vendor
+intake and no advanced/eDMP/self-test source in this change.
 
 ## Release-relevant changes since the previous audit point
 
@@ -213,3 +233,11 @@ audited against Maxim Integrated MAX86150 datasheet 19-8402, Rev 2 (12/18):
 [manufacturer PDF](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX86150.pdf),
 also available as [the same manufacturer document mirrored by MikroElektronika](https://download.mikroe.com/documents/datasheets/MAX86150_datasheet.pdf).
 See `docs/migration/max86150.md` for audit corrections and deliberate API limits.
+
+### Unreleased ICM-45605 portable basic API
+
+`include/nsx/sensors/icm45605.h` and `src/icm45605/icm45605.c` replace the
+historical NSX wrapper listed above. The Ambiq wrapper uses the retained TDK
+basic subset with caller-owned typed state, checked callbacks, native range
+validation, separate raw/scaled types and explicit fresh-sample calibration.
+Hardware remains unqualified. Future expansion is tracked in issue #23.

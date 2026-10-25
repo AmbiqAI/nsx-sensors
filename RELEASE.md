@@ -41,14 +41,14 @@ This release does **not** include:
 
 Treat these as the public contract for semantic versioning decisions:
 
-- The `nsx_*` public headers in `includes-api/`, including every context struct
+- The public headers in `include/nsx/sensors/`, including every context struct
   layout, enum value, and function signature.
 - The CMake target name `nsx_sensors`, its `nsx::sensors` alias, its
   `EXPORT_NAME`, its export set, and its installed header layout.
 - The declared dependency set and SoC/toolchain compatibility in
   `nsx-module.yaml`.
-- The ICM-45605 single-instance and context-free interrupt-handler contracts
-  documented in `includes-api/nsx_icm45605.h`.
+- The ICM-45605 address-stable caller-owned context and deferred interrupt
+  contracts documented in `include/nsx/sensors/icm45605.h`.
 
 Use patch releases for fixes that preserve those surfaces, minor releases for
 additive compatible changes, and major releases for breaking changes. While the

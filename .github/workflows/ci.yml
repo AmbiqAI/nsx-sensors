@@ -113,12 +113,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if cmake -S . -B build/unsatisfied -DNSX_SENSORS_LEGACY_NSX=ON; then
-            echo "NSX integration configure succeeded without nsx::core" >&2
+          if cmake -S . -B build/unsatisfied -DNSX_SENSOR_PORT_NSX=ON; then
+            echo "NSX adapter configure succeeded without transport targets" >&2
             exit 1
           fi
-          grep -qF 'nsx-sensors requires the nsx::core target' \
-            <(cmake -S . -B build/unsatisfied -DNSX_SENSORS_LEGACY_NSX=ON 2>&1 || true)
+          grep -qF 'NSX sensor port requires nsx::i2c' \
+            <(cmake -S . -B build/unsatisfied -DNSX_SENSOR_PORT_NSX=ON 2>&1 || true)
 
   module-compile-smoke:
     name: Module compile smoke (all declared SoCs, Arm GNU)

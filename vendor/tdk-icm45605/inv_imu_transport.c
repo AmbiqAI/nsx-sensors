@@ -17,6 +17,7 @@
 
 #include "inv_imu_transport.h"
 #include "inv_imu_defs.h"
+#include <string.h>
 
 /* Static function definition */
 
@@ -65,7 +66,7 @@ int inv_imu_write_sram(void *t, uint32_t addr, uint32_t len, const uint8_t *buf)
 
 static int read_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, uint8_t *buf)
 {
-	if (t->read_reg(reg, buf, len) != 0)
+	if (t->read_reg(t->user, reg, buf, len) != 0)
 		return INV_IMU_ERROR_TRANSPORT;
 
 	return INV_IMU_OK;
@@ -73,7 +74,7 @@ static int read_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, uint8_t 
 
 static int write_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, const uint8_t *buf)
 {
-	if (t->write_reg(reg, buf, len) != 0)
+	if (t->write_reg(t->user, reg, buf, len) != 0)
 		return INV_IMU_ERROR_TRANSPORT;
 
 	return INV_IMU_OK;
@@ -110,6 +111,9 @@ static int read_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, uint8_t
 	int     status = INV_IMU_OK;
 	uint8_t data[2];
 
+	/* NSX: callers may inspect output after an address-write failure. */
+	memset(buf, 0, len);
+
 	status |= check_out_of_bounds_mreg(reg, len);
 	if (status)
 		return status;
@@ -117,7 +121,7 @@ static int read_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, uint8_t
 	/* Write address first */
 	data[0] = (reg & 0xFF00) >> 8;
 	data[1] = reg & 0xFF;
-	t->sleep_us(4);
+	t->sleep_us(t->user, 4);
 	status |= write_dreg(t, IREG_ADDR_15_8, 2, data);
 
 	if (status)
@@ -125,7 +129,7 @@ static int read_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, uint8_t
 
 	/* Read all bytes one by one */
 	for (uint32_t i = 0; i < len; i++) {
-		t->sleep_us(4);
+		t->sleep_us(t->user, 4);
 		status |= read_dreg(t, IREG_DATA, 1, &buf[i]);
 	}
 
@@ -148,9 +152,9 @@ static int write_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, const 
 	data[2] = buf[0];
 
 	/* Burst write address and first byte */
-	t->sleep_us(4);
+	t->sleep_us(t->user, 4);
 	status |= write_dreg(t, IREG_ADDR_15_8, 3, data);
-	t->sleep_us(4);
+	t->sleep_us(t->user, 4);
 
 	if (status)
 		return status;
@@ -158,7 +162,7 @@ static int write_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, const 
 	/* Loop on the remaining bytes */
 	for (uint32_t i = 1; i < len; i++) {
 		status |= write_dreg(t, IREG_DATA, 1, &buf[i]);
-		t->sleep_us(4);
+		t->sleep_us(t->user, 4);
 	}
 
 	return status;

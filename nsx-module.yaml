@@ -9,9 +9,9 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: Portable BME688/LED Stick/INA228/MPU6050/MAX86150 cores and transitional NSX-only sensor drivers.
-# The NSX aggregate defaults on when its three declared dependency targets exist.
-# That aggregate contains the unmigrated ICM-45605 driver; see docs/migration.
+summary: Six portable sensor cores with a shared NSX transport adapter; ICM-45605 basic SPI support.
+# nsx::sensors aggregates the selected portable cores. NSX endpoints use the
+# separate nsx::sensor_port_nsx target; see docs/migration/icm45605.md.
 
 capabilities:
   - sensors

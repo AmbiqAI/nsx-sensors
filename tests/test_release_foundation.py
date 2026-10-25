@@ -49,9 +49,7 @@ VENDOR_EXCLUDED = {
     "inv_imu_selftest.h",
 }
 
-PUBLIC_HEADERS = (
-    "nsx_icm45605.h",
-)
+PUBLIC_HEADERS = ()
 
 
 def module_version() -> str:
@@ -226,13 +224,13 @@ class CMakeContractTests(unittest.TestCase):
         self.cmake = (ROOT / "CMakeLists.txt").read_text()
 
     def test_target_alias_export_name_and_export_set(self) -> None:
-        self.assertIn("add_library(nsx_sensors STATIC", self.cmake)
+        self.assertIn("add_library(nsx_sensors INTERFACE", self.cmake)
         self.assertIn("add_library(nsx::sensors ALIAS nsx_sensors)", self.cmake)
         self.assertIn(
             "set_target_properties(nsx_sensors PROPERTIES EXPORT_NAME sensors)",
             self.cmake,
         )
-        self.assertIn("install(TARGETS nsx_sensors EXPORT nsxTargets)", self.cmake)
+        self.assertIn("list(APPEND nsx_portable_targets nsx_sensors)", self.cmake)
         self.assertNotIn("nsx_sensorsTargets", self.cmake)
 
     def test_gnuinstalldirs_is_included_before_it_is_used(self) -> None:
@@ -259,7 +257,7 @@ class CMakeContractTests(unittest.TestCase):
         for dependency in ("nsx::core", "nsx::i2c", "nsx::spi"):
             self.assertIn(dependency, self.cmake, dependency)
         self.assertIn("FATAL_ERROR", self.cmake)
-        self.assertIn("if(NOT TARGET ${nsx_sensors_dependency})", self.cmake)
+        self.assertIn("if(NOT TARGET ${dependency})", self.cmake)
 
     def test_sources_are_explicit_not_globbed(self) -> None:
         self.assertNotIn("file(GLOB", self.cmake)
@@ -289,8 +287,8 @@ class PublicApiTests(unittest.TestCase):
                 )
 
     def test_icm45605_frame_buffering_api_is_absent(self) -> None:
-        header = (API / "nsx_icm45605.h").read_text()
-        source = (SRC / "nsx_icm45605.c").read_text()
+        header = (ROOT / "include/nsx/sensors/icm45605.h").read_text()
+        source = (SRC / "icm45605/icm45605.c").read_text()
         for symbol in (
             "frame_buffer",
             "frame_available_cb",
@@ -301,21 +299,19 @@ class PublicApiTests(unittest.TestCase):
             self.assertNotIn(symbol, source, symbol)
 
     def test_icm45605_interrupt_opt_in_is_explicit(self) -> None:
-        header = (API / "nsx_icm45605.h").read_text()
-        source = (SRC / "nsx_icm45605.c").read_text()
-        self.assertIn("enable_drdy_interrupt", header)
-        self.assertIn("if (ctx->enable_drdy_interrupt)", source)
+        header = (ROOT / "include/nsx/sensors/icm45605.h").read_text()
+        source = (SRC / "icm45605/icm45605.c").read_text()
+        self.assertIn("drdy_interrupt", header)
+        self.assertIn("icm45605_set_drdy_interrupt", source)
 
-    def test_icm45605_single_instance_contract_is_documented(self) -> None:
-        header = (API / "nsx_icm45605.h").read_text()
-        self.assertIn("Single-instance contract", header)
-        self.assertIn("does not buffer samples", header)
-        self.assertIn("Context-free by design", header)
-        # The contract must reflect reality: the device handle really is
-        # file-static and the interrupt handler really takes no context.
-        source = (SRC / "nsx_icm45605.c").read_text()
-        self.assertIn("static inv_imu_device_t icm45605_dev;", source)
-        self.assertIn("uint32_t icm45605_handle_interrupt(void)", source)
+    def test_icm45605_per_instance_contract_is_documented(self) -> None:
+        header = (ROOT / "include/nsx/sensors/icm45605.h").read_text()
+        self.assertIn("address-stable context", header)
+        self.assertIn("Not ISR-safe", header)
+        self.assertIn("inv_imu_device_t _device", header)
+        source = (SRC / "icm45605/icm45605.c").read_text()
+        self.assertNotIn("static inv_imu_device_t", source)
+        self.assertNotIn("icm45605_handle_interrupt(void)", source)
 
 
 class CompatibilityDeclarationTests(unittest.TestCase):
@@ -471,10 +467,11 @@ class NestedContractHarnessTests(unittest.TestCase):
         self.assertIn("get_directory_property(nsx_sensors_project", self.text)
         self.assertIn("DEFINITION PROJECT_NAME", self.text)
 
-    def test_harness_checks_export_name_alias_and_export_set(self) -> None:
+    def test_harness_checks_export_name_alias_and_portable_aggregate(self) -> None:
         self.assertIn("EXPORT_NAME", self.text)
         self.assertIn("nsx::sensors", self.text)
-        self.assertIn("install(EXPORT nsxTargets", self.text)
+        self.assertIn("INTERFACE_LINK_LIBRARIES", self.text)
+        self.assertIn("nsx_sensor_icm45605", self.text)
 
 
 class SourceArchiveTests(unittest.TestCase):

@@ -9,16 +9,14 @@ option(NSX_SENSOR_MAX86150 "Build portable MAX86150" ON)
 option(NSX_SENSOR_MPU6050 "Build portable MPU6050" ON)
 option(NSX_SENSOR_INA228 "Build portable INA228" ON)
 option(NSX_SENSOR_LEDSTICK "Build portable LED Stick" ON)
-# NSX resolves and adds its declared dependencies before this module. Preserve
-# the metadata-advertised aggregate there, without requiring an SDK in portable
-# consumers or discovering dependencies from sibling directories.
-set(nsx_sensors_legacy_default OFF)
+option(NSX_SENSOR_ICM45605 "Build portable ICM-45605 basic SPI driver" ON)
+# Only the transport adapter needs SDK targets. Every driver core and the
+# selected-driver aggregate can build and install without NSX.
+set(nsx_sensor_port_default OFF)
 if(TARGET nsx::core AND TARGET nsx::i2c AND TARGET nsx::spi)
-    set(nsx_sensors_legacy_default ON)
+    set(nsx_sensor_port_default ON)
 endif()
-option(NSX_SENSORS_LEGACY_NSX "Build remaining NSX-only drivers (transitional)"
-    ${nsx_sensors_legacy_default})
-option(NSX_SENSOR_PORT_NSX "Build the shared NSX transport adapter" ${nsx_sensors_legacy_default})
+option(NSX_SENSOR_PORT_NSX "Build the shared NSX transport adapter" ${nsx_sensor_port_default})
 option(NSX_SENSOR_INSTALL_NSX_PORT "Export the NSX port (requires SDK package exports)" OFF)
 option(NSX_SENSORS_TESTS "Build portable host tests" OFF)
 
@@ -71,11 +69,42 @@ if(NSX_SENSOR_MAX86150)
     target_link_libraries(nsx_sensor_max86150 PUBLIC nsx_sensor_common)
     list(APPEND nsx_portable_targets nsx_sensor_max86150)
 endif()
+if(NSX_SENSOR_ICM45605)
+    # Explicit, licensed TDK basic subset; context callback patch in PROVENANCE.md.
+    add_library(nsx_sensor_icm45605 STATIC src/icm45605/icm45605.c
+        vendor/tdk-icm45605/inv_imu_driver.c
+        vendor/tdk-icm45605/inv_imu_transport.c)
+    add_library(nsx::sensor_icm45605 ALIAS nsx_sensor_icm45605)
+    set_target_properties(nsx_sensor_icm45605 PROPERTIES EXPORT_NAME sensor_icm45605)
+    target_link_libraries(nsx_sensor_icm45605 PUBLIC nsx_sensor_common)
+    # Typed caller-owned vendor storage is part of the context layout, not an
+    # application-facing vendor API. Ship the headers and notices together.
+    target_include_directories(nsx_sensor_icm45605 PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/vendor/tdk-icm45605>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors/detail/tdk-icm45605>)
+    install(FILES
+        vendor/tdk-icm45605/inv_imu.h
+        vendor/tdk-icm45605/inv_imu_defs.h
+        vendor/tdk-icm45605/inv_imu_driver.h
+        vendor/tdk-icm45605/inv_imu_transport.h
+        vendor/tdk-icm45605/inv_imu_regmap_le.h
+        vendor/tdk-icm45605/inv_imu_regmap_be.h
+        vendor/tdk-icm45605/inv_imu_version.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors/detail/tdk-icm45605)
+    list(APPEND nsx_portable_targets nsx_sensor_icm45605)
+endif()
+# NSX metadata's advertised aggregate now consists entirely of portable cores.
+# Link nsx::sensor_port_nsx explicitly when an application uses the NSX adapter.
+add_library(nsx_sensors INTERFACE)
+add_library(nsx::sensors ALIAS nsx_sensors)
+set_target_properties(nsx_sensors PROPERTIES EXPORT_NAME sensors)
+target_link_libraries(nsx_sensors INTERFACE ${nsx_portable_targets})
+list(APPEND nsx_portable_targets nsx_sensors)
 install(TARGETS ${nsx_portable_targets} EXPORT nsxSensorTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES include/nsx/sensors/status.h include/nsx/sensors/bus.h
     include/nsx/sensors/runtime.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
-foreach(driver bme688 ledstick ina228 mpu6050 max86150)
+foreach(driver bme688 ledstick ina228 mpu6050 max86150 icm45605)
     if(TARGET nsx_sensor_${driver})
         install(FILES include/nsx/sensors/${driver}.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
     endif()
@@ -115,60 +144,6 @@ if(NSX_SENSOR_PORT_NSX)
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nsx_sensors)
         install(FILES include/nsx/sensors/port_nsx.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
     endif()
-endif()
-
-# Transitional NSX aggregate contains only the unmigrated ICM-45605 driver.
-# BME688/LED Stick/INA228/MPU6050/MAX86150 now use their portable targets; link nsx::sensor_port_nsx for NSX transport.
-if(NSX_SENSORS_LEGACY_NSX)
-foreach(nsx_sensors_dependency nsx::core nsx::i2c nsx::spi)
-    if(NOT TARGET ${nsx_sensors_dependency})
-        message(FATAL_ERROR
-            "nsx-sensors requires the ${nsx_sensors_dependency} target. Add this "
-            "module from an NSX build that provides nsx-core, nsx-i2c, and nsx-spi."
-        )
-    endif()
-endforeach()
-
-# Vendored TDK eMD "common files + basic driver" subset. Listed explicitly so a
-# newly vendored file is a reviewed change rather than an implicit build input;
-# see PROVENANCE.md for the exact upstream subset and its exclusions.
-set(nsx_sensors_vendor_sources
-    ${CMAKE_CURRENT_LIST_DIR}/vendor/tdk-icm45605/inv_imu_driver.c
-    ${CMAKE_CURRENT_LIST_DIR}/vendor/tdk-icm45605/inv_imu_transport.c
-)
-
-add_library(nsx_sensors STATIC
-    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_icm45605.c
-    ${nsx_sensors_vendor_sources}
-)
-
-set_target_properties(nsx_sensors PROPERTIES EXPORT_NAME sensors)
-add_library(nsx::sensors ALIAS nsx_sensors)
-
-target_include_directories(nsx_sensors
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-sensors/includes-api>
-    PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/vendor/tdk-icm45605
-)
-
-target_link_libraries(nsx_sensors
-    PUBLIC
-        nsx::core
-        nsx::i2c
-        nsx::spi
-)
-
-target_compile_features(nsx_sensors PUBLIC c_std_11)
-
-install(TARGETS nsx_sensors EXPORT nsxTargets)
-
-install(
-    DIRECTORY includes-api/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-sensors/includes-api
-)
-
 endif()
 
 if(NSX_SENSORS_TESTS)

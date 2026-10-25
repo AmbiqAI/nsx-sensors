@@ -632,3 +632,22 @@ provides deterministic overflow checks and draining at the cost of capture gaps.
 Automatic proximity transitions are excluded from this first portable API because
 they flush FIFO without a reliable per-frame epoch indication. Only ICM-45605
 remains NSX-only. This is not a v1 release or hardware qualification.
+
+### ICM-45605 basic migration status
+
+The final NSX-only core is now migrated. ICM-45605 retains TDK's basic driver;
+its read/write/delay callbacks carry a user pointer and each address-stable
+context owns typed `inv_imu_device_t` storage. Two-device and indirect-access
+host tests exercise this feasibility choice. Vendor headers ship under the
+installed detail directory with their original notices; no opaque byte casts
+or global active-device switch are used. The register maps remain unchanged.
+
+The first subset is 4-wire SPI, shared-rate low-noise configuration, direct
+raw/scaled readings, explicit start/stop, deferred data-ready handling and
+bounded stationary calibration. FIFO, advanced motion functions and additional
+interfaces are tracked in [issue #23](https://github.com/AmbiqAI/nsx-sensors/issues/23).
+See [the migration guide](../migration/icm45605.md). `nsx::sensors` now aggregates
+selected portable cores in the portable export; the legacy option is removed.
+The NSX adapter remains separate. This records an implemented slice, not v1
+acceptance: framework wrappers, representative firmware links, resource evidence,
+API review and hardware qualification gates remain outstanding.

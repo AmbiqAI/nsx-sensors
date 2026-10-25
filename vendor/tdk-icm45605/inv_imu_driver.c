@@ -21,7 +21,7 @@
 void inv_imu_sleep_us(inv_imu_device_t *s, uint32_t us)
 {
 	if (s->transport.sleep_us != NULL)
-		s->transport.sleep_us(us);
+		s->transport.sleep_us(s->transport.user, us);
 }
 
 int inv_imu_soft_reset(inv_imu_device_t *s)
@@ -448,7 +448,7 @@ int inv_imu_set_config_int(inv_imu_device_t *s, const inv_imu_int_num_t num,
                            const inv_imu_int_state_t *it)
 {
 	int            status = INV_IMU_OK;
-	intx_configx_t intx_configx;
+	intx_configx_t intx_configx = { 0 }; /* NSX: initialize reserved/unused bits. */
 	uint32_t       reg;
 
 	switch (num) {

@@ -5,9 +5,10 @@ out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
 for prefix in 3 5; do
     cc -std=c11 -Wall -Wextra -Werror -g -fsanitize=address,undefined -fno-pie -no-pie \
-        -DAM_HAL_IOM_MAX_OFFSETSIZE="$prefix" -I "$root/include" -I "$root/tests/nsx_port/stubs" \
+        -DAM_HAL_IOM_MAX_OFFSETSIZE="$prefix" -I "$root/include" -I "$root/vendor/tdk-icm45605" -I "$root/tests/nsx_port/stubs" \
         "$root/src/ports/nsx.c" "$root/src/common/bus.c" "$root/src/ledstick/ledstick.c" \
         "$root/src/max86150/max86150.c" "$root/src/mpu6050/mpu6050.c" "$root/src/ina228/ina228.c" "$root/src/bme688/bme688.c" "$root/src/bme688/compensation.c" \
+        "$root/src/icm45605/icm45605.c" "$root/vendor/tdk-icm45605/inv_imu_driver.c" "$root/vendor/tdk-icm45605/inv_imu_transport.c" \
         "$root/tests/nsx_port/test_port.c" -lm -o "$out/port-$prefix"
     "$out/port-$prefix"
 done
