@@ -14,7 +14,9 @@ typedef struct {
     uint8_t *rx;
     size_t rx_size;
 } nsx_sensor_transfer_t;
-/* Synchronous: buffers are borrowed only until return. Both phases nonempty
+/* Synchronous: buffers are borrowed only until return. A zero-length phase
+ * ignores its pointer (NULL is allowed); a nonzero phase requires a buffer.
+ * At least one phase must be nonempty. Both phases nonempty
  * mean repeated START without STOP on I2C, or CS held throughout on SPI.
  * SPI discards RX during TX; the adapter documents RX MOSI behavior (fill byte or hardware-defined).
  * Never split a transfer or substitute STOP-separated reads. Unsupported

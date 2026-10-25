@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased deep-review fixes
+
+- Require MAX86150 reinitialization after a failed consuming interrupt-status
+  read: the transfer may have erased power-reset evidence, making cached
+  configuration unsafe to reuse through FIFO clear/start recovery.
+- Accept non-null unused buffer pointers for zero-length transfer phases in the
+  NSX adapter, matching the common bus contract. Empty transfers and missing
+  buffers for nonzero phases remain invalid.
+- Add status-consumption/reset recovery and I2C/SPI descriptor regressions.
+
 ## Unreleased ICM-45605 portable basic migration
 
 - Replace the NSX-only singleton API with `<nsx/sensors/icm45605.h>` and
