@@ -7,6 +7,8 @@ typedef struct {
     uint8_t reg[256], fifo[32][12];
     unsigned count, calls, fail_at, fifo_reads, fail_fifo_read;
     bool stuck_reset, fail_after, frozen_clock, overflow_during_read;
+    /* Inject independent production/reset at transfer boundaries. */
+    unsigned push_after_call, pushes_after_call, power_before_call;
     uint64_t time;
     size_t max_read;
 } fake_t;
@@ -18,10 +20,14 @@ static unsigned width(fake_t *f)
 }
 static void flush(fake_t *f)
 { f->count=0; f->reg[4]=f->reg[5]=f->reg[6]=0; f->reg[0]&=0x7f; }
+static void push(fake_t *f, unsigned seed);
 static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *t)
 {
     fake_t *f=user; ++f->calls;
     assert(t->tx && t->tx_size>=1 && t->tx_size<=3);
+    if (f->calls==f->power_before_call) {
+        memset(f->reg,0,sizeof(f->reg)); f->reg[255]=0x1e; flush(f); f->reg[0]=1;
+    }
     uint8_t reg=t->tx[0]; bool fail=f->calls==f->fail_at;
     if (fail && !f->fail_after) return NSX_SENSOR_E_IO;
     if (t->rx_size) {
@@ -48,13 +54,16 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *t)
         uint8_t old=f->reg[reg]; f->reg[reg]=t->tx[1];
         if (reg==13) {
             if ((t->tx[1]&1) && !f->stuck_reset) {
-                memset(f->reg,0,sizeof(f->reg)); f->reg[255]=0x1e; flush(f);
+                uint8_t power=f->reg[0]&1; /* Soft reset does not generate/clear PWR_RDY. */
+                memset(f->reg,0,sizeof(f->reg)); f->reg[255]=0x1e; flush(f); f->reg[0]=power;
             }
             if (!(old&4) && (t->tx[1]&4)) flush(f);
             if (t->tx[1]&2) f->reg[0]=f->reg[1]=0;
         }
         if ((f->reg[13]&4) && (reg==9 || reg==10 || reg==14 || reg==15 || reg==60 || reg==62)) flush(f);
     }
+    if (f->calls==f->push_after_call)
+        for (unsigned i=0;i<f->pushes_after_call;++i) push(f,100+i);
     return fail?NSX_SENSOR_E_IO:NSX_SENSOR_OK;
 }
 static void delay(void *user,uint32_t us) { ((fake_t *)user)->time+=us; }
@@ -148,10 +157,10 @@ static void test_fifo(void)
     /* Equal nonzero pointers are empty as well. */
     assert(max86150_start(&c)==NSX_SENSOR_OK);
     for (unsigned i=0;i<5;++i) push(&f,i);
-    assert(max86150_read_fifo(&c,frames,32,&done)==NSX_SENSOR_OK && done==5);
-    assert(f.reg[4]==5 && f.reg[6]==5 && c._fifo_enabled);
+    assert(max86150_read_fifo(&c,frames,32,&done)==NSX_SENSOR_OK && done==4);
+    assert(f.reg[4]==5 && f.reg[6]==4 && c._fifo_enabled);
     assert(max86150_read_fifo(&c,frames,32,&done)==NSX_SENSOR_AGAIN);
-    for (unsigned i=0;i<32;++i) push(&f,i);
+    for (unsigned i=0;i<31;++i) push(&f,i);
     assert(max86150_read_fifo_snapshot(&c,frames,32,&done)==NSX_SENSOR_OK && done==32);
     assert(max86150_start(&c)==NSX_SENSOR_OK);
     for (unsigned i=0;i<33;++i) push(&f,i);
@@ -255,10 +264,83 @@ static void test_continuous_guards_and_failures(void)
     uint8_t a=0xa5,b=0x5a; f.fail_at=f.calls+1; f.fail_after=true;
     assert(max86150_get_ppg_config(&c,&a,&b)==NSX_SENSOR_E_IO && a==0xa5 && b==0x5a);
 }
+/* Status/pointer reads and bursts are distinct bus transactions. Production
+ * runs independently, including after a status read has consumed A_FULL. */
+static void test_continuous_interleavings(void)
+{
+    for (unsigned offset=1;offset<=8;++offset) {
+        for (unsigned initial=0;initial<=32;++initial) {
+            for (unsigned arrivals=1;arrivals<=32;arrivals+=31) {
+                fake_t f; max86150_context_t c; init_fake(&c,&f,96);
+                assert(max86150_start(&c)==NSX_SENSOR_OK);
+                for (unsigned i=0;i<initial;++i) push(&f,i);
+                f.push_after_call=f.calls+offset; f.pushes_after_call=arrivals;
+                max86150_frame_t frames[32]; size_t done;
+                nsx_sensor_status_t s=max86150_read_fifo(&c,frames,32,&done);
+                assert(s==NSX_SENSOR_OK || s==NSX_SENSOR_AGAIN || s==NSX_SENSOR_E_OVERFLOW);
+                if (s==NSX_SENSOR_E_OVERFLOW) continue;
+                /* Stop injecting; capture exactly what remains, including the
+                 * retained frame. The fake rejects every out-of-bounds pop. */
+                f.push_after_call=0;
+                unsigned queued=f.count;
+                s=max86150_read_fifo_snapshot(&c,frames,32,&done);
+                if (s==NSX_SENSOR_E_OVERFLOW) continue;
+                assert(done==queued && f.count==0);
+                assert(s==(queued?NSX_SENSOR_OK:NSX_SENSOR_AGAIN));
+                assert(max86150_read_fifo_snapshot(&c,frames,32,&done)==NSX_SENSOR_AGAIN && !done);
+            }
+        }
+    }
+    /* Exactly the reported 31->32 race, then continuous retries and a refill. */
+    fake_t f; max86150_context_t c; init_fake(&c,&f,96);
+    assert(max86150_start(&c)==NSX_SENSOR_OK);
+    for (unsigned i=0;i<31;++i) push(&f,i);
+    f.push_after_call=f.calls+1; f.pushes_after_call=1;
+    max86150_frame_t frames[32]; size_t done;
+    assert(max86150_read_fifo(&c,frames,32,&done)==NSX_SENSOR_OK && done==31 && f.count==1);
+    assert(max86150_read_fifo(&c,frames,32,&done)==NSX_SENSOR_AGAIN && !done && f.count==1);
+    for (unsigned i=0;i<31;++i) push(&f,i);
+    assert(max86150_read_fifo(&c,frames,32,&done)==NSX_SENSOR_OK && done==31 && f.count==1);
+    assert(max86150_read_fifo_snapshot(&c,frames,32,&done)==NSX_SENSOR_OK && done==1 && !f.count);
+}
+static void test_full_fifo_read_failure(void)
+{
+    for (unsigned offset=3;offset<=6;offset+=3) {
+        fake_t f; max86150_context_t c; init_fake(&c,&f,96);
+        assert(max86150_start(&c)==NSX_SENSOR_OK);
+        for (unsigned i=0;i<32;++i) push(&f,i);
+        f.fail_at=f.calls+offset; /* OVF read before first or second burst. */
+        max86150_frame_t frames[32]; size_t done;
+        assert(max86150_read_fifo(&c,frames,32,&done)==NSX_SENSOR_E_IO);
+        assert(done==(offset==3?0u:10u) && !c._fifo_valid);
+        unsigned queued=f.count;
+        assert(max86150_read_fifo_snapshot(&c,frames,32,&done)==NSX_SENSOR_E_STATE && !done && f.count==queued);
+        assert(max86150_start(&c)==NSX_SENSOR_OK && !f.count);
+    }
+}
+static void test_power_reset_detection(void)
+{
+    fake_t f; max86150_context_t c;
+    bind_fake(&c,&f,96); f.reg[0]=1;
+    max86150_config_t config=max86150_default_config();
+    assert(max86150_init(&c,&config)==NSX_SENSOR_OK); /* Expected power-on flag. */
+    unsigned init_calls=f.calls;
+    bind_fake(&c,&f,96); f.power_before_call=init_calls;
+    assert(max86150_init(&c,&config)==NSX_SENSOR_E_DEVICE && !c._configured);
+    init_fake(&c,&f,96);
+    unsigned before=f.calls;
+    assert(max86150_clear_fifo(&c)==NSX_SENSOR_OK);
+    unsigned clear_calls=f.calls-before;
+    f.power_before_call=f.calls+clear_calls;
+    assert(max86150_clear_fifo(&c)==NSX_SENSOR_E_DEVICE && !c._configured && !c._fifo_valid);
+    assert(max86150_start(&c)==NSX_SENSOR_E_STATE);
+    assert(max86150_init(&c,&config)==NSX_SENSOR_OK && c._configured);
+}
 int main(void)
 {
     test_lifecycle_and_errors(); test_fifo(); test_slots_and_limits(); test_status_and_instances();
-    test_continuous_guards_and_failures();
+    test_continuous_guards_and_failures(); test_continuous_interleavings();
+    test_full_fifo_read_failure(); test_power_reset_detection();
     puts("MAX86150: lifecycle, signed data, FIFO fullness/capacity/recovery, slot layouts and failures passed");
     return 0;
 }

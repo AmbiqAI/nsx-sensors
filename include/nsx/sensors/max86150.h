@@ -73,6 +73,9 @@ nsx_sensor_status_t max86150_set_fifo_enable(max86150_context_t *ctx, uint8_t en
 nsx_sensor_status_t max86150_clear_fifo(max86150_context_t *ctx);
 /* Continuous raw acquisition, FIFO enabled/awake and rollover OFF required.
  * Requires repeating A_FULL and no clear-on-data to retain full-state evidence.
+ * Retains one queued frame to disambiguate full/empty pointers without stale
+ * A_FULL evidence. Adds one frame of latency; AGAIN means fewer than two frames.
+ * Use read_fifo_snapshot to drain the final frame after acquisition.
  * Non-rollover preserves queued frames if production catches up to the reader.
  * Observed overflow requires recovery. Hardware clears OVF on every popped
  * frame, so loss occurring during a burst cannot always be observed: success

@@ -141,13 +141,18 @@ nsx_sensor_status_t max86150_init(max86150_context_t *c, const max86150_config_t
     if (!c->_bound) return NSX_SENSOR_E_STATE;
     if (!c->runtime.delay_us) return NSX_SENSOR_E_UNSUPPORTED;
     uint8_t id; s=max86150_probe(c,&id); if (s!=NSX_SENSOR_OK) return s;
+    /* A power-ready flag already present at entry is expected on first boot.
+     * Consume it before reset/configuration, then reject any later power loss. */
+    c->_configured=false; invalidate_fifo(c);
+    uint8_t boot_status[2]; s=read_bytes(c,INT1,boot_status,2);
+    if (s!=NSX_SENSOR_OK) return s;
     s=max86150_reset(c,100000); if (s!=NSX_SENSOR_OK) return s;
     s=write_reg(c,SYS,2); if (s!=NSX_SENSOR_OK) return s;
     c->_shutdown=true; c->_fifo_enabled=false;
     s=write_reg(c,EN1,0); if (s!=NSX_SENSOR_OK) return s;
     s=write_reg(c,EN2,0); if (s!=NSX_SENSOR_OK) return s;
     s=apply_config(c,&copy); if (s!=NSX_SENSOR_OK) return s;
-    uint8_t status[2]; s=read_bytes(c,INT1,status,2);
+    max86150_interrupts_t status; s=max86150_get_interrupts(c,&status);
     if (s!=NSX_SENSOR_OK) { c->_configured=false; return s; }
     c->_fifo_valid=true; c->_snapshot_ready=true; c->_remaining=0;
     return NSX_SENSOR_OK;
@@ -230,7 +235,9 @@ nsx_sensor_status_t max86150_clear_fifo(max86150_context_t *c)
     invalidate_fifo(c);
     s=write_reg(c,SYS,6); if (s!=NSX_SENSOR_OK) return s;
     s=write_reg(c,SYS,2); if (s!=NSX_SENSOR_OK) return s;
-    uint8_t status[2]; s=read_bytes(c,INT1,status,2); if (s!=NSX_SENSOR_OK) return s;
+    max86150_interrupts_t status; s=max86150_get_interrupts(c,&status);
+    if (s!=NSX_SENSOR_OK) return s;
+    c->_afull_seen=false;
     c->_fifo_valid=true; c->_snapshot_ready=true; c->_remaining=0;
     return NSX_SENSOR_OK;
 }
@@ -274,12 +281,19 @@ static nsx_sensor_status_t read_fifo(max86150_context_t *c,
         max86150_fifo_state_t state; s=max86150_get_fifo_state(c,&state);
         if (s!=NSX_SENSOR_OK) return s;
         if (state.overflow_count) return NSX_SENSOR_E_OVERFLOW;
+        /* Continuous consumption always leaves a queued frame. With no
+         * other consumer and no rollover, a known nonempty FIFO cannot become
+         * empty. Thus equal pointers mean full even if A_FULL was consumed.
+         * Before the first pop, A_FULL cannot be stale from an earlier drain. */
+        bool nonempty=c->_remaining!=0;
         c->_remaining=(uint8_t)((state.write_pointer-state.read_pointer)&31);
-        if (!c->_remaining && c->_afull_seen) c->_remaining=32;
+        if (!c->_remaining && (nonempty || c->_afull_seen)) c->_remaining=32;
         c->_afull_seen=false; c->_snapshot_ready=freeze;
     }
-    if (!c->_remaining) return NSX_SENSOR_AGAIN;
-    size_t count=c->_remaining<capacity?c->_remaining:capacity;
+    size_t available=c->_remaining;
+    if (!freeze && available) --available; /* Retain one frame until snapshot. */
+    if (!available) return NSX_SENSOR_AGAIN;
+    size_t count=available<capacity?available:capacity;
     size_t frame_size=3*n;
     while (*completed<count) {
         uint8_t bytes[96];
@@ -288,7 +302,7 @@ static nsx_sensor_status_t read_fifo(max86150_context_t *c,
         if (batch>count-*completed) batch=count-*completed;
         if (!freeze) {
             uint8_t overflow; s=read_bytes(c,OVF,&overflow,1);
-            if (s!=NSX_SENSOR_OK) return s;
+            if (s!=NSX_SENSOR_OK) { invalidate_fifo(c); return s; }
             if (overflow&31) { invalidate_fifo(c); return NSX_SENSOR_E_OVERFLOW; }
         }
         s=read_bytes(c,DATA,bytes,batch*frame_size);

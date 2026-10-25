@@ -2,6 +2,11 @@
 
 ## Unreleased MAX86150 portable migration
 
+- Fix review findings: retain one frame during continuous reads to prevent stale
+  A_FULL from fabricating full queues, invalidate ambiguous pre-burst read failures,
+  and detect power resets during FIFO recovery and initialization. Add producer
+  interleaving, bus-failure and power-loss regressions.
+
 - Move MAX86150 to `<nsx/sensors/max86150.h>` / `nsx::sensor_max86150`, using
   shared bus/runtime/status types, pure bind/probe/validation, idle init, and
   explicit start. Only ICM-45605 remains in the legacy aggregate.
