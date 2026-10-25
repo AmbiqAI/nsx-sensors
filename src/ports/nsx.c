@@ -10,7 +10,7 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *x)
     nsx_sensor_nsx_context_t *ctx = user;
     /* Validate even direct ops calls; never truncate, split or silently retry. */
     if (!ctx || !x || (!x->tx_size && !x->rx_size) ||
-        (!!x->tx != !!x->tx_size) || (!!x->rx != !!x->rx_size))
+        (x->tx_size && !x->tx) || (x->rx_size && !x->rx))
         return NSX_SENSOR_E_ARGUMENT;
     if (x->tx_size > sizeof(ctx->_scratch) || x->rx_size > sizeof(ctx->_scratch) ||
         (x->tx_size && x->rx_size && x->tx_size > AM_HAL_IOM_MAX_OFFSETSIZE))

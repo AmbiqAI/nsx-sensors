@@ -6,6 +6,7 @@
 typedef struct {
     uint8_t reg[256], fifo[32][12];
     unsigned count, calls, fail_at, fifo_reads, fail_fifo_read;
+    uint8_t last_reg;
     bool stuck_reset, fail_after, frozen_clock, overflow_during_read;
     /* Inject independent production/reset at transfer boundaries. */
     unsigned push_after_call, pushes_after_call, power_before_call;
@@ -28,7 +29,7 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *t)
     if (f->calls==f->power_before_call) {
         memset(f->reg,0,sizeof(f->reg)); f->reg[255]=0x1e; flush(f); f->reg[0]=1;
     }
-    uint8_t reg=t->tx[0]; bool fail=f->calls==f->fail_at;
+    uint8_t reg=t->tx[0]; f->last_reg=reg; bool fail=f->calls==f->fail_at;
     if (fail && !f->fail_after) return NSX_SENSOR_E_IO;
     if (t->rx_size) {
         assert(t->tx_size==1 && t->rx_size<=f->max_read);
@@ -214,6 +215,9 @@ static void test_status_and_instances(void)
     a.reg[0]=0x80; a.fail_at=a.calls+1; a.fail_after=true;
     status.status1=99;
     assert(max86150_get_interrupts(&x,&status)==NSX_SENSOR_E_IO && status.status1==99 && !x._fifo_valid);
+    assert(max86150_start(&x)==NSX_SENSOR_E_STATE);
+    max86150_config_t config=max86150_default_config();
+    assert(max86150_init(&x,&config)==NSX_SENSOR_OK);
     assert(max86150_start(&x)==NSX_SENSOR_OK);
     a.reg[0]=1;
     assert(max86150_get_interrupts(&x,&status)==NSX_SENSOR_E_DEVICE && !x._configured);
@@ -318,6 +322,50 @@ static void test_full_fifo_read_failure(void)
         assert(max86150_start(&c)==NSX_SENSOR_OK && !f.count);
     }
 }
+/* A failed consuming status read cannot prove whether PWR_RDY was lost.
+ * Cover direct/convenience reads and both status reads inside clear_fifo. */
+static void test_ambiguous_status_recovery(void)
+{
+    fake_t f; max86150_context_t c;
+    init_fake(&c,&f,96);
+    assert(max86150_start(&c)==NSX_SENSOR_OK);
+    unsigned before=f.calls;
+    assert(max86150_clear_fifo(&c)==NSX_SENSOR_OK);
+    unsigned clear_calls=f.calls-before;
+    for (unsigned path=0;path<5;++path) {
+        for (unsigned reset=0;reset<2;++reset) {
+            for (unsigned after=0;after<2;++after) {
+                init_fake(&c,&f,96);
+                assert(max86150_start(&c)==NSX_SENSOR_OK);
+                unsigned offset=path==4?clear_calls:(path==3?2:1);
+                f.fail_at=f.calls+offset; f.fail_after=after!=0;
+                if (reset) f.power_before_call=f.fail_at;
+                max86150_interrupts_t irq={0xa5,0x5a};
+                uint8_t status=0xa5;
+                nsx_sensor_status_t result;
+                if (path==0) result=max86150_get_interrupts(&c,&irq);
+                else if (path==1) result=max86150_get_int1(&c,&status);
+                else if (path==2) result=max86150_get_int2(&c,&status);
+                else result=max86150_clear_fifo(&c);
+                assert(result==NSX_SENSOR_E_IO && f.last_reg==0);
+                assert(irq.status1==0xa5 && irq.status2==0x5a && status==0xa5);
+                assert(!c._configured && !c._fifo_valid);
+                if (reset && after) assert(f.reg[0]==0 && f.reg[9]==0);
+                unsigned calls=f.calls;
+                assert(max86150_start(&c)==NSX_SENSOR_E_STATE);
+                assert(max86150_clear_fifo(&c)==NSX_SENSOR_E_STATE);
+                assert(f.calls==calls); /* Never reuse the stale requested settings. */
+                max86150_config_t config=max86150_default_config();
+                assert(max86150_init(&c,&config)==NSX_SENSOR_OK);
+                assert(f.reg[9]!=0 && max86150_start(&c)==NSX_SENSOR_OK);
+                push(&f,2);
+                max86150_frame_t frame; size_t done=99;
+                assert(max86150_read_fifo_snapshot(&c,&frame,1,&done)==NSX_SENSOR_OK);
+                assert(done==1 && frame.count==3 && frame.slots[2]==Max86150SlotEcg);
+            }
+        }
+    }
+}
 static void test_power_reset_detection(void)
 {
     fake_t f; max86150_context_t c;
@@ -340,7 +388,7 @@ int main(void)
 {
     test_lifecycle_and_errors(); test_fifo(); test_slots_and_limits(); test_status_and_instances();
     test_continuous_guards_and_failures(); test_continuous_interleavings();
-    test_full_fifo_read_failure(); test_power_reset_detection();
+    test_full_fifo_read_failure(); test_power_reset_detection(); test_ambiguous_status_recovery();
     puts("MAX86150: lifecycle, signed data, FIFO fullness/capacity/recovery, slot layouts and failures passed");
     return 0;
 }

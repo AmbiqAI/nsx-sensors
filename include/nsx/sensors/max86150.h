@@ -69,7 +69,8 @@ nsx_sensor_status_t max86150_start(max86150_context_t *ctx);
 nsx_sensor_status_t max86150_powerup(max86150_context_t *ctx);
 nsx_sensor_status_t max86150_shutdown(max86150_context_t *ctx);
 nsx_sensor_status_t max86150_set_fifo_enable(max86150_context_t *ctx, uint8_t enable);
-/* Explicit recovery; ends shutdown/FIFO disabled. Does not write read-only OVF. */
+/* FIFO-only recovery; ends shutdown/FIFO disabled. Does not write read-only OVF.
+ * Lost configuration (including a failed interrupt-status read) requires init. */
 nsx_sensor_status_t max86150_clear_fifo(max86150_context_t *ctx);
 /* Continuous raw acquisition, FIFO enabled/awake and rollover OFF required.
  * Requires repeating A_FULL and no clear-on-data to retain full-state evidence.
@@ -88,7 +89,8 @@ nsx_sensor_status_t max86150_read_fifo(max86150_context_t *ctx,
  * frames. Start explicitly for a new capture (flushes unread frames). This is
  * intentionally NOT gapless streaming: conversions during draining are omitted.
  * Freezing avoids OVF being erased by a pop before loss can be detected.
- * Overflow or ambiguous consumption requires clear_fifo/start; no retries.
+ * Overflow or ambiguous FIFO-data consumption requires clear_fifo/start;
+ * failed interrupt-status reads require init. No automatic retries.
  * Each burst contains complete frames, published only if the burst succeeds.
  * Empty returns AGAIN. Full/empty discrimination retains read-to-clear A_FULL;
  * do not access device registers outside this context. */
@@ -96,7 +98,8 @@ nsx_sensor_status_t max86150_read_fifo_snapshot(max86150_context_t *ctx,
     max86150_frame_t *frames, size_t capacity, size_t *completed);
 nsx_sensor_status_t max86150_get_fifo_state(max86150_context_t *ctx, max86150_fifo_state_t *state);
 /* These reads consume flags. A_FULL evidence is retained for the snapshot;
- * unexpected power-ready invalidates configuration (init required).
+ * unexpected power-ready or a failed status read invalidates configuration
+ * (init required), since failure may have consumed reset evidence.
  * The legacy get_int1/get_int2 conveniences consume BOTH status registers. */
 nsx_sensor_status_t max86150_get_interrupts(max86150_context_t *ctx, max86150_interrupts_t *status);
 nsx_sensor_status_t max86150_get_int1(max86150_context_t *ctx, uint8_t *status);

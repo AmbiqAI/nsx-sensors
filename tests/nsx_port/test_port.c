@@ -77,6 +77,36 @@ int main(void) {
     assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,0x76,NULL)==NSX_SENSOR_E_ARGUMENT);
     i2c.sIomCfg.eInterfaceMode = AM_HAL_IOM_I2C_MODE;
     uint8_t tx[257], rx[258]; memset(tx,0xab,sizeof(tx)); memset(rx,0xee,sizeof(rx));
+    /* Unused direction pointers may remain populated in reusable descriptors.
+     * Exercise common dispatch and direct adapter calls for I2C and SPI. */
+    nsx_sensor_nsx_context_t *endpoints[]={&a,&b};
+    for (unsigned endpoint=0;endpoint<2;++endpoint) {
+        nsx_sensor_bus_t *bus=&endpoints[endpoint]->bus;
+        for (unsigned direct=0;direct<2;++direct) {
+            for (unsigned populated=0;populated<2;++populated) {
+                memset(rx,0xee,sizeof(rx));
+                nsx_sensor_transfer_t t={tx+1,5,populated?rx+1:NULL,0};
+                nsx_sensor_status_t s=direct?bus->ops->transfer(bus->user,&t):nsx_sensor_bus_transfer(bus,&t);
+                assert(s==NSX_SENSOR_OK && route==(endpoint?4u:1u));
+                assert(sent_size==5 && !memcmp(sent,tx+1,5));
+                for (size_t i=0;i<sizeof(rx);++i) assert(rx[i]==0xee);
+                t=(nsx_sensor_transfer_t){populated?tx+1:NULL,0,rx+1,17};
+                s=direct?bus->ops->transfer(bus->user,&t):nsx_sensor_bus_transfer(bus,&t);
+                assert(s==NSX_SENSOR_OK && route==(endpoint?5u:2u));
+                assert(rx[0]==0xee && rx[1]==0x61 && rx[17]==0x61 && rx[18]==0xee);
+                if (endpoint) assert(!prefix_len && !prefix);
+            }
+            const nsx_sensor_transfer_t invalid[]={
+                {NULL,1,rx+1,1}, {tx+1,1,NULL,1}, {tx+1,0,rx+1,0}
+            };
+            unsigned before_calls=calls, before_locks=acquisitions;
+            for (unsigned i=0;i<sizeof(invalid)/sizeof(invalid[0]);++i) {
+                nsx_sensor_status_t s=direct?bus->ops->transfer(bus->user,&invalid[i]):nsx_sensor_bus_transfer(bus,&invalid[i]);
+                assert(s==NSX_SENSOR_E_ARGUMENT);
+            }
+            assert(calls==before_calls && acquisitions==before_locks);
+        }
+    }
     nsx_sensor_transfer_t x={tx+1,1,rx+1,17};
     assert(nsx_sensor_bus_transfer(&a.bus,&x)==NSX_SENSOR_OK);
     assert(route==3 && selector==0x76 && sent_size==1 && sent[0]==0xab);

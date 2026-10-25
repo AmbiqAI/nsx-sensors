@@ -179,7 +179,13 @@ nsx_sensor_status_t max86150_get_interrupts(max86150_context_t *c, max86150_inte
     if (!out) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s;
     uint8_t bytes[2]; s=read_bytes(c,INT1,bytes,2);
-    if (s!=NSX_SENSOR_OK) { invalidate_fifo(c); return s; }
+    if (s!=NSX_SENSOR_OK) {
+        /* The read may have consumed PWR_RDY before reporting failure.
+         * FIFO recovery alone cannot restore reset-lost configuration. */
+        c->_configured=false;
+        invalidate_fifo(c);
+        return s;
+    }
     if (bytes[0]&1) { c->_configured=false; invalidate_fifo(c); return NSX_SENSOR_E_DEVICE; }
     if (bytes[0]&0x80) c->_afull_seen=true;
     const max86150_interrupts_t v={bytes[0],bytes[1]}; *out=v; return NSX_SENSOR_OK;
