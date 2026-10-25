@@ -668,3 +668,17 @@ Copilot reviews are complete for this cleanup; the
 [readiness audit](../v1-readiness.md) records their scope, current CI evidence and
 remaining framework, resource, provenance and release gates. This does not freeze
 v1 or qualify hardware.
+
+
+### Spark portable additions under review
+
+[PR #28](https://github.com/AmbiqAI/nsx-sensors/pull/28) adds TSL2540/TSL2541 and
+T5838 AAD control, bringing the implemented inventory to eight cores. At this
+update it remains draft and unmerged (`717baf0`); main still contains six.
+TSL254x uses the common I2C endpoint. T5838 preserves the caller-owned context
+pattern with a dedicated synchronous timed-waveform endpoint; it does not extend
+the common bus with a fake I2C/SPI transaction. Audio capture and concrete board
+timing remain outside the portable core. The [readiness audit](../v1-readiness.md)
+records review findings, the corrected >50-cycle pre/post-write requirement,
+exact CI evidence and remaining framework/release/hardware work. These additions
+do not constitute final RFC acceptance or v1 metadata changes.

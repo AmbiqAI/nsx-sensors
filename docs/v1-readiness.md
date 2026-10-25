@@ -2,6 +2,10 @@
 
 Audited baseline: `2ac3039bc4576f4a0ba5c36a1af6543e296d80fa` (PR #27),
 updated 2026-10-25 after PRs #26 and #27 merged.
+Reviewed addition: [PR #28](https://github.com/AmbiqAI/nsx-sensors/pull/28) at
+`717baf0d0886eed2112d5cdc3e1707f8228abc61`, still draft and unmerged.
+The inventory below covers eight implemented cores: six on merged main and two
+on PR #28. Its evidence does not imply those additions have shipped on main.
 This is an implementation and release-evidence audit against
 [RFC 0001](rfcs/0001-portable-sensor-driver-architecture.md), not a fresh
 independent driver review or a freeze of the v1 API. Version metadata
@@ -9,9 +13,10 @@ remains `0.3.0`; the breaking portable transition is unreleased.
 
 ## Driver inventory
 
-All six cores use caller-owned contexts, the common synchronous bus contract,
-pure binding/configuration validation, and explicit initialization. Identity
-probing exists where the device supports it; LED Stick has no invented probe.
+All eight implemented cores use caller-owned contexts, pure binding/configuration
+validation, and explicit initialization. Seven use the common synchronous I2C/SPI
+bus contract; T5838 uses a dedicated synchronous timed-waveform endpoint.
+Identity probing exists where supported; LED Stick and T5838 have no invented probe.
 Public headers live under `include/nsx/sensors/`; private protocol helpers live
 with each core under `src/<device>/`.
 
@@ -23,6 +28,8 @@ with each core under `src/<device>/`.
 | MPU6050 | I2C direct/FIFO acquisition, scaling, explicit bounded calibration and recovery | `tests/mpu6050_host/`; [migration](migration/mpu6050.md) |
 | MAX86150 | I2C ECG/PPG FIFO acquisition, snapshot/continuous behavior and recovery | `tests/max86150_host/`; [migration](migration/max86150.md) |
 | ICM-45605 | Basic SPI direct raw/scaled acquisition, DRDY and explicit calibration; typed per-instance TDK state | `tests/icm45605_host/`; [migration](migration/icm45605.md) |
+| TSL2540/TSL2541 (PR #28, unmerged) | Shared I2C core, explicit variant, raw visible/IR counts, gain/integration/thresholds, saturation and TSL2541 factory scaling; no application lux calibration | `tests/tsl254x_host/` on PR #28; [guide at reviewed revision](https://github.com/AmbiqAI/nsx-sensors/blob/717baf0d0886eed2112d5cdc3e1707f8228abc61/docs/tsl254x.md) |
+| T5838 (PR #28, unmerged) | Analog/D1/D2 acoustic activity control, THSEL frame encoder, shared-clock pair example; PDM/PCM capture remains in audio layer | `tests/t5838_host/` on PR #28; [guide at reviewed revision](https://github.com/AmbiqAI/nsx-sensors/blob/717baf0d0886eed2112d5cdc3e1707f8228abc61/docs/t5838.md) |
 
 These tests establish software behavior with synthetic devices. No row claims
 physical accuracy, successful electrical communication or hardware qualification.
@@ -61,12 +68,29 @@ and enum-layout probes, not the full linked suites or hardware tests; its
 datasheet fetch failed. Full suite evidence comes from CI below. These reviews
 and merge approval complete this cleanup, not the remaining RFC release gates.
 
+### Spark additions: PR #28 (unmerged)
+
+Three independent agents and hosted/local Copilot reviewed `5d90d03`.
+Local Copilot identified insufficient T5838 pre/post-write clocking. Visual
+inspection of DS-000383 rev1.2 Figure 22 confirmed **>50 CLK cycles** on each
+side; text extraction had incorrectly reduced the annotation to five.
+Commit `717baf0` supplies 60 cycles, documents the endpoint obligation, and
+requires >50 in the fake endpoint for every write. The strengthened regression
+failed against the old encoder. The full portable suite passed after the fix,
+and a focused protocol follow-up confirmed it and neighboring symbol timing.
+
+[Hosted Copilot](https://github.com/AmbiqAI/nsx-sensors/pull/28#pullrequestreview-5645700609)
+reported no code issues and requested final human datasheet/timing verification;
+its state is COMMENTED, not formal approval. Initial independent reviews and
+Copilot covered the preceding SHA; the focused fix review and CI cover `717baf0`.
+No review establishes physical waveform correctness or hardware qualification.
+
 ## Platform and build evidence
 
 | Platform | Available integration | Evidence at audited baseline | Remaining acceptance work |
 | --- | --- | --- | --- |
-| Plain CMake / application HAL | Six independently selectable cores, common bus/runtime, portable aggregate | Offline tests, ASan/UBSan, source and relocated installed C/C++ consumers; C++ consumer references functions from every driver | Real board HAL/example and resource measurements |
-| NSX | Shared I2C/SPI adapter for all six cores | Actual adapter with mocked SDK helpers, 3/5-byte command limits, installed consumers; real SDK configure; all eight declared SoCs compile with Arm GNU | Representative real firmware link on the final release candidate; electrical qualification later |
+| Plain CMake / application HAL | Six merged cores plus two selectable cores in PR #28; common bus/runtime and T5838 timed endpoint | Offline tests, ASan/UBSan, source and relocated installed C/C++ consumers; C++ consumer references functions from every driver | Real board HAL/example and resource measurements |
+| NSX | Shared I2C/SPI adapter for six merged cores and TSL254x in PR #28; T5838 needs a board timing endpoint | Actual adapter with mocked SDK helpers, 3/5-byte command limits, installed consumers; real SDK configure; all eight declared SoCs compile with Arm GNU | Representative real firmware link on the final release candidate; electrical qualification later |
 | FreeRTOS | Portable cores usable through application bus/timing/locking callbacks | No FreeRTOS example or pinned kernel/HAL integration build in this repository | Implement and link a task-based example with correct sub-tick delays and shared-bus serialization |
 | Zephyr | Portable C cores only | No Zephyr sensor wrapper, devicetree binding, native simulation or cross-build | BME688 wrapper/example, pinned Zephyr version, mocked-bus/native tests and board cross-build |
 
@@ -77,6 +101,15 @@ The SDK pin is `1f18f01555897ed8e06437ff9727f2bb61771e70`, containing the
 combined-I2C prerequisite. Historical Armclang/ATfE results are not evidence for
 this final six-core revision. SDK-stub consumer links are not real firmware links.
 
+PR #28 CI [run 40241138132](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40241138132)
+passed all four jobs at `717baf0`: host release/API contracts, nested CMake
+consumer, vendored TDK compile, and all eight SoCs with Arm GNU. The full portable
+suite passed locally, including ASan/UBSan, selected drivers, relocated installed
+C/C++ consumers and short enums. At preceding `5d90d03`, independent checks also
+built individual installed components and compiled both new cores plus the pair
+helper with Arm GNU, Armclang and ATfE. Those three-toolchain probes were not
+repeated after the timing fix; current embedded evidence is the Arm GNU CI matrix.
+
 ## RFC decisions to record before freezing v1
 
 The implementation resolves several proposed choices; maintainers still need to
@@ -86,7 +119,7 @@ reviews above are complete; the remaining decision is final RFC acceptance:
 - `<nsx/sensors/port_nsx.h>` is the implemented port header, rather than the
   RFC sketch's `<nsx/sensors/ports/nsx.h>`.
 - `nsx::sensors` aggregates selected portable cores only. Applications link
-  `nsx::sensor_port_nsx` explicitly. All six drivers default on; the port defaults
+  `nsx::sensor_port_nsx` explicitly. The six merged drivers (eight with PR #28) default on; the port defaults
   on only when enclosing SDK targets exist. No legacy aggregate remains.
 - Context storage is public and typed, private by convention. ICM carries TDK
   headers and must remain address-stable. No stable binary context ABI is promised.
@@ -106,13 +139,17 @@ change to RFC acceptance requirements.
 
 ## Ordered release checklist
 
+Before recording the final eight-core release baseline, merge PR #28 through its
+normal approval process and record the resulting main SHA and CI. This audit
+update does not authorize or perform that merge.
+
 1. **Record final RFC acceptance.** The API cleanup is reviewed and merged.
    Record acceptance of the choices above and any explicit scope amendments
    before freezing v1; this is not another request to redo the completed reviews.
 2. **Finish framework integration.** Add the FreeRTOS example first, then the
    BME688 Zephyr wrapper/example. Select and pin actual kernel/framework, HAL,
    SDK and toolchain revisions; add separate reproducible integration checks.
-   A Zephyr wrapper for one driver does not qualify the other five.
+   A Zephyr wrapper for one driver does not qualify the other drivers.
 3. **Measure resource costs.** Record per-context and NSX scratch sizes, linked
    flash/RAM and compiler stack-usage evidence on a named target/toolchain with
    optimization settings. Include deepest vendor/callback paths and distinguish
@@ -145,6 +182,11 @@ Record board/sensor revisions, bus settings, SDK/toolchain and firmware SHA for:
 - independent reference comparisons, stationary calibration, heater behavior and
   power measurements as applicable to each driver.
 
-TSL254x support (issue #15), T5838 integration (issue #12), expanded BME688
-operation (issue #14), and ICM advanced features (#23) are separate feature work,
-not evidence that the six existing portable migrations remain incomplete.
+The portable portions of TSL254x (issue #15) and T5838 (issue #12) are implemented
+in unmerged PR #28; both tracking issues remain open for integration/qualification.
+Spark's supplied draft selects TSL2540; select that explicit variant in board code.
+Remaining T5838 work is a concrete timer-based THSEL endpoint, separate control
+pins for the pair, shared programming/PDM-clock handoff, and waveform/WAKE/stereo
+capture validation. Do not substitute ordinary RTOS delays for bounded pulse timing.
+These board/audio tasks are separate from portable-driver merge readiness.
+Expanded BME688 operation (#14) and ICM advanced features (#23) remain follow-ups.
