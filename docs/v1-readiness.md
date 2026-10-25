@@ -1,9 +1,10 @@
 # v1 RFC readiness audit
 
-Audited baseline: `e9a36a9dc9922e2da6c395e3a4bce96f20bb9d56` (PR #24).
+Audited baseline: `2ac3039bc4576f4a0ba5c36a1af6543e296d80fa` (PR #27),
+updated 2026-10-25 after PRs #26 and #27 merged.
 This is an implementation and release-evidence audit against
 [RFC 0001](rfcs/0001-portable-sensor-driver-architecture.md), not a fresh
-independent driver review or acceptance of the proposed v1 API. Version metadata
+independent driver review or a freeze of the v1 API. Version metadata
 remains `0.3.0`; the breaking portable transition is unreleased.
 
 ## Driver inventory
@@ -27,6 +28,39 @@ These tests establish software behavior with synthetic devices. No row claims
 physical accuracy, successful electrical communication or hardware qualification.
 ICM advanced functionality remains in [issue #23](https://github.com/AmbiqAI/nsx-sensors/issues/23).
 
+## Completed review follow-up
+
+[PR #26](https://github.com/AmbiqAI/nsx-sensors/pull/26) closes the two
+consequential findings from the six-driver technical review:
+
+- MAX86150 failed consuming interrupt reads invalidate configuration and FIFO
+  state; recovery requires init because reset evidence may already be consumed.
+  Fault-injection tests cover failures before and after status consumption.
+- The NSX adapter accepts populated pointers for unused zero-length transfer
+  segments, matching the common bus contract. I2C/SPI regressions cover both
+  directions and reject invalid requests before locking or I/O.
+
+[PR #27](https://github.com/AmbiqAI/nsx-sensors/pull/27) completes the requested
+API cleanup: MPU6050 constants are prefixed, MAX86150 configuration selections
+use named enums, and INA228 exposes its cached calibration scale without I/O.
+Lifecycle, consuming-read recovery and device-operation serialization are
+consolidated in the [API migration guide](migration/api-cleanup.md). Defaults,
+register encodings and measurement units remain unchanged; callers must migrate
+source names/types and recompile. MAX86150 has persistent short-enum regression
+coverage. INA228 distinguishes rejected preflight calibration requests, which
+preserve valid calibration, from failed programming/readback, which invalidates it.
+
+Three local agents reviewed API, driver behavior and build/design coverage.
+The resulting short-enum test correction and calibration wording clarification
+were applied before the final Copilot passes. Hosted Copilot
+[recommended approval with no open issues](https://github.com/AmbiqAI/nsx-sensors/pull/27#pullrequestreview-5645328774);
+local Copilot found no consequential defects. Those Copilot passes reviewed
+`31c646c`; rebasing onto merged #26 produced `8624975` with identical file contents
+and fresh passing CI before squash merge. The local Copilot pass ran C/C++ syntax
+and enum-layout probes, not the full linked suites or hardware tests; its
+datasheet fetch failed. Full suite evidence comes from CI below. These reviews
+and merge approval complete this cleanup, not the remaining RFC release gates.
+
 ## Platform and build evidence
 
 | Platform | Available integration | Evidence at audited baseline | Remaining acceptance work |
@@ -36,7 +70,7 @@ ICM advanced functionality remains in [issue #23](https://github.com/AmbiqAI/nsx
 | FreeRTOS | Portable cores usable through application bus/timing/locking callbacks | No FreeRTOS example or pinned kernel/HAL integration build in this repository | Implement and link a task-based example with correct sub-tick delays and shared-bus serialization |
 | Zephyr | Portable C cores only | No Zephyr sensor wrapper, devicetree binding, native simulation or cross-build | BME688 wrapper/example, pinned Zephyr version, mocked-bus/native tests and board cross-build |
 
-Main CI [run 40153003552](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40153003552)
+Main CI [run 40234941475](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40234941475)
 passed all four jobs at the audited baseline. See `.github/workflows/ci.yml`,
 `tests/portable_build.sh` and `tests/nsx_port_host.sh` for exact commands.
 The SDK pin is `1f18f01555897ed8e06437ff9727f2bb61771e70`, containing the
@@ -46,7 +80,8 @@ this final six-core revision. SDK-stub consumer links are not real firmware link
 ## RFC decisions to record before freezing v1
 
 The implementation resolves several proposed choices; maintainers still need to
-accept these as the v1 source contract:
+record these as the frozen v1 source contract. The merged cleanup and its
+reviews above are complete; the remaining decision is final RFC acceptance:
 
 - `<nsx/sensors/port_nsx.h>` is the implemented port header, rather than the
   RFC sketch's `<nsx/sensors/ports/nsx.h>`.
@@ -61,8 +96,9 @@ accept these as the v1 source contract:
 - Runtime hooks are optional only where the device operation permits it. Without
   a clock, documented timeouts bound requested waits, not bus wall time.
 - Device-specific lifecycle APIs remain appropriate: FIFO reads and accessory
-  commands need not mimic BME688 start/collect. Review naming, units, consuming
-  status reads, failure recovery and context lifetime before freezing headers.
+  commands need not mimic BME688 start/collect. Naming, units, consuming
+  status reads, failure recovery and context lifetime have been reviewed and
+  documented in the API migration guide; preserve these contracts in wrappers.
 
 The historical RFC implementation notes describe intermediate commits. This
 snapshot supersedes them as the current progress inventory, not as an automatic
@@ -70,8 +106,9 @@ change to RFC acceptance requirements.
 
 ## Ordered release checklist
 
-1. **Accept the API decisions.** Review the choices above and final public
-   headers with maintainers; record RFC acceptance or explicit scope amendments.
+1. **Record final RFC acceptance.** The API cleanup is reviewed and merged.
+   Record acceptance of the choices above and any explicit scope amendments
+   before freezing v1; this is not another request to redo the completed reviews.
 2. **Finish framework integration.** Add the FreeRTOS example first, then the
    BME688 Zephyr wrapper/example. Select and pin actual kernel/framework, HAL,
    SDK and toolchain revisions; add separate reproducible integration checks.

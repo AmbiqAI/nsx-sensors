@@ -655,3 +655,16 @@ selected portable cores in the portable export; the legacy option is removed.
 The NSX adapter remains separate. This records an implemented slice, not v1
 acceptance: framework wrappers, representative firmware links, resource evidence,
 API review and hardware qualification gates remain outstanding.
+
+### Post-migration recovery and API cleanup
+
+PRs [#26](https://github.com/AmbiqAI/nsx-sensors/pull/26) and
+[#27](https://github.com/AmbiqAI/nsx-sensors/pull/27) are merged. They address
+MAX86150 consuming-status failure recovery and NSX zero-length segment handling,
+prefix MPU6050 constants, type MAX86150 selections, and expose the INA228 cached
+calibration scale. The [API migration guide](../migration/api-cleanup.md) records
+source changes and the six-driver lifecycle contracts. Independent agent and
+Copilot reviews are complete for this cleanup; the
+[readiness audit](../v1-readiness.md) records their scope, current CI evidence and
+remaining framework, resource, provenance and release gates. This does not freeze
+v1 or qualify hardware.
