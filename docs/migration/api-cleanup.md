@@ -58,7 +58,8 @@ getter. No helper claims a guaranteed effective FIFO rate.
 
 `ina228_get_current_lsb(ctx, &scale)` provides the cached amperes-per-code scale
 from the last verified calibration without I/O. It returns `E_STATE` until
-calibrated, or after reset/calibration failure. It preserves output on error.
+calibrated, or after reset or failed calibration programming/readback. A rejected
+preflight request preserves any prior valid calibration. Output is unchanged on error.
 This avoids accessing `_current_lsb` when converting exact accumulator deltas:
 
 ```c

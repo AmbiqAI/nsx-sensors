@@ -244,7 +244,8 @@ nsx_sensor_status_t
 ina228_set_shunt(ina228_context_t *ctx,  float shunt_res, float max_current);
 
 /* Cached CURRENT_LSB in amperes per code, from the last verified calibration;
- * no I/O or hardware readback. E_STATE after bind/reset or calibration failure.
+ * no I/O or hardware readback. E_STATE after bind/reset or failed calibration
+ * programming/readback. Preflight rejection preserves prior valid calibration.
  * Output is unchanged on error. For raw accumulator deltas, use double
  * arithmetic: charge C = delta * lsb; energy J = delta * 16 * 3.2 * lsb.
  * Keep calibration/range fixed across the window and handle counter wrap.

@@ -402,12 +402,15 @@ static void test_typed_settings(void)
     assert(max86150_configure(&c,&config)==NSX_SENSOR_OK);
     assert(f.reg[14]==0xfb && f.reg[15]==5 && f.reg[20]==4);
     assert(f.reg[60]==6 && f.reg[62]==9);
+    /* Enum conversion can narrow 256 to valid zero under -fshort-enums.
+     * Only values still outside the field range reach validation as invalid. */
 #define CHECK_SELECTION(field,maximum) \
     { const int invalid_values[]={-1,(maximum)+1,256}; \
     for (unsigned i=0;i<3;++i) { \
         int invalid=invalid_values[i]; \
         max86150_config_t bad=config; \
         bad.field=(max86150_##field##_t)invalid; \
+        if ((unsigned)bad.field<=(maximum)) continue; \
         unsigned calls=f.calls; \
         assert(max86150_configure(&c,&bad)==NSX_SENSOR_E_ARGUMENT); \
         assert(max86150_set_##field(&c,(max86150_##field##_t)invalid)==NSX_SENSOR_E_ARGUMENT); \
@@ -423,7 +426,9 @@ static void test_typed_settings(void)
 #undef CHECK_SELECTION
     unsigned calls=f.calls;
     assert(max86150_set_led_current_range(&c,0,(max86150_led_range_t)-1)==NSX_SENSOR_E_ARGUMENT);
-    assert(max86150_set_led_current_range(&c,0,(max86150_led_range_t)256)==NSX_SENSOR_E_ARGUMENT);
+    max86150_led_range_t large_range=(max86150_led_range_t)256;
+    if ((unsigned)large_range>1)
+        assert(max86150_set_led_current_range(&c,0,large_range)==NSX_SENSOR_E_ARGUMENT);
     assert(f.calls==calls);
     assert(max86150_set_ppg_sample_rate(&c,MAX86150_PPG_SAMPLE_RATE_100_HZ)==NSX_SENSOR_OK);
     assert(f.reg[14]==0xd3); /* Preserve ADC range and pulse width. */
