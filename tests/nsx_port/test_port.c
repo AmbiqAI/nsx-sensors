@@ -158,7 +158,7 @@ int main(void) {
     assert(ina228_bind(&monitor,&a.bus)==NSX_SENSOR_OK);
     assert(ina228_probe(&monitor,&monitor_id)==NSX_SENSOR_OK);
     assert(monitor_id.manufacturer_id==0x5449 && monitor_id.device_id==0x2281);
-    assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,MPU_I2CADDRESS_AD0_HIGH,&lock)==NSX_SENSOR_OK);
+    assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,MPU6050_I2C_ADDRESS_AD0_HIGH,&lock)==NSX_SENSOR_OK);
     mpu6050_context_t motion; uint8_t motion_id;
     assert(mpu6050_bind(&motion,&a.bus,NULL)==NSX_SENSOR_OK);
     assert(mpu6050_probe(&motion,&motion_id)==NSX_SENSOR_OK && motion_id==0x68);

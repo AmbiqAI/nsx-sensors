@@ -659,7 +659,10 @@ static void test_side_effects_and_two_instances(void)
     CHECK(ina228_set_shunt(&second,0.05f,0.1f)==NSX_SENSOR_OK);
     CHECK(get_reg16(REG_SHUNTCAL)==1250);
     CHECK(((second_regs[REG_SHUNTCAL][0]<<8)|second_regs[REG_SHUNTCAL][1])==125);
-    CHECK(first._current_lsb!=second._current_lsb);
+    float first_scale, second_scale;
+    CHECK(ina228_get_current_lsb(&first,&first_scale)==NSX_SENSOR_OK);
+    CHECK(ina228_get_current_lsb(&second,&second_scale)==NSX_SENSOR_OK);
+    CHECK(first_scale!=second_scale);
     set_reg16(REG_DIAGALRT,0x8e83); /* latched, energy/charge/math overflow + temp/ready */
     uint16_t flags=0;
     CHECK(ina228_alert_functions(&first,&flags)==NSX_SENSOR_OK && flags==0xe83);
@@ -702,9 +705,41 @@ static void test_identity_and_counter_failures(void)
     CHECK(ina228_read_power(&ctx,&power)==NSX_SENSOR_E_OVERFLOW && power==42);
 }
 
+static void test_current_lsb_api(void)
+{
+    ina228_context_t ctx=fresh_device(), unbound={0};
+    float scale=42.0f;
+    unsigned reads=read_xfers, writes=write_xfers;
+    CHECK(ina228_get_current_lsb(NULL,&scale)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_get_current_lsb(&ctx,NULL)==NSX_SENSOR_E_ARGUMENT);
+    CHECK(ina228_get_current_lsb(&unbound,&scale)==NSX_SENSOR_E_STATE);
+    CHECK(ina228_get_current_lsb(&ctx,&scale)==NSX_SENSOR_E_STATE && scale==42.0f);
+    CHECK(read_xfers==reads && write_xfers==writes);
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+    reads=read_xfers; writes=write_xfers;
+    CHECK(ina228_get_current_lsb(&ctx,&scale)==NSX_SENSOR_OK);
+    CHECK_NEAR(scale,0.5f/524288.0f,1e-12f);
+    CHECK(read_xfers==reads && write_xfers==writes);
+    CHECK(ina228_set_adc_range(&ctx,1)==NSX_SENSOR_OK);
+    CHECK(ina228_get_current_lsb(&ctx,&scale)==NSX_SENSOR_OK);
+    CHECK_NEAR(scale,0.5f/524288.0f,1e-12f);
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.25f)==NSX_SENSOR_OK);
+    CHECK(ina228_get_current_lsb(&ctx,&scale)==NSX_SENSOR_OK);
+    CHECK_NEAR(scale,0.25f/524288.0f,1e-12f);
+    fail_write_nth=1; apply_failed_write=true;
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_E_IO);
+    scale=42.0f; reads=read_xfers; writes=write_xfers;
+    CHECK(ina228_get_current_lsb(&ctx,&scale)==NSX_SENSOR_E_STATE && scale==42.0f);
+    CHECK(read_xfers==reads && write_xfers==writes);
+    CHECK(ina228_set_shunt(&ctx,0.1f,0.5f)==NSX_SENSOR_OK);
+    CHECK(ina228_reset(&ctx)==NSX_SENSOR_OK);
+    CHECK(ina228_get_current_lsb(&ctx,&scale)==NSX_SENSOR_E_STATE && scale==42.0f);
+}
+
 int
 main(void)
 {
+    test_current_lsb_api();
     test_identity_and_counter_failures();
     test_lifecycle();
     test_invalid_config_and_calibration();

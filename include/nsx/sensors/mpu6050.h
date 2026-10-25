@@ -12,41 +12,41 @@
 extern "C" {
 #endif
 typedef enum {
-    DLPF_260HZ = 0, // Accel: 260 Hz, Gyro: 256 Hz, Delay: 1 ms
-    DLPF_184HZ = 1, // Accel: 184 Hz, Gyro: 188 Hz, Delay: 2 ms
-    DLPF_094HZ = 2, // Accel:  94 Hz, Gyro:  98 Hz, Delay: 3 ms
-    DLPF_044HZ = 3, // Accel:  44 Hz, Gyro:  42 Hz, Delay: 5 ms
-    DLPF_021HZ = 4, // Accel:  21 Hz, Gyro:  20 Hz, Delay: 9 ms
-    DLPF_010HZ = 5, // Accel:  10 Hz, Gyro:  10 Hz, Delay: 14 ms
-    DLPF_005HZ = 6, // Accel:   5 Hz, Gyro:   5 Hz, Delay: 19 ms
+    MPU6050_DLPF_260HZ = 0, // Accel: 260 Hz, Gyro: 256 Hz, Delay: 1 ms
+    MPU6050_DLPF_184HZ = 1, // Accel: 184 Hz, Gyro: 188 Hz, Delay: 2 ms
+    MPU6050_DLPF_094HZ = 2, // Accel:  94 Hz, Gyro:  98 Hz, Delay: 3 ms
+    MPU6050_DLPF_044HZ = 3, // Accel:  44 Hz, Gyro:  42 Hz, Delay: 5 ms
+    MPU6050_DLPF_021HZ = 4, // Accel:  21 Hz, Gyro:  20 Hz, Delay: 9 ms
+    MPU6050_DLPF_010HZ = 5, // Accel:  10 Hz, Gyro:  10 Hz, Delay: 14 ms
+    MPU6050_DLPF_005HZ = 6, // Accel:   5 Hz, Gyro:   5 Hz, Delay: 19 ms
 
 } mpu6050_dlpf_cfg_t;
 
 /*! Gyroscope full-scale range */
 typedef enum {
-    GYRO_FS_250DPS = 0,  //!< +/- 250 º/s  -> 131 LSB/(º/s)
-    GYRO_FS_500DPS = 1,  //!< +/- 500 º/s  -> 65.5 LSB/(º/s)
-    GYRO_FS_1000DPS = 2, //!< +/- 1000 º/s -> 32.8 LSB/(º/s)
-    GYRO_FS_2000DPS = 3  //!< +/- 2000 º/s -> 16.4 LSB/(º/s)
+    MPU6050_GYRO_FS_250DPS = 0,  //!< +/- 250 º/s  -> 131 LSB/(º/s)
+    MPU6050_GYRO_FS_500DPS = 1,  //!< +/- 500 º/s  -> 65.5 LSB/(º/s)
+    MPU6050_GYRO_FS_1000DPS = 2, //!< +/- 1000 º/s -> 32.8 LSB/(º/s)
+    MPU6050_GYRO_FS_2000DPS = 3  //!< +/- 2000 º/s -> 16.4 LSB/(º/s)
 } mpu6050_gyro_fs_t;
 
 /*! Accel full-scale range */
 typedef enum {
-    ACCEL_FS_2G = 0, //!< +/- 2 g  -> 16384 LSB/g
-    ACCEL_FS_4G = 1, //!< +/- 4 g  -> 8192 LSB/g
-    ACCEL_FS_8G = 2, //!< +/- 8 g  -> 4096 LSB/g
-    ACCEL_FS_16G = 3 //!< +/- 16 g -> 2048 LSB/g
+    MPU6050_ACCEL_FS_2G = 0, //!< +/- 2 g  -> 16384 LSB/g
+    MPU6050_ACCEL_FS_4G = 1, //!< +/- 4 g  -> 8192 LSB/g
+    MPU6050_ACCEL_FS_8G = 2, //!< +/- 8 g  -> 4096 LSB/g
+    MPU6050_ACCEL_FS_16G = 3 //!< +/- 16 g -> 2048 LSB/g
 } mpu6050_accel_fs_t;
 
 /*! Clock selection */
 typedef enum {
-    CLOCK_INTERNAL = 0,  // Internal 8 MHz oscillator
-    CLOCK_GX_PLL = 1,    // Gyroscope x axis PLL
-    CLOCK_GY_PLL = 2,    // Gyroscope y axis PLL
-    CLOCK_GZ_PLL = 3,    // Gyroscope z axis PLL
-    CLOCK_32_REF = 4,    // PLL with external 32.768kHz reference
-    CLOCK_19_REF = 5,    // PLL with external 19.2MHz reference
-    CLOCK_KEEP_RESET = 7 //!< Stops the clock and keeps timing generator in reset
+    MPU6050_CLOCK_INTERNAL = 0,  // Internal 8 MHz oscillator
+    MPU6050_CLOCK_GX_PLL = 1,    // Gyroscope x axis PLL
+    MPU6050_CLOCK_GY_PLL = 2,    // Gyroscope y axis PLL
+    MPU6050_CLOCK_GZ_PLL = 3,    // Gyroscope z axis PLL
+    MPU6050_CLOCK_32_REF = 4,    // PLL with external 32.768kHz reference
+    MPU6050_CLOCK_19_REF = 5,    // PLL with external 19.2MHz reference
+    MPU6050_CLOCK_KEEP_RESET = 7 //!< Stops the clock and keeps timing generator in reset
 } mpu6050_clock_src_t;
 
 /*! FIFO configuration */
@@ -71,8 +71,8 @@ typedef struct {
     uint8_t fsyncEnable;
 } mpu6050_int_config_t;
 
-#define MPU_I2CADDRESS_AD0_LOW 0x68
-#define MPU_I2CADDRESS_AD0_HIGH 0x69
+#define MPU6050_I2C_ADDRESS_AD0_LOW 0x68
+#define MPU6050_I2C_ADDRESS_AD0_HIGH 0x69
 
 
 typedef struct {

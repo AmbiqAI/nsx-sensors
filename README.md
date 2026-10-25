@@ -36,7 +36,9 @@ binding/probing and command writes without pretending to read physical sensors.
 
 Caller-owned endpoints implement synchronous transfers using the board HAL.
 See [migration and transport contracts](docs/migration/portable-foundation.md)
-and the [BME688 guide](docs/bme688.md). INA228 users should follow
+and the [BME688 guide](docs/bme688.md). See the
+[pre-v1 API cleanup](docs/migration/api-cleanup.md) for enum/type migration and
+a lifecycle comparison across all six drivers. INA228 users should follow
 the [INA228 migration guide](docs/migration/ina228.md). MPU6050 users should follow
 the [MPU6050 migration guide](docs/migration/mpu6050.md). MAX86150 users should follow
 the [MAX86150 migration and audit guide](docs/migration/max86150.md).

@@ -51,7 +51,8 @@ typedef struct {
     bool _bound, _initialized, _running;
 } icm45605_context_t;
 /* Caller-owned, address-stable context: do not copy/move after bind. Serialize
- * all calls per device and shared bus; no heap, singleton, GPIO ownership or ISR
+ * whole operations per device; the endpoint serializes shared-bus transfers,
+ * releasing the bus before conversion/calibration delays. No heap, singleton, GPIO ownership or ISR
  * bus calls. Implementation fields are private by convention. Outputs remain
  * unchanged on error. Failed mutation requires init (partial writes possible). */
 icm45605_config_t icm45605_default_config(void);

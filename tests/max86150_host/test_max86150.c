@@ -117,15 +117,15 @@ static void test_lifecycle_and_errors(void)
     assert(max86150_reset(&c,2500)==NSX_SENSOR_E_TIMEOUT && f.time==2500);
     assert(max86150_start(&c)==NSX_SENSOR_E_STATE);
     init_fake(&c,&f,12); assert(max86150_start(&c)==NSX_SENSOR_OK && f.reg[13]==4);
-    assert(max86150_set_ppg_adc_range(&c,1)==NSX_SENSOR_E_STATE);
+    assert(max86150_set_ppg_adc_range(&c,MAX86150_PPG_ADC_RANGE_8192_NA)==NSX_SENSOR_E_STATE);
     assert(max86150_shutdown(&c)==NSX_SENSOR_OK && f.reg[13]==2 && f.time==100000);
     assert(max86150_disable_slots(&c)==NSX_SENSOR_OK);
     assert(max86150_start(&c)==NSX_SENSOR_E_STATE);
-    max86150_config_t cfg=max86150_default_config(); cfg.slots[0]=Max86150SlotEcg;
+    max86150_config_t cfg=max86150_default_config(); cfg.slots[0]=MAX86150_SLOT_ECG;
     assert(max86150_validate_config(&cfg)==NSX_SENSOR_E_ARGUMENT);
-    cfg=max86150_default_config(); cfg.led_range[0]=2;
+    cfg=max86150_default_config(); cfg.led_range[0]=(max86150_led_range_t)2;
     assert(max86150_validate_config(&cfg)==NSX_SENSOR_E_ARGUMENT);
-    cfg=max86150_default_config(); cfg.slots[0]=Max86150SlotOff;
+    cfg=max86150_default_config(); cfg.slots[0]=MAX86150_SLOT_OFF;
     assert(max86150_validate_config(&cfg)==NSX_SENSOR_E_ARGUMENT);
     init_fake(&c,&f,12); unsigned calls=f.calls;
     assert(max86150_set_led_current_range(&c,2,0)==NSX_SENSOR_E_ARGUMENT);
@@ -133,7 +133,7 @@ static void test_lifecycle_and_errors(void)
     f.reg[20]=0xf0;
     assert(max86150_set_led_current_range(&c,1,1)==NSX_SENSOR_OK && f.reg[20]==0xf4);
     assert(max86150_set_led_pulse_amplitude(&c,0,255)==NSX_SENSOR_OK && f.reg[17]==255);
-    cfg=c._config; cfg.ecg_pga_gain=3;
+    cfg=c._config; cfg.ecg_pga_gain=MAX86150_ECG_PGA_GAIN_8;
     f.fail_at=f.calls+3; /* After one applied config write, a later RMW read fails. */
     assert(max86150_configure(&c,&cfg)==NSX_SENSOR_E_IO && !c._configured);
 }
@@ -151,7 +151,7 @@ static void test_fifo(void)
     assert(max86150_read_fifo_snapshot(&c,frames,2,&done)==NSX_SENSOR_OK && done==2 && f.count==30);
     assert(!(f.reg[13]&4));
     assert(frames[0].value[0]==0 && frames[0].value[1]==1 && frames[0].value[2]==-1);
-    assert(frames[1].value[2]==-131072 && frames[1].count==3 && frames[1].slots[2]==Max86150SlotEcg);
+    assert(frames[1].value[2]==-131072 && frames[1].count==3 && frames[1].slots[2]==MAX86150_SLOT_ECG);
     unsigned count=f.count; push(&f,99); assert(f.count==count);
     assert(max86150_read_fifo_snapshot(&c,frames,32,&done)==NSX_SENSOR_OK && done==30);
     assert(max86150_read_fifo_snapshot(&c,frames,32,&done)==NSX_SENSOR_AGAIN && done==0);
@@ -179,13 +179,13 @@ static void test_fifo(void)
 static void test_slots_and_limits(void)
 {
     /* All contiguous permitted source permutations, 1..4 slots. */
-    const max86150_slot_type choices[]={Max86150SlotOff,Max86150SlotPpgLed1,Max86150SlotPpgLed2,
-        Max86150SlotPilotLed1,Max86150SlotPilotLed2,Max86150SlotEcg};
+    const max86150_slot_t choices[]={MAX86150_SLOT_OFF,MAX86150_SLOT_PPG_LED1,MAX86150_SLOT_PPG_LED2,
+        MAX86150_SLOT_PILOT_LED1,MAX86150_SLOT_PILOT_LED2,MAX86150_SLOT_ECG};
     unsigned tested=0;
     for (unsigned combo=0;combo<1296;++combo) {
         max86150_config_t cfg=max86150_default_config(); unsigned v=combo;
         for (unsigned i=0;i<4;++i) { cfg.slots[i]=choices[v%6]; v/=6; }
-        if (max86150_validate_config(&cfg)!=NSX_SENSOR_OK || cfg.slots[0]==Max86150SlotOff) continue;
+        if (max86150_validate_config(&cfg)!=NSX_SENSOR_OK || cfg.slots[0]==MAX86150_SLOT_OFF) continue;
         fake_t f; max86150_context_t c; bind_fake(&c,&f,12);
         assert(max86150_init(&c,&cfg)==NSX_SENSOR_OK && max86150_start(&c)==NSX_SENSOR_OK);
         for (unsigned i=0;i<3;++i) push(&f,i);
@@ -193,7 +193,7 @@ static void test_slots_and_limits(void)
         assert(max86150_read_fifo_snapshot(&c,frames,2,&done)==NSX_SENSOR_OK && done==2 && f.count==1);
         for (unsigned j=0;j<frames[0].count;++j) {
             assert(frames[0].slots[j]==cfg.slots[j]);
-            assert(frames[0].value[j]==(cfg.slots[j]==Max86150SlotEcg?-1:(int)j));
+            assert(frames[0].value[j]==(cfg.slots[j]==MAX86150_SLOT_ECG?-1:(int)j));
         }
         assert(max86150_read_fifo_snapshot(&c,frames,4,&done)==NSX_SENSOR_OK && done==1);
         ++tested;
@@ -203,7 +203,7 @@ static void test_slots_and_limits(void)
 static void test_status_and_instances(void)
 {
     fake_t a,b; max86150_context_t x,y; init_fake(&x,&a,12); init_fake(&y,&b,96);
-    assert(max86150_set_ecg_pga_gain(&x,3)==NSX_SENSOR_OK && a.reg[62]==14 && b.reg[62]==2);
+    assert(max86150_set_ecg_pga_gain(&x,MAX86150_ECG_PGA_GAIN_8)==NSX_SENSOR_OK && a.reg[62]==14 && b.reg[62]==2);
     assert(max86150_start(&x)==NSX_SENSOR_OK && max86150_start(&y)==NSX_SENSOR_OK);
     push(&a,1); push(&b,2); max86150_frame_t frame; size_t done;
     assert(max86150_read_fifo_snapshot(&x,&frame,1,&done)==NSX_SENSOR_OK && frame.value[2]==-131072);
@@ -264,7 +264,7 @@ static void test_continuous_guards_and_failures(void)
     assert(max86150_bind(&c,&bad,NULL)==NSX_SENSOR_E_UNSUPPORTED && f.calls==calls);
     bad=c.bus; bad.kind=NSX_SENSOR_BUS_SPI;
     assert(max86150_bind(&c,&bad,NULL)==NSX_SENSOR_E_UNSUPPORTED && f.calls==calls);
-    assert(max86150_set_ppg_sample_rate(&c,16)==NSX_SENSOR_E_ARGUMENT && f.calls==calls);
+    assert(max86150_set_ppg_sample_rate(&c,(max86150_ppg_sample_rate_t)16)==NSX_SENSOR_E_ARGUMENT && f.calls==calls);
     uint8_t a=0xa5,b=0x5a; f.fail_at=f.calls+1; f.fail_after=true;
     assert(max86150_get_ppg_config(&c,&a,&b)==NSX_SENSOR_E_IO && a==0xa5 && b==0x5a);
 }
@@ -361,7 +361,7 @@ static void test_ambiguous_status_recovery(void)
                 push(&f,2);
                 max86150_frame_t frame; size_t done=99;
                 assert(max86150_read_fifo_snapshot(&c,&frame,1,&done)==NSX_SENSOR_OK);
-                assert(done==1 && frame.count==3 && frame.slots[2]==Max86150SlotEcg);
+                assert(done==1 && frame.count==3 && frame.slots[2]==MAX86150_SLOT_ECG);
             }
         }
     }
@@ -384,8 +384,59 @@ static void test_power_reset_detection(void)
     assert(max86150_start(&c)==NSX_SENSOR_E_STATE);
     assert(max86150_init(&c,&config)==NSX_SENSOR_OK && c._configured);
 }
+/* Public selections must preserve device encodings and reject invalid enum
+ * casts before I/O or bit shifts. Expected register bytes come from Rev 2. */
+static void test_typed_settings(void)
+{
+    fake_t f; max86150_context_t c; init_fake(&c,&f,96);
+    assert(f.reg[14]==0x19 && f.reg[15]==0 && f.reg[60]==2 && f.reg[62]==2);
+    max86150_config_t config=max86150_default_config();
+    config.ppg_adc_range=MAX86150_PPG_ADC_RANGE_32768_NA;
+    config.ppg_sample_rate=MAX86150_PPG_SAMPLE_RATE_84_HZ_2_PULSES;
+    config.ppg_pulse_width=MAX86150_PPG_PULSE_WIDTH_400_US;
+    config.ppg_sample_average=MAX86150_PPG_SAMPLE_AVERAGE_32;
+    config.led_range[1]=MAX86150_LED_RANGE_100_MA;
+    config.ecg_sample_rate=MAX86150_ECG_SAMPLE_RATE_800_HZ_CLK1;
+    config.ecg_pga_gain=MAX86150_ECG_PGA_GAIN_4;
+    config.ecg_ia_gain=MAX86150_ECG_IA_GAIN_9_5;
+    assert(max86150_configure(&c,&config)==NSX_SENSOR_OK);
+    assert(f.reg[14]==0xfb && f.reg[15]==5 && f.reg[20]==4);
+    assert(f.reg[60]==6 && f.reg[62]==9);
+    /* Enum conversion can narrow 256 to valid zero under -fshort-enums.
+     * Only values still outside the field range reach validation as invalid. */
+#define CHECK_SELECTION(field,maximum) \
+    { const int invalid_values[]={-1,(maximum)+1,256}; \
+    for (unsigned i=0;i<3;++i) { \
+        int invalid=invalid_values[i]; \
+        max86150_config_t bad=config; \
+        bad.field=(max86150_##field##_t)invalid; \
+        if ((unsigned)bad.field<=(maximum)) continue; \
+        unsigned calls=f.calls; \
+        assert(max86150_configure(&c,&bad)==NSX_SENSOR_E_ARGUMENT); \
+        assert(max86150_set_##field(&c,(max86150_##field##_t)invalid)==NSX_SENSOR_E_ARGUMENT); \
+        assert(f.calls==calls); \
+    } }
+    CHECK_SELECTION(ppg_adc_range,3)
+    CHECK_SELECTION(ppg_sample_rate,15)
+    CHECK_SELECTION(ppg_pulse_width,3)
+    CHECK_SELECTION(ppg_sample_average,7)
+    CHECK_SELECTION(ecg_sample_rate,7)
+    CHECK_SELECTION(ecg_pga_gain,3)
+    CHECK_SELECTION(ecg_ia_gain,3)
+#undef CHECK_SELECTION
+    unsigned calls=f.calls;
+    assert(max86150_set_led_current_range(&c,0,(max86150_led_range_t)-1)==NSX_SENSOR_E_ARGUMENT);
+    max86150_led_range_t large_range=(max86150_led_range_t)256;
+    if ((unsigned)large_range>1)
+        assert(max86150_set_led_current_range(&c,0,large_range)==NSX_SENSOR_E_ARGUMENT);
+    assert(f.calls==calls);
+    assert(max86150_set_ppg_sample_rate(&c,MAX86150_PPG_SAMPLE_RATE_100_HZ)==NSX_SENSOR_OK);
+    assert(f.reg[14]==0xd3); /* Preserve ADC range and pulse width. */
+    assert(max86150_set_ecg_ia_gain(&c,MAX86150_ECG_IA_GAIN_50)==NSX_SENSOR_OK && f.reg[62]==11);
+}
 int main(void)
 {
+    test_typed_settings();
     test_lifecycle_and_errors(); test_fifo(); test_slots_and_limits(); test_status_and_instances();
     test_continuous_guards_and_failures(); test_continuous_interleavings();
     test_full_fifo_read_failure(); test_power_reset_detection(); test_ambiguous_status_recovery();

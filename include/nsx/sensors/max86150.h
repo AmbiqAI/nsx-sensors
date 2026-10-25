@@ -14,9 +14,85 @@ extern "C" {
 #define MAX86150_FIFO_DEPTH 32
 #define MAX86150_MAX_SLOTS 4
 typedef enum {
-    Max86150SlotOff = 0, Max86150SlotPpgLed1 = 1, Max86150SlotPpgLed2 = 2,
-    Max86150SlotPilotLed1 = 5, Max86150SlotPilotLed2 = 6, Max86150SlotEcg = 9
-} max86150_slot_type;
+    MAX86150_SLOT_OFF = 0, MAX86150_SLOT_PPG_LED1 = 1, MAX86150_SLOT_PPG_LED2 = 2,
+    MAX86150_SLOT_PILOT_LED1 = 5, MAX86150_SLOT_PILOT_LED2 = 6, MAX86150_SLOT_ECG = 9
+} max86150_slot_t;
+/* Native register encodings, MAX86150 Rev 2 pp. 29-35. Requested PPG rates
+ * may be adjusted by hardware. ECG CLK0/CLK1 names preserve the ADC clock bit.
+ * Averaging encodings 6/7 also mean 32; new configurations should use _32.
+ * LED range names are nominal ranges; amplitude 255 gives 51/102 mA. */
+typedef enum {
+    MAX86150_PPG_ADC_RANGE_4096_NA = 0,
+    MAX86150_PPG_ADC_RANGE_8192_NA = 1,
+    MAX86150_PPG_ADC_RANGE_16384_NA = 2,
+    MAX86150_PPG_ADC_RANGE_32768_NA = 3
+} max86150_ppg_adc_range_t;
+
+typedef enum {
+    MAX86150_PPG_SAMPLE_RATE_10_HZ = 0,
+    MAX86150_PPG_SAMPLE_RATE_20_HZ = 1,
+    MAX86150_PPG_SAMPLE_RATE_50_HZ = 2,
+    MAX86150_PPG_SAMPLE_RATE_84_HZ = 3,
+    MAX86150_PPG_SAMPLE_RATE_100_HZ = 4,
+    MAX86150_PPG_SAMPLE_RATE_200_HZ = 5,
+    MAX86150_PPG_SAMPLE_RATE_400_HZ = 6,
+    MAX86150_PPG_SAMPLE_RATE_800_HZ = 7,
+    MAX86150_PPG_SAMPLE_RATE_1000_HZ = 8,
+    MAX86150_PPG_SAMPLE_RATE_1600_HZ = 9,
+    MAX86150_PPG_SAMPLE_RATE_3200_HZ = 10,
+    MAX86150_PPG_SAMPLE_RATE_10_HZ_2_PULSES = 11,
+    MAX86150_PPG_SAMPLE_RATE_20_HZ_2_PULSES = 12,
+    MAX86150_PPG_SAMPLE_RATE_50_HZ_2_PULSES = 13,
+    MAX86150_PPG_SAMPLE_RATE_84_HZ_2_PULSES = 14,
+    MAX86150_PPG_SAMPLE_RATE_100_HZ_2_PULSES = 15
+} max86150_ppg_sample_rate_t;
+
+typedef enum {
+    MAX86150_PPG_PULSE_WIDTH_50_US = 0,
+    MAX86150_PPG_PULSE_WIDTH_100_US = 1,
+    MAX86150_PPG_PULSE_WIDTH_200_US = 2,
+    MAX86150_PPG_PULSE_WIDTH_400_US = 3
+} max86150_ppg_pulse_width_t;
+
+typedef enum {
+    MAX86150_PPG_SAMPLE_AVERAGE_1 = 0,
+    MAX86150_PPG_SAMPLE_AVERAGE_2 = 1,
+    MAX86150_PPG_SAMPLE_AVERAGE_4 = 2,
+    MAX86150_PPG_SAMPLE_AVERAGE_8 = 3,
+    MAX86150_PPG_SAMPLE_AVERAGE_16 = 4,
+    MAX86150_PPG_SAMPLE_AVERAGE_32 = 5
+} max86150_ppg_sample_average_t;
+
+typedef enum {
+    MAX86150_LED_RANGE_50_MA = 0,
+    MAX86150_LED_RANGE_100_MA = 1
+} max86150_led_range_t;
+
+typedef enum {
+    MAX86150_ECG_SAMPLE_RATE_1600_HZ_CLK0 = 0,
+    MAX86150_ECG_SAMPLE_RATE_800_HZ_CLK0 = 1,
+    MAX86150_ECG_SAMPLE_RATE_400_HZ_CLK0 = 2,
+    MAX86150_ECG_SAMPLE_RATE_200_HZ_CLK0 = 3,
+    MAX86150_ECG_SAMPLE_RATE_3200_HZ_CLK1 = 4,
+    MAX86150_ECG_SAMPLE_RATE_1600_HZ_CLK1 = 5,
+    MAX86150_ECG_SAMPLE_RATE_800_HZ_CLK1 = 6,
+    MAX86150_ECG_SAMPLE_RATE_400_HZ_CLK1 = 7
+} max86150_ecg_sample_rate_t;
+
+typedef enum {
+    MAX86150_ECG_PGA_GAIN_1 = 0,
+    MAX86150_ECG_PGA_GAIN_2 = 1,
+    MAX86150_ECG_PGA_GAIN_4 = 2,
+    MAX86150_ECG_PGA_GAIN_8 = 3
+} max86150_ecg_pga_gain_t;
+
+typedef enum {
+    MAX86150_ECG_IA_GAIN_5 = 0,
+    MAX86150_ECG_IA_GAIN_9_5 = 1,
+    MAX86150_ECG_IA_GAIN_20 = 2,
+    MAX86150_ECG_IA_GAIN_50 = 3
+} max86150_ecg_ia_gain_t;
+
 enum {
     MAX86150_INT1_ALMOST_FULL=0x80, MAX86150_INT1_PPG_READY=0x40,
     MAX86150_INT1_ALC_OVERFLOW=0x20, MAX86150_INT1_PROXIMITY=0x10,
@@ -24,16 +100,22 @@ enum {
     MAX86150_INT2_ECG_READY=0x04
 };
 typedef struct {
-    max86150_slot_type slots[4]; /* Contiguous PPG slots, then ECG, then Off. */
-    uint8_t ppg_adc_range, ppg_sample_rate, ppg_pulse_width, ppg_sample_average;
-    uint8_t led_amplitude[2], led_range[2], pilot_amplitude, proximity_threshold;
-    uint8_t ecg_sample_rate, ecg_pga_gain, ecg_ia_gain;
+    max86150_slot_t slots[4]; /* Contiguous PPG slots, then ECG, then Off. */
+    max86150_ppg_adc_range_t ppg_adc_range;
+    max86150_ppg_sample_rate_t ppg_sample_rate;
+    max86150_ppg_pulse_width_t ppg_pulse_width;
+    max86150_ppg_sample_average_t ppg_sample_average;
+    uint8_t led_amplitude[2], pilot_amplitude, proximity_threshold;
+    max86150_led_range_t led_range[2];
+    max86150_ecg_sample_rate_t ecg_sample_rate;
+    max86150_ecg_pga_gain_t ecg_pga_gain;
+    max86150_ecg_ia_gain_t ecg_ia_gain;
     uint8_t almost_full_threshold; /* Free slots, 0..15. */
     bool fifo_rollover, almost_full_clear_on_data, almost_full_once;
 } max86150_config_t;
 typedef struct {
     int32_t value[4]; /* Slot order: unsigned 19-bit PPG, signed 18-bit ECG codes. */
-    max86150_slot_type slots[4];
+    max86150_slot_t slots[4];
     uint8_t count; /* Inactive entries are zero/Off. No physical/clinical units. */
 } max86150_frame_t;
 typedef struct { uint8_t status1, status2; } max86150_interrupts_t;
@@ -107,23 +189,24 @@ nsx_sensor_status_t max86150_get_int2(max86150_context_t *ctx, uint8_t *status);
 /* Masks: status1 enables 0xe0 (A_FULL, PPG_RDY, ALC_OVF); status2 0x84.
  * Automatic proximity mode is unsupported because its transitions flush FIFO. */
 nsx_sensor_status_t max86150_set_interrupts(max86150_context_t *ctx, uint8_t mask1, uint8_t mask2);
+/* Raw hardware readback of PPG_CONFIG1/2, not cached requested settings. */
 nsx_sensor_status_t max86150_get_ppg_config(max86150_context_t *ctx, uint8_t *config1, uint8_t *config2);
-nsx_sensor_status_t max86150_set_fifo_slots(max86150_context_t *ctx, const max86150_slot_type slots[4]);
-nsx_sensor_status_t max86150_set_fifo_slot(max86150_context_t *ctx, uint8_t slot, max86150_slot_type type);
+nsx_sensor_status_t max86150_set_fifo_slots(max86150_context_t *ctx, const max86150_slot_t slots[4]);
+nsx_sensor_status_t max86150_set_fifo_slot(max86150_context_t *ctx, uint8_t slot, max86150_slot_t type);
 nsx_sensor_status_t max86150_disable_slots(max86150_context_t *ctx);
 /* Direct setters below require shutdown/FIFO disabled, validate values and
  * modify only the corresponding register fields. Use configure to replace
  * all settings. A write failure requires init; read failures propagate. */
-nsx_sensor_status_t max86150_set_ppg_adc_range(max86150_context_t *ctx, uint8_t value);
-nsx_sensor_status_t max86150_set_ppg_sample_rate(max86150_context_t *ctx, uint8_t value);
-nsx_sensor_status_t max86150_set_ppg_pulse_width(max86150_context_t *ctx, uint8_t value);
-nsx_sensor_status_t max86150_set_ppg_sample_average(max86150_context_t *ctx, uint8_t value);
+nsx_sensor_status_t max86150_set_ppg_adc_range(max86150_context_t *ctx, max86150_ppg_adc_range_t value);
+nsx_sensor_status_t max86150_set_ppg_sample_rate(max86150_context_t *ctx, max86150_ppg_sample_rate_t value);
+nsx_sensor_status_t max86150_set_ppg_pulse_width(max86150_context_t *ctx, max86150_ppg_pulse_width_t value);
+nsx_sensor_status_t max86150_set_ppg_sample_average(max86150_context_t *ctx, max86150_ppg_sample_average_t value);
 nsx_sensor_status_t max86150_set_proximity_threshold(max86150_context_t *ctx, uint8_t value);
 nsx_sensor_status_t max86150_set_led_pulse_amplitude(max86150_context_t *ctx, uint8_t led, uint8_t value);
-nsx_sensor_status_t max86150_set_led_current_range(max86150_context_t *ctx, uint8_t led, uint8_t value);
-nsx_sensor_status_t max86150_set_ecg_sample_rate(max86150_context_t *ctx, uint8_t value);
-nsx_sensor_status_t max86150_set_ecg_pga_gain(max86150_context_t *ctx, uint8_t value);
-nsx_sensor_status_t max86150_set_ecg_ia_gain(max86150_context_t *ctx, uint8_t value);
+nsx_sensor_status_t max86150_set_led_current_range(max86150_context_t *ctx, uint8_t led, max86150_led_range_t value);
+nsx_sensor_status_t max86150_set_ecg_sample_rate(max86150_context_t *ctx, max86150_ecg_sample_rate_t value);
+nsx_sensor_status_t max86150_set_ecg_pga_gain(max86150_context_t *ctx, max86150_ecg_pga_gain_t value);
+nsx_sensor_status_t max86150_set_ecg_ia_gain(max86150_context_t *ctx, max86150_ecg_ia_gain_t value);
 nsx_sensor_status_t max86150_set_almost_full_threshold(max86150_context_t *ctx, uint8_t value);
 nsx_sensor_status_t max86150_set_almost_full_rollover(max86150_context_t *ctx, uint8_t value);
 nsx_sensor_status_t max86150_set_almost_full_int_options(max86150_context_t *ctx, uint8_t value);

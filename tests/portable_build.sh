@@ -52,3 +52,9 @@ cmake -S "$root" -B "$out/sanitize" -DNSX_SENSORS_TESTS=ON \
     -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined -no-pie'
 cmake --build "$out/sanitize" --parallel
 ctest --test-dir "$out/sanitize" --output-on-failure
+# Embedded consumers may use short enum storage. Compile the driver and its
+# tests consistently; invalid-value tests must account for caller-side narrowing.
+cc -std=c11 -Wall -Wextra -Werror -fshort-enums -I "$root/include" \
+    "$root/src/common/bus.c" "$root/src/max86150/max86150.c" \
+    "$root/tests/max86150_host/test_max86150.c" -o "$out/max86150-short-enums"
+"$out/max86150-short-enums"
