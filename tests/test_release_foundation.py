@@ -51,7 +51,6 @@ VENDOR_EXCLUDED = {
 
 PUBLIC_HEADERS = (
     "nsx_icm45605.h",
-    "nsx_max86150.h",
 )
 
 

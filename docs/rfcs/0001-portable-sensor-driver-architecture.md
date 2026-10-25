@@ -619,3 +619,16 @@ implemented. `nsx::sensor_mpu6050` is independently selectable and uses the shar
 NSX adapter. The legacy aggregate now contains MAX86150 and ICM-45605.
 See [the migration guide](../migration/mpu6050.md). Hardware validation is pending;
 this does not publish v1 or change the released registry pin.
+
+### MAX86150 migration status
+
+MAX86150 now implements shared bus/runtime/status types, pure bind/validation,
+probe, init into shutdown and explicit acquisition start. It offers typed raw
+FIFO frames with capacity and partial-publication contracts. The migration also
+audits original driver defects; see [the migration and audit guide](../migration/max86150.md).
+Continuous reads retain normal acquisition but cannot guarantee reporting every
+lost sample because hardware clears OVF on a pop. A separate frozen snapshot API
+provides deterministic overflow checks and draining at the cost of capture gaps.
+Automatic proximity transitions are excluded from this first portable API because
+they flush FIFO without a reliable per-frame epoch indication. Only ICM-45605
+remains NSX-only. This is not a v1 release or hardware qualification.

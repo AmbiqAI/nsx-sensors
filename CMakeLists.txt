@@ -5,6 +5,7 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 option(NSX_SENSOR_BME688 "Build portable BME688" ON)
+option(NSX_SENSOR_MAX86150 "Build portable MAX86150" ON)
 option(NSX_SENSOR_MPU6050 "Build portable MPU6050" ON)
 option(NSX_SENSOR_INA228 "Build portable INA228" ON)
 option(NSX_SENSOR_LEDSTICK "Build portable LED Stick" ON)
@@ -63,11 +64,18 @@ if(NSX_SENSOR_MPU6050)
     target_link_libraries(nsx_sensor_mpu6050 PUBLIC nsx_sensor_common)
     list(APPEND nsx_portable_targets nsx_sensor_mpu6050)
 endif()
+if(NSX_SENSOR_MAX86150)
+    add_library(nsx_sensor_max86150 STATIC src/max86150/max86150.c)
+    add_library(nsx::sensor_max86150 ALIAS nsx_sensor_max86150)
+    set_target_properties(nsx_sensor_max86150 PROPERTIES EXPORT_NAME sensor_max86150)
+    target_link_libraries(nsx_sensor_max86150 PUBLIC nsx_sensor_common)
+    list(APPEND nsx_portable_targets nsx_sensor_max86150)
+endif()
 install(TARGETS ${nsx_portable_targets} EXPORT nsxSensorTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES include/nsx/sensors/status.h include/nsx/sensors/bus.h
     include/nsx/sensors/runtime.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
-foreach(driver bme688 ledstick ina228 mpu6050)
+foreach(driver bme688 ledstick ina228 mpu6050 max86150)
     if(TARGET nsx_sensor_${driver})
         install(FILES include/nsx/sensors/${driver}.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
     endif()
@@ -109,8 +117,8 @@ if(NSX_SENSOR_PORT_NSX)
     endif()
 endif()
 
-# Transitional NSX aggregate contains only the two unmigrated drivers.
-# BME688/LED Stick/INA228/MPU6050 now use their portable targets; link nsx::sensor_port_nsx for NSX transport.
+# Transitional NSX aggregate contains only the unmigrated ICM-45605 driver.
+# BME688/LED Stick/INA228/MPU6050/MAX86150 now use their portable targets; link nsx::sensor_port_nsx for NSX transport.
 if(NSX_SENSORS_LEGACY_NSX)
 foreach(nsx_sensors_dependency nsx::core nsx::i2c nsx::spi)
     if(NOT TARGET ${nsx_sensors_dependency})
@@ -130,7 +138,6 @@ set(nsx_sensors_vendor_sources
 )
 
 add_library(nsx_sensors STATIC
-    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_max86150.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_icm45605.c
     ${nsx_sensors_vendor_sources}
 )

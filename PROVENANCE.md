@@ -202,3 +202,14 @@ was consulted for register-map annotations and existing offset compensation
 semantics. This is a rewrite of the existing Ambiq port, not a vendored import;
 `vendor/tdk-icm45605` and its license are unchanged.
 See `docs/migration/mpu6050.md` for behavior changes and qualification limits.
+
+## Portable MAX86150 migration
+
+The Ambiq-authored `src/nsx_max86150.c` / `includes-api/nsx_max86150.h` port moved
+to `src/max86150/max86150.c` / `include/nsx/sensors/max86150.h`. The migration
+keeps the original attribution; no external implementation was copied and no
+vendor files changed. Register fields, FIFO behavior and signed ECG format were
+audited against Maxim Integrated MAX86150 datasheet 19-8402, Rev 2 (12/18):
+[manufacturer PDF](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX86150.pdf),
+also available as [the same manufacturer document mirrored by MikroElektronika](https://download.mikroe.com/documents/datasheets/MAX86150_datasheet.pdf).
+See `docs/migration/max86150.md` for audit corrections and deliberate API limits.
