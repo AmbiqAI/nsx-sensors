@@ -23,15 +23,17 @@ cmake -S "$root/examples/baremetal" -B "$out/nested" -DNSX_SENSORS_SOURCE="$root
 cmake --build "$out/nested" --parallel
 "$out/nested/sensor_example"
 "$out/nested/sensor_cpp"
-for driver in BME688 LEDSTICK INA228 MPU6050 MAX86150 ICM45605 NONE; do
-    bme=OFF; led=OFF; ina=OFF; mpu=OFF; max=OFF; icm=OFF
+for driver in BME688 LEDSTICK INA228 MPU6050 MAX86150 ICM45605 TSL254X T5838 NONE; do
+    bme=OFF; led=OFF; ina=OFF; mpu=OFF; max=OFF; icm=OFF; tsl=OFF; mic=OFF
     if [[ "$driver" == BME688 ]]; then bme=ON; fi
     if [[ "$driver" == LEDSTICK ]]; then led=ON; fi
     if [[ "$driver" == INA228 ]]; then ina=ON; fi
     if [[ "$driver" == MPU6050 ]]; then mpu=ON; fi
     if [[ "$driver" == MAX86150 ]]; then max=ON; fi
     if [[ "$driver" == ICM45605 ]]; then icm=ON; fi
-    cmake -S "$root" -B "$out/$driver" -DNSX_SENSOR_BME688="$bme" -DNSX_SENSOR_LEDSTICK="$led" -DNSX_SENSOR_INA228="$ina" -DNSX_SENSOR_MPU6050="$mpu" -DNSX_SENSOR_MAX86150="$max" -DNSX_SENSOR_ICM45605="$icm" \
+    if [[ "$driver" == TSL254X ]]; then tsl=ON; fi
+    if [[ "$driver" == T5838 ]]; then mic=ON; fi
+    cmake -S "$root" -B "$out/$driver" -DNSX_SENSOR_BME688="$bme" -DNSX_SENSOR_LEDSTICK="$led" -DNSX_SENSOR_INA228="$ina" -DNSX_SENSOR_MPU6050="$mpu" -DNSX_SENSOR_MAX86150="$max" -DNSX_SENSOR_ICM45605="$icm" -DNSX_SENSOR_TSL254X="$tsl" -DNSX_SENSOR_T5838="$mic" \
         -DNSX_SENSORS_TESTS=ON
     cmake --build "$out/$driver" --parallel
     if [[ "$driver" != NONE ]]; then ctest --test-dir "$out/$driver" --output-on-failure; fi
@@ -58,3 +60,12 @@ cc -std=c11 -Wall -Wextra -Werror -fshort-enums -I "$root/include" \
     "$root/src/common/bus.c" "$root/src/max86150/max86150.c" \
     "$root/tests/max86150_host/test_max86150.c" -o "$out/max86150-short-enums"
 "$out/max86150-short-enums"
+for driver in tsl254x t5838; do
+    extra_sources=()
+    if [[ "$driver" == t5838 ]]; then extra_sources+=("$root/examples/spark/t5838_pair.c"); fi
+    cc -std=c11 -Wall -Wextra -Werror -pedantic -fshort-enums -I "$root/include" \
+        "$root/src/common/bus.c" "$root/src/$driver/$driver.c" \
+        "$root/tests/${driver}_host/test_$driver.c" "${extra_sources[@]}" \
+        -o "$out/$driver-short-enums"
+    "$out/$driver-short-enums"
+done

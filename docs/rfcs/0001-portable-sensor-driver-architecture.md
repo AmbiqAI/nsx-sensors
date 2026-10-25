@@ -1,6 +1,6 @@
 # RFC 0001: Portable Sensor Driver Architecture for v1.0
 
-Status: Draft — six portable cores implemented; final API acceptance and framework gates pending
+Status: Draft — eight portable cores implemented; final API acceptance and framework gates pending
 Date: 2026-10-24  
 Repository: `AmbiqAI/nsx-sensors`  
 Baseline: released v0.3.0 and the BME688 forced-mode proposal in [PR #16](https://github.com/AmbiqAI/nsx-sensors/pull/16)
@@ -670,11 +670,11 @@ remaining framework, resource, provenance and release gates. This does not freez
 v1 or qualify hardware.
 
 
-### Spark portable additions under review
+### Merged Spark portable additions
 
 [PR #28](https://github.com/AmbiqAI/nsx-sensors/pull/28) adds TSL2540/TSL2541 and
-T5838 AAD control, bringing the implemented inventory to eight cores. At this
-update it remains draft and unmerged (`717baf0`); main still contains six.
+T5838 AAD control, bringing the implemented inventory to eight cores. It merged as
+`572a3d9` after review and timing-fix verification at `717baf0`.
 TSL254x uses the common I2C endpoint. T5838 preserves the caller-owned context
 pattern with a dedicated synchronous timed-waveform endpoint; it does not extend
 the common bus with a fake I2C/SPI transaction. Audio capture and concrete board

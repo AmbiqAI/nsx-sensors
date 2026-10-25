@@ -6,9 +6,10 @@ be treated as qualification of the final v1 candidate.
 
 ## Unreleased portable foundation
 
-All six drivers have portable CMake targets and offline host tests. They share
-the NSX adapter; Zephyr wrappers remain pending. `nsx::sensors` aggregates the
-selected portable cores without SDK dependencies. Metadata dependencies below
+All eight driver cores have portable CMake targets and offline host tests. The
+seven I2C/SPI cores share the NSX adapter; T5838 uses a caller-supplied THSEL
+waveform endpoint and the separate audio layer. Zephyr wrappers remain pending.
+`nsx::sensors` aggregates the selected portable cores without SDK dependencies. Metadata dependencies below
 describe NSX integration, not portable-core requirements. No framework or hardware
 qualification is implied by portable compilation.
 
@@ -16,6 +17,9 @@ qualification is implied by portable compilation.
 | --- | --- | --- | --- | --- |
 | BME688, LED Stick, INA228, MPU6050, MAX86150 | Implemented; host tested and linked | Shared NSX adapter | Pending | Unqualified |
 | ICM-45605 basic SPI | Implemented; per-instance TDK state, direct reads and explicit calibration | Shared NSX adapter | Pending | Unqualified |
+
+| TSL2540/TSL2541 | Implemented shared core with explicit variant; host tested | Shared NSX I2C adapter | Pending | Unqualified |
+| T5838 AAD control | Implemented Analog/D1/D2 control and waveform encoder; host tested | Board waveform endpoint and audio clock handoff pending | Pending | Unqualified |
 
 ## What the declarations mean
 
@@ -237,7 +241,8 @@ perform:
 
 ## Shared NSX port (unreleased)
 
-All six portable drivers use the shared NSX adapter.
+Seven portable cores use the shared NSX I2C/SPI adapter. T5838 instead requires
+a board-provided timed THSEL endpoint; PDM capture remains in the audio layer.
 It requires SDK PR #130; see [the adapter guide](nsx-port.md) for the exact
 CI revision, transfer limits, locking, and remaining hardware checks.
 

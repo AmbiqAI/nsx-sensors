@@ -1,11 +1,9 @@
 # v1 RFC readiness audit
 
-Audited baseline: `2ac3039bc4576f4a0ba5c36a1af6543e296d80fa` (PR #27),
-updated 2026-10-25 after PRs #26 and #27 merged.
-Reviewed addition: [PR #28](https://github.com/AmbiqAI/nsx-sensors/pull/28) at
-`717baf0d0886eed2112d5cdc3e1707f8228abc61`, still draft and unmerged.
-The inventory below covers eight implemented cores: six on merged main and two
-on PR #28. Its evidence does not imply those additions have shipped on main.
+Audited baseline: `572a3d9343ebc6fedddc9e61a8b983df97a8c94d` (PR #28),
+updated 2026-10-25 after PRs #26, #27 and #28 merged.
+All eight implemented cores are now on main. PR #28 was reviewed at
+`717baf0d0886eed2112d5cdc3e1707f8228abc61` before squash merge.
 This is an implementation and release-evidence audit against
 [RFC 0001](rfcs/0001-portable-sensor-driver-architecture.md), not a fresh
 independent driver review or a freeze of the v1 API. Version metadata
@@ -28,8 +26,8 @@ with each core under `src/<device>/`.
 | MPU6050 | I2C direct/FIFO acquisition, scaling, explicit bounded calibration and recovery | `tests/mpu6050_host/`; [migration](migration/mpu6050.md) |
 | MAX86150 | I2C ECG/PPG FIFO acquisition, snapshot/continuous behavior and recovery | `tests/max86150_host/`; [migration](migration/max86150.md) |
 | ICM-45605 | Basic SPI direct raw/scaled acquisition, DRDY and explicit calibration; typed per-instance TDK state | `tests/icm45605_host/`; [migration](migration/icm45605.md) |
-| TSL2540/TSL2541 (PR #28, unmerged) | Shared I2C core, explicit variant, raw visible/IR counts, gain/integration/thresholds, saturation and TSL2541 factory scaling; no application lux calibration | `tests/tsl254x_host/` on PR #28; [guide at reviewed revision](https://github.com/AmbiqAI/nsx-sensors/blob/717baf0d0886eed2112d5cdc3e1707f8228abc61/docs/tsl254x.md) |
-| T5838 (PR #28, unmerged) | Analog/D1/D2 acoustic activity control, THSEL frame encoder, shared-clock pair example; PDM/PCM capture remains in audio layer | `tests/t5838_host/` on PR #28; [guide at reviewed revision](https://github.com/AmbiqAI/nsx-sensors/blob/717baf0d0886eed2112d5cdc3e1707f8228abc61/docs/t5838.md) |
+| TSL2540/TSL2541 (PR #28) | Shared I2C core, explicit variant, raw visible/IR counts, gain/integration/thresholds, saturation and TSL2541 factory scaling; no application lux calibration | `tests/tsl254x_host/`; [guide at reviewed revision](https://github.com/AmbiqAI/nsx-sensors/blob/717baf0d0886eed2112d5cdc3e1707f8228abc61/docs/tsl254x.md) |
+| T5838 (PR #28) | Analog/D1/D2 acoustic activity control, THSEL frame encoder, shared-clock pair example; PDM/PCM capture remains in audio layer | `tests/t5838_host/`; [guide at reviewed revision](https://github.com/AmbiqAI/nsx-sensors/blob/717baf0d0886eed2112d5cdc3e1707f8228abc61/docs/t5838.md) |
 
 These tests establish software behavior with synthetic devices. No row claims
 physical accuracy, successful electrical communication or hardware qualification.
@@ -68,7 +66,7 @@ and enum-layout probes, not the full linked suites or hardware tests; its
 datasheet fetch failed. Full suite evidence comes from CI below. These reviews
 and merge approval complete this cleanup, not the remaining RFC release gates.
 
-### Spark additions: PR #28 (unmerged)
+### Spark additions: PR #28 (merged)
 
 Three independent agents and hosted/local Copilot reviewed `5d90d03`.
 Local Copilot identified insufficient T5838 pre/post-write clocking. Visual
@@ -89,13 +87,13 @@ No review establishes physical waveform correctness or hardware qualification.
 
 | Platform | Available integration | Evidence at audited baseline | Remaining acceptance work |
 | --- | --- | --- | --- |
-| Plain CMake / application HAL | Six merged cores plus two selectable cores in PR #28; common bus/runtime and T5838 timed endpoint | Offline tests, ASan/UBSan, source and relocated installed C/C++ consumers; C++ consumer references functions from every driver | Real board HAL/example and resource measurements |
-| NSX | Shared I2C/SPI adapter for six merged cores and TSL254x in PR #28; T5838 needs a board timing endpoint | Actual adapter with mocked SDK helpers, 3/5-byte command limits, installed consumers; real SDK configure; all eight declared SoCs compile with Arm GNU | Representative real firmware link on the final release candidate; electrical qualification later |
+| Plain CMake / application HAL | Eight independently selectable cores; common bus/runtime and T5838 timed endpoint | Offline tests, ASan/UBSan, source and relocated installed C/C++ consumers; C++ consumer references functions from every driver | Real board HAL/example and resource measurements |
+| NSX | Shared I2C/SPI adapter for seven cores; T5838 needs a board timing endpoint | Actual adapter with mocked SDK helpers, 3/5-byte command limits, installed consumers; real SDK configure; all eight declared SoCs compile with Arm GNU | Representative real firmware link on the final release candidate; electrical qualification later |
 | FreeRTOS | Portable cores usable through application bus/timing/locking callbacks | No FreeRTOS example or pinned kernel/HAL integration build in this repository | Implement and link a task-based example with correct sub-tick delays and shared-bus serialization |
 | Zephyr | Portable C cores only | No Zephyr sensor wrapper, devicetree binding, native simulation or cross-build | BME688 wrapper/example, pinned Zephyr version, mocked-bus/native tests and board cross-build |
 
 Main CI [run 40234941475](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40234941475)
-passed all four jobs at the audited baseline. See `.github/workflows/ci.yml`,
+passed all four jobs at the preceding six-core baseline `2ac3039`. See `.github/workflows/ci.yml`,
 `tests/portable_build.sh` and `tests/nsx_port_host.sh` for exact commands.
 The SDK pin is `1f18f01555897ed8e06437ff9727f2bb61771e70`, containing the
 combined-I2C prerequisite. Historical Armclang/ATfE results are not evidence for
@@ -110,6 +108,10 @@ built individual installed components and compiled both new cores plus the pair
 helper with Arm GNU, Armclang and ATfE. Those three-toolchain probes were not
 repeated after the timing fix; current embedded evidence is the Arm GNU CI matrix.
 
+After squash merge, main CI [run 40242270537](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40242270537)
+passed all four jobs at the audited eight-core baseline `572a3d9`. This is the
+current merged software/build evidence; hardware qualification remains pending.
+
 ## RFC decisions to record before freezing v1
 
 The implementation resolves several proposed choices; maintainers still need to
@@ -119,7 +121,7 @@ reviews above are complete; the remaining decision is final RFC acceptance:
 - `<nsx/sensors/port_nsx.h>` is the implemented port header, rather than the
   RFC sketch's `<nsx/sensors/ports/nsx.h>`.
 - `nsx::sensors` aggregates selected portable cores only. Applications link
-  `nsx::sensor_port_nsx` explicitly. The six merged drivers (eight with PR #28) default on; the port defaults
+  `nsx::sensor_port_nsx` explicitly. All eight drivers default on; the port defaults
   on only when enclosing SDK targets exist. No legacy aggregate remains.
 - Context storage is public and typed, private by convention. ICM carries TDK
   headers and must remain address-stable. No stable binary context ABI is promised.
@@ -139,9 +141,8 @@ change to RFC acceptance requirements.
 
 ## Ordered release checklist
 
-Before recording the final eight-core release baseline, merge PR #28 through its
-normal approval process and record the resulting main SHA and CI. This audit
-update does not authorize or perform that merge.
+PR #28 is merged; the eight-core main baseline is recorded above. Final RFC
+acceptance and release qualification remain separate from this merge.
 
 1. **Record final RFC acceptance.** The API cleanup is reviewed and merged.
    Record acceptance of the choices above and any explicit scope amendments
@@ -183,7 +184,7 @@ Record board/sensor revisions, bus settings, SDK/toolchain and firmware SHA for:
   power measurements as applicable to each driver.
 
 The portable portions of TSL254x (issue #15) and T5838 (issue #12) are implemented
-in unmerged PR #28; both tracking issues remain open for integration/qualification.
+in merged PR #28; both tracking issues remain open for integration/qualification.
 Spark's supplied draft selects TSL2540; select that explicit variant in board code.
 Remaining T5838 work is a concrete timer-based THSEL endpoint, separate control
 pins for the pair, shared programming/PDM-clock handoff, and waveform/WAKE/stereo

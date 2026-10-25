@@ -155,8 +155,8 @@ esac
 rm -rf "$out_dir"
 mkdir -p "$out_dir"
 
-sources=("$repo_root"/src/icm45605/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
-[ "${#sources[@]}" -eq 11 ] || fail "expected 11 translation units, found ${#sources[@]}"
+sources=("$repo_root"/src/icm45605/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/src/tsl254x/*.c "$repo_root"/src/t5838/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
+[ "${#sources[@]}" -eq 13 ] || fail "expected 13 translation units, found ${#sources[@]}"
 
 for source in "${sources[@]}"; do
     echo "compiling $(basename "$source") [$toolchain/$soc/$soc_core]"
@@ -180,6 +180,8 @@ cat > "$out_dir/port_header.cpp" <<'CPP'
 #include <nsx/sensors/ina228.h>
 #include <nsx/sensors/mpu6050.h>
 #include <nsx/sensors/max86150.h>
+#include <nsx/sensors/tsl254x.h>
+#include <nsx/sensors/t5838.h>
 nsx_sensor_status_t bind_port(nsx_sensor_nsx_context_t *ctx, nsx_i2c_config_t *bus)
 {
     return nsx_sensor_nsx_bind_i2c(ctx, bus, 0x76, nullptr);
