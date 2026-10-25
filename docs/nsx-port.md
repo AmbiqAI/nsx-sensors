@@ -2,8 +2,9 @@
 
 Link `nsx::sensor_port_nsx` alongside the portable driver targets. Include
 `<nsx/sensors/port_nsx.h>` and the device header, such as
-`<nsx/sensors/bme688.h>`. The same endpoint type supports BME688, LED Stick, INA228, MPU6050, MAX86150, ICM-45605,
-and future drivers using the common synchronous bus API.
+`<nsx/sensors/bme688.h>`. The same endpoint type supports BME688, LED Stick,
+INA228, MPU6050, MAX86150, ICM-45605, TSL254x, and future drivers using the common
+synchronous bus API.
 
 This unreleased adapter requires the combined-read addition in
 [SDK PR #130](https://github.com/AmbiqAI/nsx-ambiq-sdk/pull/130).

@@ -97,7 +97,7 @@ passed all four jobs at the preceding six-core baseline `2ac3039`. See `.github/
 `tests/portable_build.sh` and `tests/nsx_port_host.sh` for exact commands.
 The SDK pin is `1f18f01555897ed8e06437ff9727f2bb61771e70`, containing the
 combined-I2C prerequisite. Historical Armclang/ATfE results are not evidence for
-this final six-core revision. SDK-stub consumer links are not real firmware links.
+that six-core baseline. SDK-stub consumer links are not real firmware links.
 
 PR #28 CI [run 40241138132](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40241138132)
 passed all four jobs at `717baf0`: host release/API contracts, nested CMake
