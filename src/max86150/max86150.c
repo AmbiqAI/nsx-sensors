@@ -142,7 +142,7 @@ nsx_sensor_status_t max86150_init(max86150_context_t *c, const max86150_config_t
     if (!c->runtime.delay_us) return NSX_SENSOR_E_UNSUPPORTED;
     uint8_t id; s=max86150_probe(c,&id); if (s!=NSX_SENSOR_OK) return s;
     /* A power-ready flag already present at entry is expected on first boot.
-     * Consume it before reset/configuration, then reject any later power loss. */
+     * Consume it before reset/configuration, then reject a later pending power-ready flag. */
     c->_configured=false; invalidate_fifo(c);
     uint8_t boot_status[2]; s=read_bytes(c,INT1,boot_status,2);
     if (s!=NSX_SENSOR_OK) return s;
