@@ -1,5 +1,12 @@
 # Release policy
 
+## Unreleased v1 transition
+
+All six portable migrations are implemented, but v1 acceptance is incomplete.
+Use the [readiness audit](docs/v1-readiness.md) for current evidence and the
+ordered release checklist. Version metadata remains `0.3.0` until a coordinated
+release PR. The v0.1.0 scope below is historical.
+
 ## `v0.1.0`
 
 `v0.1.0` is the first semantic release of this repository. The module metadata

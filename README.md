@@ -14,7 +14,7 @@ Current drivers:
 | SparkFun Qwiic LED Stick | I2C | `include/nsx/sensors/ledstick.h` |
 | TDK ICM-45605 6-axis IMU | SPI | `include/nsx/sensors/icm45605.h` |
 
-This branch implements the first stage of [RFC 0001 (PR #17)](https://github.com/AmbiqAI/nsx-sensors/pull/17).
+This branch implements the six portable driver migrations from [RFC 0001 (PR #17)](https://github.com/AmbiqAI/nsx-sensors/pull/17).
 All six drivers now have portable cores. ICM-45605 retains the TDK basic
 implementation with per-device transport callbacks. The shared NSX port is available; Zephyr wrappers remain follow-up work. This is an
 unreleased API transition, not a v1 release or a drop-in v0 replacement.
@@ -69,6 +69,7 @@ release. See `docs/compatibility.md` before relying on any device.
 | Document | Purpose |
 | --- | --- |
 | `CHANGELOG.md` | What changed, including breaking changes and known caveats |
+| [v1 readiness audit](docs/v1-readiness.md) | Current RFC coverage, remaining integration work and release checklist |
 | `RELEASE.md` | Versioning policy, compatibility surfaces, publication process |
 | `PROVENANCE.md` | Exact port lineage and the vendored TDK subset |
 | `docs/compatibility.md` | Declared vs build-verified vs runtime-validated |
@@ -79,7 +80,7 @@ release. See `docs/compatibility.md` before relying on any device.
 
 ## Licensing
 
-Ambiq-authored code in `includes-api/` and `src/` is BSD-3-Clause; see
+Ambiq-authored code in `include/` and `src/` is BSD-3-Clause; see
 `LICENSE`. `vendor/tdk-icm45605/` is third-party TDK InvenSense code
 redistributed under its own permissive terms and is **not** relicensed. See
 `NOTICE` and `PROVENANCE.md`. The native BME688 compensation/calibration/heater

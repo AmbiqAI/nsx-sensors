@@ -2,7 +2,7 @@
 
 Link `nsx::sensor_port_nsx` alongside the portable driver targets. Include
 `<nsx/sensors/port_nsx.h>` and the device header, such as
-`<nsx/sensors/bme688.h>`. The same endpoint type supports BME688, LED Stick, INA228, MPU6050, MAX86150,
+`<nsx/sensors/bme688.h>`. The same endpoint type supports BME688, LED Stick, INA228, MPU6050, MAX86150, ICM-45605,
 and future drivers using the common synchronous bus API.
 
 This unreleased adapter requires the combined-read addition in
@@ -91,7 +91,7 @@ behavior; there is no caller deadline or cancellation API here.
 `nsx::core`, `nsx::i2c`, and `nsx::spi`. It defaults off standalone and can be
 explicitly enabled with I2C/SPI dependency targets supplied. No sibling checkout
 is discovered. Link the port and each desired portable driver explicitly;
-`nsx::sensors` still contains the unmigrated ICM-45605 driver.
+`nsx::sensors` aggregates only the selected portable cores.
 
 Firmware builds do not emit an install export for the port. Package producers
 explicitly enable `NSX_SENSOR_INSTALL_NSX_PORT=ON` and must supply the SDK's
@@ -108,7 +108,7 @@ target_link_libraries(app PRIVATE nsx::sensor_bme688 nsx::sensor_port_nsx)
 
 `tests/nsx_port_host.sh` exercises real adapter code with mocked SDK helpers,
 both prefix limits, error/lock paths, alignment/padding, unchanged failed RX,
-portable BME688/LED Stick calls, and relocated C/C++ package consumers.
+portable driver calls (including ICM-45605 SPI probing), and relocated C/C++ package consumers.
 `tests/module_compile_smoke.sh` compiles the adapter against real SDK headers
 for all eight declared SoCs. These tests do not establish wire-level timing or
 fault recovery on hardware. Repeated START, CS continuity, sensor sampling,

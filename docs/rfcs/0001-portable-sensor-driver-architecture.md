@@ -1,9 +1,13 @@
 # RFC 0001: Portable Sensor Driver Architecture for v1.0
 
-Status: Draft — proposed interfaces, not an implemented contract  
+Status: Draft — six portable cores implemented; final API acceptance and framework gates pending
 Date: 2026-10-24  
 Repository: `AmbiqAI/nsx-sensors`  
 Baseline: released v0.3.0 and the BME688 forced-mode proposal in [PR #16](https://github.com/AmbiqAI/nsx-sensors/pull/16)
+
+Current progress and outstanding acceptance work are recorded in the
+[v1 readiness audit](../v1-readiness.md). Historical stage notes below retain
+their original scope; implemented headers are the current source API.
 
 ## Summary
 

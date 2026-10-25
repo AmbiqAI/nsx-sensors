@@ -1,5 +1,9 @@
 # Compatibility
 
+See the [v1 readiness audit](v1-readiness.md) for the exact current baseline,
+platform matrix and remaining release gates. Historical evidence below must not
+be treated as qualification of the final v1 candidate.
+
 ## Unreleased portable foundation
 
 All six drivers have portable CMake targets and offline host tests. They share
@@ -192,12 +196,14 @@ payload. This records the evidence for the new driver; it does not replace the
 historical SDK pin above. The existing CI matrix will also compile the new
 sources against the pinned SDK on each PR.
 
-The portable foundation now passes synthetic BME688/LED Stick protocol and
+At the initial foundation stage, synthetic BME688/LED Stick protocol and
 lifecycle tests, host ASan/UBSan, C/C++ consumer linkage, relocated package
 installation, selected-driver configurations and all eight GCC SoC compile
-checks. The foundation has 10 translation units (including the shared bus and
-retained TDK subset). The shared NSX port, real firmware link and hardware tests
-remain pending; Armclang and ATfE have not been rerun for this migration.
+checks passed. That foundation had 10 translation units (including the shared
+bus and retained TDK subset). The shared NSX port was pending at that stage and
+is now implemented. A real firmware link on the final v1 candidate and hardware
+tests remain outstanding;
+Armclang and ATfE have not been rerun for the full migration.
 
 Hardware qualification still needs a recorded board, sensor/module revision,
 SDK revision, toolchain, bus speed/mode, and results for:
@@ -231,7 +237,7 @@ perform:
 
 ## Shared NSX port (unreleased)
 
-The portable BME688 and LED Stick drivers now have a shared NSX adapter.
+All six portable drivers use the shared NSX adapter.
 It requires SDK PR #130; see [the adapter guide](nsx-port.md) for the exact
 CI revision, transfer limits, locking, and remaining hardware checks.
 
