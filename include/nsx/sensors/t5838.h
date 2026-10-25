@@ -11,7 +11,9 @@ extern "C" {
 #define T5838_WRITE_SYMBOLS 26u
 /* One START, 24 MSB-first payload bits, one STOP. Durations are PDM CLK
  * cycles, not microseconds. Drive THSEL low before/after, high for each symbol,
- * and low between symbols. No read turnaround or device ACK is implemented. */
+ * and low between symbols. CLK must run for >50 cycles before START and after
+ * STOP; the encoder supplies 60 for each interval. No read turnaround or device
+ * ACK is implemented. */
 typedef struct {
     uint16_t high_cycles[T5838_WRITE_SYMBOLS];
     uint16_t space_cycles, pre_cycles, post_cycles;

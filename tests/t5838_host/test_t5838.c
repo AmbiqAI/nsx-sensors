@@ -13,7 +13,8 @@ static nsx_sensor_status_t send_frame(void *user, const t5838_write_frame_t *f)
     fake_t *device = user;
     uint8_t bytes[3] = {0};
     assert(f->high_cycles[0] == 10 && f->high_cycles[25] > 128);
-    assert(f->space_cycles == 10 && f->pre_cycles >= 5 && f->post_cycles >= 5);
+    /* DS-000383 rev1.2 Figure 22: CLK active for >50 cycles on both sides. */
+    assert(f->space_cycles == 10 && f->pre_cycles > 50 && f->post_cycles > 50);
     for (unsigned i = 0; i < 24; ++i) {
         uint16_t width = f->high_cycles[i + 1];
         assert(width == 10 || width == 30);

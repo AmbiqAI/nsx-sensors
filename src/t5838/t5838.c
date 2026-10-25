@@ -17,7 +17,8 @@ nsx_sensor_status_t t5838_encode_write(uint8_t reg, uint8_t value, t5838_write_f
 {
     if (!frame) return NSX_SENSOR_E_ARGUMENT;
     const uint8_t payload[] = {0xa6, reg, value};
-    t5838_write_frame_t result = {.space_cycles = 10, .pre_cycles = 5, .post_cycles = 5};
+    /* DS-000383 rev1.2 Figure 22 requires >50 CLK cycles before/after writes. */
+    t5838_write_frame_t result = {.space_cycles = 10, .pre_cycles = 60, .post_cycles = 60};
     result.high_cycles[0] = 10;
     for (size_t byte = 0; byte < 3; ++byte)
         for (unsigned bit = 0; bit < 8; ++bit)
