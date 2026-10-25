@@ -7,7 +7,6 @@ Ambiq maintains this repository and owns the release decision for
 controller transport. It owns:
 
 - portable driver and transaction contracts in `include/nsx/sensors/`;
-- the remaining NSX-specific APIs in `includes-api/`;
 - framework adapters that map those contracts onto existing platform buses;
 - their implementations in `src/`;
 - the vendoring decision for `vendor/tdk-icm45605/`, including which upstream

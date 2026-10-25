@@ -37,7 +37,7 @@ extern "C" {
  *  @param[in] len   Number of byte to be read.
  *  @return          0 on success, negative value on error.
  */
-typedef int (*inv_imu_read_reg_t)(uint8_t reg, uint8_t *buf, uint32_t len);
+typedef int (*inv_imu_read_reg_t)(void *user, uint8_t reg, uint8_t *buf, uint32_t len);
 
 /** @brief Function pointer to write register(s).
  *  @param[in] reg  Register address to be written.
@@ -45,7 +45,7 @@ typedef int (*inv_imu_read_reg_t)(uint8_t reg, uint8_t *buf, uint32_t len);
  *  @param[in] len  Number of byte to be written.
  *  @return         0 on success, negative value on error.
  */
-typedef int (*inv_imu_write_reg_t)(uint8_t reg, const uint8_t *buf, uint32_t len);
+typedef int (*inv_imu_write_reg_t)(void *user, uint8_t reg, const uint8_t *buf, uint32_t len);
 
 /* Available serial interface type. */
 #define UI_I2C  0 /**< identifies I2C interface. */
@@ -60,6 +60,8 @@ typedef uint32_t inv_imu_serif_type_t;
 
 /** @brief Structure dedicated to transport layer transport interface. */
 typedef struct {
+	/* NSX local patch: caller-owned instance passed to every callback. */
+	void *user;
 	/* Serial interface variables (should be initialized by application) */
 	inv_imu_read_reg_t  read_reg; /**< Function pointer to read register(s). */
 	inv_imu_write_reg_t write_reg; /**< Function pointer to write register(s). */
@@ -68,7 +70,7 @@ typedef struct {
 	/** @brief Callback to sleep function.
 	 *  @param[in] us  Time to sleep in microseconds.
 	 */
-	void (*sleep_us)(uint32_t us);
+	void (*sleep_us)(void *user, uint32_t us);
 } inv_imu_transport_t;
 
 /** @brief Reads data from a register on IMU.

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased ICM-45605 portable basic migration
+
+- Replace the NSX-only singleton API with `<nsx/sensors/icm45605.h>` and
+  `nsx::sensor_icm45605`: caller-owned typed TDK state and per-instance callbacks.
+- Provide validated basic SPI low-noise configuration, idle init, explicit
+  start/stop, raw/scaled register samples, deferred data-ready status, opt-in
+  INT2 output and explicit bounded stationary calibration.
+- Audit native ranges, read-error publication, partial writes, fresh calibration
+  and vendor interrupt reserved bits. Keep all TDK notices and record patches.
+- Complete core portability: `nsx::sensors` aggregates all selected cores in the
+  portable export; remove `NSX_SENSORS_LEGACY_NSX` and the last legacy header.
+  NSX users link the shared adapter separately. Version remains 0.3.0 pending v1.
+- Add fake indirect-register/two-device/failure/calibration tests and installed
+  C/C++/NSX build coverage. FIFO/APEX/additional interfaces follow in issue #23;
+  Spark integration and hardware qualification remain pending in #13/#4.
+
 ## Unreleased MAX86150 portable migration
 
 - Fix review findings: retain one frame during continuous reads to prevent stale

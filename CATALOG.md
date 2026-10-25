@@ -17,7 +17,7 @@ point at this project and should move to the immutable tag, not a branch.
 | MPU6050 6-axis IMU | I2C | `include/nsx/sensors/mpu6050.h` |
 | INA228 power/current monitor | I2C | `include/nsx/sensors/ina228.h` |
 | SparkFun Qwiic LED Stick | I2C | `include/nsx/sensors/ledstick.h` |
-| TDK ICM-45605 6-axis IMU | SPI | `includes-api/nsx_icm45605.h` |
+| TDK ICM-45605 6-axis IMU | SPI | `include/nsx/sensors/icm45605.h` |
 
 The compatibility declaration covers the Apollo3, Apollo3P, Apollo4L, Apollo4P,
 Apollo330P, Apollo510, Apollo510B, and Apollo510L families declared by
@@ -31,7 +31,8 @@ The current registry lock already pins `nsx-sensors` at
 `neuralSPOT`, `ns-sensors`, or application repository is changed by this
 release-preparation branch.
 
-Unreleased foundation: BME688/LED Stick/INA228/MPU6050/MAX86150 use portable per-driver targets. The
-transitional NSX aggregate defaults on when its dependency targets exist and
-contains ICM-45605 (`NSX_SENSORS_LEGACY_NSX` can override it). See `docs/migration/portable-foundation.md`;
-registry consumers must not repin automatically during this transition.
+Unreleased migration: all six cores have portable per-driver targets.
+`nsx::sensors` aggregates selected cores without SDK dependencies. Link the
+shared `nsx::sensor_port_nsx` explicitly in NSX applications. ICM-45605 exposes
+the basic SPI subset; see `docs/migration/icm45605.md`. Registry consumers must
+not repin automatically during this transition.

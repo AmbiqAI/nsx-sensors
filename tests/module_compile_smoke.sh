@@ -155,7 +155,7 @@ esac
 rm -rf "$out_dir"
 mkdir -p "$out_dir"
 
-sources=("$repo_root"/src/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
+sources=("$repo_root"/src/icm45605/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
 [ "${#sources[@]}" -eq 11 ] || fail "expected 11 translation units, found ${#sources[@]}"
 
 for source in "${sources[@]}"; do
@@ -175,6 +175,7 @@ produced="$(find "$out_dir" -name '*.o' | wc -l | tr -d '[:blank:]')"
 
 # Compile the public adapter header as C++ against the same real SDK headers.
 cat > "$out_dir/port_header.cpp" <<'CPP'
+#include <nsx/sensors/icm45605.h>
 #include <nsx/sensors/port_nsx.h>
 #include <nsx/sensors/ina228.h>
 #include <nsx/sensors/mpu6050.h>

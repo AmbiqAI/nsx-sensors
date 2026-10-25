@@ -2,17 +2,16 @@
 
 ## Unreleased portable foundation
 
-BME688, LED Stick, INA228, MPU6050 and MAX86150 now have portable CMake targets and offline host tests.
-They share the NSX adapter; Zephyr wrappers remain pending. ICM-45605 remains
-NSX-only; its aggregate defaults on when its NSX dependencies exist
-(and can be overridden with `NSX_SENSORS_LEGACY_NSX`). Metadata dependencies
-below describe that NSX integration, not portable-core requirements. No framework
-or hardware qualification is implied by portable compilation.
+All six drivers have portable CMake targets and offline host tests. They share
+the NSX adapter; Zephyr wrappers remain pending. `nsx::sensors` aggregates the
+selected portable cores without SDK dependencies. Metadata dependencies below
+describe NSX integration, not portable-core requirements. No framework or hardware
+qualification is implied by portable compilation.
 
 | Drivers | Portable core | NSX integration | Zephyr wrapper | Hardware |
 | --- | --- | --- | --- | --- |
 | BME688, LED Stick, INA228, MPU6050, MAX86150 | Implemented; host tested and linked | Shared NSX adapter | Pending | Unqualified |
-| ICM-45605 | Pending | Existing API via NSX aggregate | Pending | Unqualified |
+| ICM-45605 basic SPI | Implemented; per-instance TDK state, direct reads and explicit calibration | Shared NSX adapter | Pending | Unqualified |
 
 ## What the declarations mean
 

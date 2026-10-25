@@ -5,6 +5,7 @@
 #include <nsx/sensors/ina228.h>
 #include <nsx/sensors/mpu6050.h>
 #include <nsx/sensors/max86150.h>
+#include <nsx/sensors/icm45605.h>
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -52,7 +53,10 @@ uint32_t nsx_spi_write(nsx_spi_config_t *c, const void *b, uint32_t n, uint64_t 
     assert(c->iomHandle); selector=cs; prefix=p; prefix_len=np; return record(4,b,n,NULL,0);
 }
 uint32_t nsx_spi_read(nsx_spi_config_t *c, const void *b, uint32_t n, uint64_t p, uint32_t np, uint32_t cs) {
-    assert(c->iomHandle); selector=cs; prefix=p; prefix_len=np; return record(5,NULL,0,(void *)b,n);
+    assert(c->iomHandle); selector=cs; prefix=p; prefix_len=np;
+    uint32_t status=record(5,NULL,0,(void *)b,n);
+    if (p==0xf2 && np==1 && n==1) *(uint8_t *)b=0xe5;
+    return status;
 }
 int main(void) {
     nsx_i2c_config_t i2c = { &i2c, { AM_HAL_IOM_I2C_MODE } };
@@ -134,6 +138,10 @@ int main(void) {
     assert(max86150_bind(&optical,&a.bus,NULL)==NSX_SENSOR_OK);
     assert(max86150_probe(&optical,&optical_id)==NSX_SENSOR_OK && optical_id==0x1e);
     assert(route==3 && selector==0x5e && sent_size==1 && sent[0]==0xff);
+    icm45605_context_t icm; uint8_t icm_id;
+    assert(icm45605_bind(&icm,&b.bus,NULL)==NSX_SENSOR_OK);
+    assert(icm45605_probe(&icm,&icm_id)==NSX_SENSOR_OK && icm_id==0xe5);
+    assert(route==5 && selector==2 && prefix==0xf2 && prefix_len==1);
     /* Explicitly serialized application can omit hooks. Binding still has no I/O. */
     before=calls; assert(nsx_sensor_nsx_bind_i2c(&a,&i2c,0x20,NULL)==NSX_SENSOR_OK);
     assert(calls==before); held=1;

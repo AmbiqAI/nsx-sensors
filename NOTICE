@@ -43,8 +43,11 @@ vendor/tdk-icm45605/
     These files are redistributed under the permissive InvenSense terms
     reproduced above and in each file header. They are NOT relicensed under
     BSD-3-Clause. The copyright notice and permission terms must be retained in
-    any redistribution, in source or binary form. The only local modification is
-    the removal of the upstream `imu/` include-path prefix; see PROVENANCE.md.
+    any redistribution, in source or binary form. Local modifications remove the
+    upstream `imu/` include-path prefix, add per-instance context routing for
+    register and delay callbacks, initialize indirect-read output on error paths,
+    and initialize interrupt configuration fields. See PROVENANCE.md for the
+    detailed modification record.
 
 --------------------------------------------------------------------------------
 
