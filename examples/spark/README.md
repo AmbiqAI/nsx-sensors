@@ -1,7 +1,8 @@
 # Spark integration examples
 
-The board brief is not a final wiring contract. Choose the actual TSL254x variant
-and bind the existing NSX I2C adapter to its endpoint; see [light sensor usage](../../docs/tsl254x.md).
+The supplied `SCH-2005480-DRAFT.pdf` selects TSL25403M (U1600), with a note
+that it substitutes for TSL25413. Select `TSL254X_TSL2540` in the Spark board
+configuration and bind the existing NSX I2C adapter to its endpoint; see [light sensor usage](../../docs/tsl254x.md).
 Use separate bus/mux endpoints if another device shares address 0x39.
 
 `t5838_pair.c` is a compiled and host-tested example of coordinating two T5838
@@ -42,3 +43,7 @@ invalidate both contexts and recover the pair before resuming. See the
 No Spark pinout, timer waveform emitter, high-quality NSX capture clock or hardware
 qualification is supplied by these portable examples. Those depend on the final
 BOM/schematic and board resources. The examples need no framework migration.
+
+Board pin assignments and the concrete THSEL/clock/PDM adapters belong in board
+and audio integration. They are not prerequisites for reviewing or merging the
+portable sensor cores; hardware qualification is a separate gate.

@@ -8,9 +8,10 @@ combined reads. There is no per-device NSX bus wrapper.
 
 Select `TSL254X_TSL2540` or `TSL254X_TSL2541` from the actual BOM. Both use ID
 `0xe4`; the auxiliary ID distinguishes TSL2540 (0/1) from TSL2541 (2). Probe
-rejects a mismatch. Supporting both variants does not establish which Spark uses.
-Confirm supply, I2C levels, address sharing and interrupt wiring from the final
-schematic. Both sensors at the same address need separate buses or a mux.
+rejects a mismatch. The supplied Spark schematic `SCH-2005480-DRAFT.pdf` selects TSL25403M at
+U1600, noting a substitution for unavailable TSL25413. That board therefore
+selects `TSL254X_TSL2540`; both variants remain supported by this portable core.
+Confirm supply, I2C levels, address sharing and interrupt wiring in board integration. Both sensors at the same address need separate buses or a mux.
 
 Bind is pure. Init validates and programs gain, integration cycles, thresholds,
 persistence and interrupt enables, then leaves ALS off. It disables wait,
