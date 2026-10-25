@@ -1,6 +1,6 @@
 # nsx-sensors
 
-External NSX module for reusable I2C/SPI-attached sensor and accessory device
+External NSX module for reusable sensor and accessory device
 drivers.
 
 Current drivers:
@@ -13,11 +13,17 @@ Current drivers:
 | INA228 power and current monitor | I2C | `include/nsx/sensors/ina228.h` |
 | SparkFun Qwiic LED Stick | I2C | `include/nsx/sensors/ledstick.h` |
 | TDK ICM-45605 6-axis IMU | SPI | `include/nsx/sensors/icm45605.h` |
+| ams OSRAM TSL2540 / TSL2541 light | I2C | `include/nsx/sensors/tsl254x.h` |
+| TDK T5838 microphone AAD control | THSEL one-wire; audio separate | `include/nsx/sensors/t5838.h` |
 
 This branch implements the first stage of [RFC 0001 (PR #17)](https://github.com/AmbiqAI/nsx-sensors/pull/17).
-All six drivers now have portable cores. ICM-45605 retains the TDK basic
+All eight driver cores are portable. ICM-45605 retains the TDK basic
 implementation with per-device transport callbacks. The shared NSX port is available; Zephyr wrappers remain follow-up work. This is an
 unreleased API transition, not a v1 release or a drop-in v0 replacement.
+
+See [TSL254x](docs/tsl254x.md), [T5838 control/audio boundaries](docs/t5838.md) and
+[Spark integration examples](examples/spark/README.md). T5838 needs a board
+THSEL timing endpoint; the NSX I2C/SPI adapter does not provide one.
 
 ## Usage
 
@@ -28,9 +34,9 @@ add_subdirectory(third_party/nsx-sensors)
 target_link_libraries(my_app PRIVATE nsx::sensor_bme688 nsx::sensor_ledstick nsx::sensor_ina228 nsx::sensor_mpu6050 nsx::sensor_max86150 nsx::sensor_icm45605)
 ```
 
-All six portable drivers are enabled by default. Set `NSX_SENSOR_BME688=OFF`,
-`NSX_SENSOR_LEDSTICK=OFF`, `NSX_SENSOR_INA228=OFF`, `NSX_SENSOR_MPU6050=OFF`, `NSX_SENSOR_MAX86150=OFF`, or `NSX_SENSOR_ICM45605=OFF` to omit a driver. Installed consumers use
-`find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 ledstick ina228 mpu6050 max86150 icm45605)` and the
+All eight portable drivers are enabled by default. Set `NSX_SENSOR_BME688=OFF`,
+`NSX_SENSOR_LEDSTICK=OFF`, `NSX_SENSOR_INA228=OFF`, `NSX_SENSOR_MPU6050=OFF`, `NSX_SENSOR_MAX86150=OFF`, `NSX_SENSOR_ICM45605=OFF`, `NSX_SENSOR_TSL254X=OFF`, or `NSX_SENSOR_T5838=OFF` to omit a driver. Installed consumers use
+`find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 ledstick ina228 mpu6050 max86150 icm45605 tsl254x t5838)` and the
 same targets. The runnable [fake-HAL example](examples/baremetal/) exercises
 binding/probing and command writes without pretending to read physical sensors.
 
@@ -38,7 +44,7 @@ Caller-owned endpoints implement synchronous transfers using the board HAL.
 See [migration and transport contracts](docs/migration/portable-foundation.md)
 and the [BME688 guide](docs/bme688.md). See the
 [pre-v1 API cleanup](docs/migration/api-cleanup.md) for enum/type migration and
-a lifecycle comparison across all six drivers. INA228 users should follow
+a lifecycle comparison across the original six drivers. INA228 users should follow
 the [INA228 migration guide](docs/migration/ina228.md). MPU6050 users should follow
 the [MPU6050 migration guide](docs/migration/mpu6050.md). MAX86150 users should follow
 the [MAX86150 migration and audit guide](docs/migration/max86150.md).

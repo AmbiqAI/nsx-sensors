@@ -7,8 +7,12 @@ enum { CLOCK_INTERNAL, DLPF_044HZ, GYRO_FS_250DPS, ACCEL_FS_2G };
 #include <nsx/sensors/max86150.h>
 #include <nsx/sensors/ledstick.h>
 #include <nsx/sensors/runtime.h>
+#include <nsx/sensors/tsl254x.h>
+#include <nsx/sensors/t5838.h>
 int main()
 {
+    auto light = tsl254x_default_config();
+    auto mic = t5838_default_config();
     auto icm = icm45605_default_config();
     auto config = bme688_default_config();
     auto optical = max86150_default_config();
@@ -27,7 +31,9 @@ int main()
     auto monitor = ina228_default_config();
     monitor.shunt_ohms = 0.1f; monitor.max_current_amps = 0.5f;
     ledstick_config_t leds = {10};
-    return icm45605_validate_config(&icm) != NSX_SENSOR_OK ||
+    return tsl254x_validate_config(&light) != NSX_SENSOR_OK ||
+           t5838_validate_config(&mic) != NSX_SENSOR_OK ||
+           icm45605_validate_config(&icm) != NSX_SENSOR_OK ||
            max86150_validate_config(&optical) != NSX_SENSOR_OK ||
            mpu6050_validate_config(&motion) != NSX_SENSOR_OK ||
            ina228_validate_config(&monitor) != NSX_SENSOR_OK ||
