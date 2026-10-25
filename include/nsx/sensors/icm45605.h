@@ -57,7 +57,8 @@ typedef struct {
 icm45605_config_t icm45605_default_config(void);
 nsx_sensor_status_t icm45605_validate_config(const icm45605_config_t *config);
 /* Pure bind; 4-wire SPI only, TX>=4 and RX>=14. Caller configures SPI mode 0/3,
- * <=24 MHz and CS timing. delay_us is required by init/start/calibrate; now_us
+ * <=20 MHz when VDDIO <1.71 V or <=24 MHz when VDDIO >=1.71 V, and datasheet CS
+ * timing. delay_us is required by init/start/calibrate; now_us
  * optional (without it, timeout bounds requested waits, not bus wall time). */
 nsx_sensor_status_t icm45605_bind(icm45605_context_t *ctx, const nsx_sensor_bus_t *bus,
                                  const nsx_sensor_runtime_t *runtime);
