@@ -103,7 +103,8 @@ def _arm(lines: list[str]) -> LinkMap:
     # Symbol table gives name/address; memory map gives the archive/member.
     # The table's bare member name alone is not sufficient provenance.
     symbol = re.compile(r"^\s*([A-Za-z_][\w.$]*)\s+(0x[0-9a-fA-F]+)\s+(?:Thumb|ARM) Code\s+\d+\s+.+$")
-    section = re.compile(r"^\s*(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+Code\s+RO\s+\d+\s+(?:\*\s+)?\S+\s+(.+?)\s*$")
+    # --load_addr_map_info inserts a load address between execution address and size.
+    section = re.compile(r"^\s*(0x[0-9a-fA-F]+)\s+(?:0x[0-9a-fA-F]+\s+)?(0x[0-9a-fA-F]+)\s+Code\s+RO\s+\d+\s+(?:\*\s+)?\S+\s+(.+?)\s*$")
     in_memory_map = False
     for line in lines:
         if line == "Memory Map of the image":

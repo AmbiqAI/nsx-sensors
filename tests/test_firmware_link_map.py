@@ -26,18 +26,20 @@ Memory Map of the image
     0x8000 0x22 Code RO 12 * .text.bme688_validate_config {ORIGIN}
 """
 
+ARM_LOAD = ARM.replace("0x8000 0x22 Code", "0x8000 0x10000 0x22 Code")
+
 
 class FirmwareMapTests(unittest.TestCase):
     def verify(self, text, address=0x8000):
         parse_map(text).verify(SYMBOL, address, "libnsx_sensor_bme688.a", "bme688.c")
 
     def test_supported_formats_and_thumb_addresses(self):
-        for text in (GNU, LLD, ARM):
+        for text in (GNU, LLD, ARM, ARM_LOAD):
             with self.subTest(text=text):
                 self.verify(text)
 
     def test_replacement_object_and_wrong_archive_member(self):
-        for text in (GNU, LLD, ARM):
+        for text in (GNU, LLD, ARM, ARM_LOAD):
             for origin in ("replacement.o", "other.a(bme688.c.o)",
                            "libnsx_sensor_bme688.a(replacement.c.o)"):
                 with self.subTest(text=text, origin=origin):
@@ -45,7 +47,7 @@ class FirmwareMapTests(unittest.TestCase):
                         self.verify(text.replace(ORIGIN, origin))
 
     def test_stale_map_address(self):
-        for text in (GNU, LLD, ARM):
+        for text in (GNU, LLD, ARM, ARM_LOAD):
             with self.assertRaisesRegex(ValueError, "does not match ELF address"):
                 self.verify(text, address=0x9000)
 
