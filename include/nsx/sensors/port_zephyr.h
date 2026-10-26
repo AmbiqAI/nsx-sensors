@@ -9,8 +9,12 @@
 extern "C" {
 #endif
 #define NSX_SENSOR_ZEPHYR_MAX_TRANSFER 256U
-/* Caller-owned stable-address endpoint. Bind copies the DT spec; controller,
- * GPIO devices and SPI configuration dependencies must outlive it. Serialize
+/* Caller-owned stable-address endpoint. I2C bind copies the DT spec; SPI bind
+ * borrows it. SPI spec/config must remain immutable and at a stable address
+ * for as long as the controller may retain its configuration pointer, including
+ * after endpoint rebind/destruction. Prefer static const storage. For changed
+ * settings, use a distinct persistent spec; never overwrite/reuse a cached
+ * configuration's address. Controller/GPIO devices must remain alive. Serialize
  * whole device operations, including access to scratch and last_native_status.
  * Zephyr controllers serialize physical bus access. Calls are synchronous;
  * the selected controller must provide finite transfer completion. Timeouts
@@ -18,7 +22,7 @@ extern "C" {
 typedef struct {
     nsx_sensor_bus_t bus;
     struct i2c_dt_spec _i2c;
-    struct spi_dt_spec _spi;
+    const struct spi_dt_spec *_spi;
     int last_native_status; /* Last I/O result; validation does not overwrite it. */
     uint8_t _tx[2 * NSX_SENSOR_ZEPHYR_MAX_TRANSFER];
     uint8_t _rx[2 * NSX_SENSOR_ZEPHYR_MAX_TRANSFER];

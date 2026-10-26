@@ -66,7 +66,7 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *x)
         if (x->tx_size) memcpy(ctx->_tx, x->tx, x->tx_size);
         struct spi_buf tx = { ctx->_tx, length }, rx = { ctx->_rx, length };
         struct spi_buf_set tx_set = { &tx, 1 }, rx_set = { &rx, 1 };
-        result = spi_transceive_dt(&ctx->_spi, &tx_set, &rx_set);
+        result = spi_transceive_dt(ctx->_spi, &tx_set, &rx_set);
 #endif
     } else return NSX_SENSOR_E_STATE;
     ctx->last_native_status = result;
@@ -104,11 +104,12 @@ nsx_sensor_status_t nsx_sensor_zephyr_bind_spi(nsx_sensor_zephyr_context_t *ctx,
 #ifndef CONFIG_SPI
     return NSX_SENSOR_E_UNSUPPORTED;
 #else
-    struct spi_dt_spec copy = *spec;
     *ctx = (nsx_sensor_zephyr_context_t){
         .bus = { &ops, ctx, NSX_SENSOR_BUS_SPI,
                  NSX_SENSOR_ZEPHYR_MAX_TRANSFER, NSX_SENSOR_ZEPHYR_MAX_TRANSFER },
-        ._spi = copy };
+        /* Preserve caller configuration identity: Zephyr controllers may cache
+         * this pointer and skip reconfiguration when the address is unchanged. */
+        ._spi = spec };
     return NSX_SENSOR_OK;
 #endif
 }

@@ -174,8 +174,18 @@ remain required; PDM/PCM capture is owned by the audio layer.
 
 `<nsx/sensors/port_zephyr.h>` exposes `nsx_sensor_zephyr_context_t`,
 `nsx_sensor_zephyr_bind_i2c()`, `nsx_sensor_zephyr_bind_spi()`, status/errno
-translation helpers and `nsx_sensor_zephyr_runtime()`. Bind copies the devicetree
-spec without I/O or a readiness check; the caller checks controller readiness.
+translation helpers and `nsx_sensor_zephyr_runtime()`. I2C bind copies the
+devicetree spec; SPI bind borrows the caller's `const struct spi_dt_spec` without
+I/O or a readiness check. The caller checks controller readiness.
+
+SPI controllers may retain the configuration pointer and use pointer identity
+to skip reconfiguration. The caller must keep the SPI spec/config immutable
+and at a stable address for the controller-retained lifetime, including after
+endpoint rebind or destruction. Prefer `static const` storage. Rebinding a
+quiescent endpoint with changed settings requires a distinct persistent spec;
+never overwrite or reuse a cached configuration's address. `spi_release()`
+does not universally invalidate that cache.
+
 `CONFIG_NSX_SENSORS` enables the module; individual `CONFIG_NSX_SENSOR_*`
 selections are opt-in. The devicetree-enabled BME688 wrapper defaults on when its
 SENSOR/bus dependencies are met and selects the BME688 core. The Zephyr library

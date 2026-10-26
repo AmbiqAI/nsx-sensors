@@ -99,11 +99,22 @@ static DEVICE_API(i2c, mock_i2c_api) = {
 DEVICE_DT_DEFINE(DT_NODELABEL(mock_i2c), mock_i2c_init, NULL, NULL, NULL,
                  POST_KERNEL, 40, &mock_i2c_api);
 
+/* Model Zephyr spi_context_configured(): hardware settings are only applied
+ * when the configuration pointer changes, as in pointer-caching controllers. */
+static const struct spi_config *spi_cached_config;
+static uint32_t spi_effective_frequency;
+static uint16_t spi_effective_slave;
+
 static int mock_spi_transfer(const struct device *dev, const struct spi_config *config,
                              const struct spi_buf_set *tx, const struct spi_buf_set *rx)
 {
     ARG_UNUSED(dev);
-    if (config->slave == 2) {
+    if (config != spi_cached_config) {
+        spi_cached_config = config;
+        spi_effective_frequency = config->frequency;
+        spi_effective_slave = config->slave;
+    }
+    if (spi_effective_slave == 2) {
         struct mock_sensor *s = &sensors[2];
         zassert_equal(tx->count, 1); zassert_equal(rx->count, 1);
         const uint8_t *wire = tx->buffers[0].buf;
@@ -149,7 +160,7 @@ static int mock_spi_transfer(const struct device *dev, const struct spi_config *
     zassert_equal(tx->buffers[0].len, rx->buffers[0].len);
     spi_size = tx->buffers[0].len;
     zassert_true(spi_size <= sizeof(spi_wire));
-    spi_slave = config->slave;
+    spi_slave = spi_effective_slave;
     memcpy(spi_wire, tx->buffers[0].buf, spi_size);
     uint8_t *out = rx->buffers[0].buf;
     for (size_t i = 0; i < spi_size; ++i) out[i] = (uint8_t)(0xa0 + i);
@@ -286,11 +297,14 @@ ZTEST(nsx_zephyr, test_i2c_port_transactions_limits_and_errors)
 ZTEST(nsx_zephyr, test_spi_single_transaction_fill_and_ownership)
 {
     nsx_sensor_zephyr_context_t a, b;
-    struct spi_dt_spec spec = { .bus = DEVICE_DT_GET(DT_NODELABEL(mock_spi)),
+    static const struct spi_dt_spec spec_a = {
+        .bus = DEVICE_DT_GET(DT_NODELABEL(mock_spi)),
         .config = { .frequency = 1000000, .operation = SPI_WORD_SET(8), .slave = 0 } };
-    zassert_equal(nsx_sensor_zephyr_bind_spi(&a, &spec), NSX_SENSOR_OK);
-    spec.config.slave = 1;
-    zassert_equal(nsx_sensor_zephyr_bind_spi(&b, &spec), NSX_SENSOR_OK);
+    static const struct spi_dt_spec spec_b = {
+        .bus = DEVICE_DT_GET(DT_NODELABEL(mock_spi)),
+        .config = { .frequency = 1000000, .operation = SPI_WORD_SET(8), .slave = 1 } };
+    zassert_equal(nsx_sensor_zephyr_bind_spi(&a, &spec_a), NSX_SENSOR_OK);
+    zassert_equal(nsx_sensor_zephyr_bind_spi(&b, &spec_b), NSX_SENSOR_OK);
     uint8_t tx[] = { 0x81, 0x42 }, rx[3] = {0};
     nsx_sensor_transfer_t t = { tx, sizeof(tx), rx, sizeof(rx) };
     unsigned calls = spi_calls;
@@ -309,6 +323,7 @@ ZTEST(nsx_zephyr, test_spi_single_transaction_fill_and_ownership)
     zassert_equal(b.last_native_status, 0);
     spi_failure = 0;
     calls = spi_calls;
+    struct spi_dt_spec spec = spec_b;
     spec.config.operation |= SPI_HOLD_ON_CS;
     zassert_equal(nsx_sensor_zephyr_bind_spi(&b, &spec), NSX_SENSOR_E_UNSUPPORTED);
     zassert_equal(spi_calls, calls);
@@ -320,5 +335,26 @@ ZTEST(nsx_zephyr, test_spi_single_transaction_fill_and_ownership)
     t = (nsx_sensor_transfer_t){ max_tx, sizeof(max_tx), max_rx, sizeof(max_rx) };
     zassert_equal(nsx_sensor_bus_transfer(&a.bus, &t), NSX_SENSOR_OK);
     zassert_equal(spi_size, sizeof(max_tx) + sizeof(max_rx));
+}
+ZTEST(nsx_zephyr, test_spi_rebind_configuration_identity)
+{
+    static const struct spi_dt_spec slow = {
+        .bus = DEVICE_DT_GET(DT_NODELABEL(mock_spi)),
+        .config = { .frequency = 1000000, .operation = SPI_WORD_SET(8), .slave = 0 } };
+    static const struct spi_dt_spec fast = {
+        .bus = DEVICE_DT_GET(DT_NODELABEL(mock_spi)),
+        .config = { .frequency = 2000000, .operation = SPI_WORD_SET(8), .slave = 0 } };
+    nsx_sensor_zephyr_context_t endpoint;
+    uint8_t command = 0x81, value;
+    nsx_sensor_transfer_t transfer = { &command, 1, &value, 1 };
+    /* Isolate the first transaction from earlier tests' cached configuration. */
+    spi_cached_config = NULL;
+    zassert_equal(nsx_sensor_zephyr_bind_spi(&endpoint, &slow), NSX_SENSOR_OK);
+    zassert_equal(nsx_sensor_bus_transfer(&endpoint.bus, &transfer), NSX_SENSOR_OK);
+    zassert_equal(spi_effective_frequency, 1000000);
+    zassert_equal(nsx_sensor_zephyr_bind_spi(&endpoint, &fast), NSX_SENSOR_OK);
+    zassert_equal(nsx_sensor_bus_transfer(&endpoint.bus, &transfer), NSX_SENSOR_OK);
+    zassert_equal(spi_effective_frequency, 2000000,
+                  "Rebind retained the controller's previous frequency");
 }
 ZTEST_SUITE(nsx_zephyr, NULL, NULL, NULL, NULL, NULL);

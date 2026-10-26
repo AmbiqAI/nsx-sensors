@@ -65,8 +65,17 @@ readiness semantics; it is not a hot-plug recovery facility.
 Include the device's `<nsx/sensors/<device>.h>` and
 `<nsx/sensors/port_zephyr.h>`. Allocate a zero-initialized, address-stable
 `nsx_sensor_zephyr_context_t`, bind it to an I2C/SPI DT spec, and pass its `.bus`
-and `nsx_sensor_zephyr_runtime()` to the portable driver. Bind copies the spec
-without performing I/O; referenced framework devices must remain alive and ready.
+and `nsx_sensor_zephyr_runtime()` to the portable driver. I2C bind copies the
+spec; SPI bind borrows the caller's `const struct spi_dt_spec`. Neither performs
+I/O; referenced framework devices must remain alive and ready.
+
+Zephyr SPI controllers may cache the configuration pointer and skip applying
+settings when its address is unchanged. Keep each SPI spec/config immutable at
+a stable address for as long as the controller can retain that pointer, even
+after endpoint rebind or destruction; `static const` storage is recommended.
+To change settings on a quiescent endpoint, bind a distinct persistent spec.
+Do not overwrite or reuse a previously cached configuration's address, and do
+not assume `spi_release()` clears the controller's configuration cache.
 Check every status. Do not move or share an endpoint without serialization.
 
 Each direction supports up to 256 bytes. Combined I2C uses repeated START with a
