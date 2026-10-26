@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import shutil
 import signal
@@ -21,6 +22,15 @@ PROJECTS = {
     "cmsis_6": ("modules/hal/cmsis_6", "30a859f44ef8ab4dc8f84b03ed586fd16ccf9d74"),
 }
 ROOT = Path(__file__).resolve().parents[1]
+ARM_RELEASE = "arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi"
+ARM_URL = ("https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/"
+           + ARM_RELEASE + ".tar.xz")
+ARM_SHA256 = "597893282ac8c6ab1a4073977f2362990184599643b4c5ee34870a8215783a16"
+
+
+def sha256_file(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
 class Runner:
@@ -30,6 +40,7 @@ class Runner:
         self.evidence = workspace / "evidence"
         self.evidence.mkdir(parents=True, exist_ok=True)
         (self.evidence / "result.json").unlink(missing_ok=True)
+        (self.evidence / "arm-toolchain.json").unlink(missing_ok=True)
         self.commands: list[dict] = []
         self.env = os.environ.copy()
         # Never inherit a caller's unrelated SDK/workspace selection.
@@ -102,6 +113,44 @@ class Runner:
         if Path(path).resolve() != self.workspace / "zephyr/west.yml":
             raise RuntimeError("workspace west configuration must use its pinned zephyr/west.yml")
 
+    def provision_arm(self) -> str:
+        if sys.platform != "linux" or platform.machine() != "x86_64":
+            raise RuntimeError("pinned Arm provisioning supports Linux x86_64; use --arm-prefix elsewhere")
+        downloads = self.workspace / "downloads"
+        downloads.mkdir(exist_ok=True)
+        archive = downloads / (ARM_RELEASE + ".tar.xz")
+        if not archive.exists():
+            partial = archive.with_suffix(archive.suffix + ".partial")
+            self.run("curl", "--fail", "--location", "--connect-timeout", "30",
+                     "--max-time", "600", "--retry", "2", "--output", partial, ARM_URL)
+            if sha256_file(partial) != ARM_SHA256:
+                raise RuntimeError(f"Arm toolchain checksum mismatch: {partial}")
+            partial.replace(archive)
+        if sha256_file(archive) != ARM_SHA256:
+            raise RuntimeError(f"Arm toolchain checksum mismatch: {archive}")
+        toolchains = self.workspace / "toolchains"
+        toolchains.mkdir(exist_ok=True)
+        self.run("tar", "--extract", "--xz", "--file", archive, "--directory", toolchains)
+        (self.evidence / "arm-toolchain.json").write_text(json.dumps({
+            "release": ARM_RELEASE, "url": ARM_URL, "sha256": ARM_SHA256,
+            "checksum_source": ARM_URL + ".sha256asc",
+        }, indent=2) + "\n")
+        return str(toolchains / ARM_RELEASE / "bin/arm-none-eabi-")
+
+    def check_arm_newlib(self, cross: str) -> None:
+        probe = self.evidence / "newlib-prerequisite.c"
+        probe.write_text("#include <newlib.h>\n"
+                         "#if !defined(_RETARGETABLE_LOCKING) || !_RETARGETABLE_LOCKING\n"
+                         '#error "Zephyr requires newlib built with retargetable locking"\n'
+                         "#endif\nint nsx_newlib_prerequisite;\n")
+        try:
+            self.run(cross + "gcc", "-mcpu=cortex-m3", "-mthumb", "-c", probe,
+                     "-o", self.evidence / "newlib-prerequisite.o", timeout=60)
+        except RuntimeError as error:
+            raise RuntimeError("GNU Arm newlib prerequisite failed: use --provision-arm-toolchain "
+                               "or --arm-prefix pointing to a compatible official Arm toolchain; "
+                               "do not define _RETARGETABLE_LOCKING manually. " + str(error)) from error
+
     def build(self, label: str, board: str, cross: str | None = None, app: str = "zephyr") -> Path:
         build = self.workspace / ("build-" + label)
         env = self.env.copy()
@@ -125,12 +174,16 @@ def main() -> int:
     parser.add_argument("--workspace", type=Path, required=True,
                         help="isolated writable provision/build directory, outside this repository")
     parser.add_argument("--provision", action="store_true", help="explicitly allow network dependency setup")
+    parser.add_argument("--provision-arm-toolchain", action="store_true",
+                        help="download and checksum-verify official GNU Arm 15.2.Rel1 (Linux x86_64)")
     parser.add_argument("--arm-prefix", help="GNU Arm compiler prefix, e.g. /opt/arm/bin/arm-none-eabi-")
     parser.add_argument("--timeout", type=int, default=900, help="seconds per provision/build command")
     args = parser.parse_args()
     workspace = args.workspace.expanduser().resolve()
     if workspace == ROOT or ROOT in workspace.parents:
         parser.error("workspace must be outside the source repository")
+    if args.provision_arm_toolchain and args.arm_prefix:
+        parser.error("choose --provision-arm-toolchain or --arm-prefix")
     if args.timeout <= 0:
         parser.error("timeout must be positive")
     if sys.version_info < (3, 12):
@@ -151,9 +204,11 @@ def main() -> int:
             if f"{name} {revision}" not in manifest.splitlines():
                 raise RuntimeError(f"manifest pin differs for {name}")
         compiler = shutil.which("arm-none-eabi-gcc")
-        cross = args.arm_prefix or (compiler.removesuffix("gcc") if compiler else None)
+        cross = (runner.provision_arm() if args.provision_arm_toolchain else
+                 args.arm_prefix or (compiler.removesuffix("gcc") if compiler else None))
         if not cross:
             raise RuntimeError("install a GNU Arm toolchain with newlib or pass --arm-prefix")
+        runner.check_arm_newlib(cross)
         versions = {}
         for tool in ("cmake", "ninja", "gcc", cross + "gcc"):
             versions[tool] = runner.run(tool, "--version")
@@ -167,7 +222,7 @@ def main() -> int:
         native = runner.build("native", "native_sim/native/64")
         result = runner.run(native / "zephyr/zephyr.exe", timeout=60)
         print(result)
-        if "PROJECT EXECUTION SUCCESSFUL" not in result or "pass = 3, fail = 0" not in result:
+        if "PROJECT EXECUTION SUCCESSFUL" not in result or "pass = 4, fail = 0, skip = 0, total = 4" not in result:
             raise RuntimeError("native ztest success summary missing")
         arm = runner.build("arm", "qemu_cortex_m3", cross)
         firmware = arm / "zephyr/zephyr.elf"
@@ -202,7 +257,7 @@ def main() -> int:
             raise RuntimeError("wrapper fetch code does not originate in its allocated archive member")
         runner.build("t5838", "native_sim/native/64", app="zephyr_t5838")
         (runner.evidence / "result.json").write_text(json.dumps({
-            "native": "3 tests passed", "arm": "qemu_cortex_m3 linked (not executed)",
+            "native": "4 tests passed", "arm": "qemu_cortex_m3 linked (not executed)",
             "t5838": "native_sim control-only build, I2C/SPI disabled", "hardware": "not tested",
             "arm_elf_sha256": hashlib.sha256((arm / "zephyr/zephyr.elf").read_bytes()).hexdigest(),
         }, indent=2) + "\n")
