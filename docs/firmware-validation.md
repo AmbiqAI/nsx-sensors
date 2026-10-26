@@ -1,5 +1,79 @@
 # Firmware link validation
 
+## Reproducible NSX integration fixture
+
+The explicit offline command builds real bare-metal and FreeRTOS final firmware
+for `apollo4p_evb` using the root sensor CMake targets:
+
+```sh
+python3 tests/nsx_firmware_integration.py /absolute/path/to/nsx-ambiq-sdk \
+    --output build/firmware-integration
+```
+
+Provide a clean SDK checkout at exactly
+`40b893d859672caf0b17b0e51db351a77b423e56`; the command checks the revision and
+rejects local changes or untracked files. The SDK contains AmbiqSuite/HAL/BSP
+and FreeRTOS-Kernel V11.1.0 (MIT), including the GCC ARM_CM4F port and heap_4.
+There is no download, sibling-repository fallback, stub substitution, or flash.
+The output directory must be new or empty. Python 3.9+, Git, CMake 3.20+, a build
+backend, Arm GNU GCC with newlib, `arm-none-eabi-nm`, and
+`arm-none-eabi-objcopy` must be on PATH. Each configure/build has a ten-minute
+limit; other subprocesses have a two-minute limit. Missing prerequisites or
+artifacts fail the command.
+
+The fixture follows the SDK hardware-test firmware composition, using its real
+board descriptor, startup/vector table, linker script, HAL/BSP, core runtime,
+I2C and SPI targets. It does not include the SDK's Unity reporter. The SDK's
+`nsx::board_flags` compilation context flows through the root sensor targets;
+no driver source list or CPU/FPU flags are duplicated. Compile-command evidence
+checks that every sensor/core/vendor/adapter/application translation unit and
+the FreeRTOS sources match the SDK transport's CPU/FPU/ABI profile. The
+application calls the SDK CMSIS `SystemCoreClockUpdate()` before starting the
+scheduler, retaining the SDK-owned clock data rather than defining a replacement.
+
+Both modes validate configurations for all eight portable cores and call both
+NSX bindings. The fixture deliberately leaves controller configurations
+uninitialized: these binding attempts fail without sensor I/O. This is a final
+link fixture, not a deployable board/sensor example. Adapter function pointers
+retain the real synchronous I2C/SPI transfer implementations and their HAL paths.
+The existing ELF/map verifier checks all ten sensor entry points against their
+defining archive members. Additional checks verify startup, clock, BSP, transport,
+HAL and busy-wait provenance. FreeRTOS also requires the real task/scheduler,
+mutex operations, port entry points, and strong SVC/PendSV/SysTick shims; actual
+vector bytes must route to those handlers. Bare-metal rejects kernel presence.
+Negative checks weaken SVC, corrupt its vector, and change application ABI
+metadata in temporary copies; each must fail its intended gate.
+
+The FreeRTOS fixture supplies its own `FreeRTOSConfig.h`, copied from the pinned
+SDK template with heap, tick, and hook policy explicit. One application task owns
+the contexts; the adapter lock uses a mutex covering each entire synchronous bus
+transaction. Other users of that IOM would need the same lock. Delays use
+`nsx_delay_us`/the HAL busy wait in both modes, preserving sub-tick waits rather
+than rounding to scheduler ticks. Scheduler ticks are used only for task idle
+periods. Device-level serialization remains the application's responsibility.
+
+`evidence.json` records SDK/sensor revisions, dirty-tree status and diff hash,
+fixture hashes, compiler version/path, CMake version, compile profile, input and
+artifact hashes, symbol provenance, and negative-check results. Per-mode folders
+contain commands, configure/build logs, `compile_commands.json`, input paths,
+unstripped ELF, binary and map. A dirty source tree is reported, not represented
+as a clean revision. For review evidence, commit the fixture before running.
+
+The local acceptance run used Arm GNU 15.2.Rel1 (`15.2.1 20251203`) and CMake
+4.3.2. Hosted CI installs Ubuntu's Arm GNU/newlib packages and records the actual
+version; that compiler package is **not pinned** and is not claimed to reproduce
+local artifact bytes. The SDK (including vendored HAL/kernel) is immutable.
+CI preserves artifacts/logs even on failure. Existing SDK/header compiler
+warnings remain visible; this integration build does not promote external
+warnings to errors. Normal host test commands remain offline and independent of
+this explicit SDK fixture.
+
+These links do not establish scheduler execution, sensor traffic, waveforms,
+resource qualification, or T5838 timed THSEL/audio integration. No hardware is
+flashed. Independent review and user approval remain separate merge gates.
+
+## Existing application workspace
+
 Use the opt-in smoke script with a real NSX consumer workspace:
 
 ```sh
