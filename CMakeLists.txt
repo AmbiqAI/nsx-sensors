@@ -29,6 +29,7 @@ target_include_directories(nsx_sensor_common PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_compile_features(nsx_sensor_common PUBLIC c_std_11)
+include(cmake/compile_context.cmake)
 set(nsx_portable_targets nsx_sensor_common)
 if(NSX_SENSOR_BME688)
     add_library(nsx_sensor_bme688 STATIC src/bme688/bme688.c src/bme688/compensation.c)

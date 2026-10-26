@@ -30,6 +30,9 @@ THSEL timing endpoint; the NSX I2C/SPI adapter does not provide one.
 
 Portable CMake builds need no SDK, RTOS, network, or sibling repository:
 
+See [shared CMake compilation settings](docs/cmake-integration.md) for framework
+CPU/FPU/ABI propagation and installed-package requirements.
+
 ```cmake
 add_subdirectory(third_party/nsx-sensors)
 target_link_libraries(my_app PRIVATE nsx::sensor_bme688 nsx::sensor_ledstick nsx::sensor_ina228 nsx::sensor_mpu6050 nsx::sensor_max86150 nsx::sensor_icm45605)

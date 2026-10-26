@@ -1,7 +1,7 @@
 # v1 RFC readiness audit
 
-Audited baseline: `572a3d9343ebc6fedddc9e61a8b983df97a8c94d` (PR #28),
-updated 2026-10-25 after PRs #26, #27 and #28 merged.
+Audited baseline: `d3cda01c8f0e167a086942bb3a75784b1b7d357e` (PR #30),
+updated 2026-10-26 after PRs #29 and #30 merged.
 All eight implemented cores are now on main. PR #28 was reviewed at
 `717baf0d0886eed2112d5cdc3e1707f8228abc61` before squash merge.
 This is an implementation and release-evidence audit against
@@ -109,8 +109,37 @@ helper with Arm GNU, Armclang and ATfE. Those three-toolchain probes were not
 repeated after the timing fix; current embedded evidence is the Arm GNU CI matrix.
 
 After squash merge, main CI [run 40242270537](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40242270537)
-passed all four jobs at the audited eight-core baseline `572a3d9`. This is the
-current merged software/build evidence; hardware qualification remains pending.
+passed all four jobs at the audited eight-core baseline `572a3d9`. This records the prior eight-core baseline; hardware qualification remains pending.
+
+## Shared CMake and firmware verification: PRs #29 and #30
+
+PR #29 merged as `b070b10`: one SDK or explicitly selected interface compilation
+profile propagates CPU/FPU/ABI settings through common, all cores, vendor code,
+NSX adapters and callers. Installed packages reconnect the recorded profile;
+matching names alone do not establish ABI compatibility. The linked C/C++
+short-enum regression, relocated consumers and negative configuration checks
+passed. See [the compilation contract](cmake-integration.md).
+
+PR #30 merged as `d3cda01`: the smoke script now requires a final Arm executable,
+matching map and selected APIs. It checks code addresses and expected defining
+archive members, rejecting same-named consumer replacements. GNU ld, LLVM lld
+and Arm map layouts (including the optional load-address column) were exercised.
+See [firmware verification](firmware-validation.md) for supported formats and limits.
+
+Three independent reviewers covered the original stack. Local Copilot identified
+the symbol-origin gap; follow-up reviews found a command documentation error and
+an alternate Arm map layout. All were corrected and verified. The final parser
+delta received a focused independent review; Copilot did not rereview that delta.
+PR #30 was rebased to `4413daa` with identical file contents and all four checks
+passed in [run 40377920546](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40377920546)
+before squash merge. These checks cover production targets in synthetic firmware,
+not a real board application or hardware operation.
+
+[Draft PR #31](https://github.com/AmbiqAI/nsx-sensors/pull/31) proposes real NSX
+bare-metal and FreeRTOS integration fixtures with explicit pinned dependencies,
+real startup/HAL/kernel code and final ELF/map checks. It is pending work, not
+accepted integration evidence. Polished examples are deferred; the immediate
+priority is the shared build, API and platform contracts.
 
 ## RFC decisions to record before freezing v1
 
@@ -141,14 +170,14 @@ change to RFC acceptance requirements.
 
 ## Ordered release checklist
 
-PR #28 is merged; the eight-core main baseline is recorded above. Final RFC
+PRs #28–#30 are merged; the eight-core main baseline is recorded above. Final RFC
 acceptance and release qualification remain separate from this merge.
 
 1. **Record final RFC acceptance.** The API cleanup is reviewed and merged.
    Record acceptance of the choices above and any explicit scope amendments
    before freezing v1; this is not another request to redo the completed reviews.
-2. **Finish framework integration.** Add the FreeRTOS example first, then the
-   BME688 Zephyr wrapper/example. Select and pin actual kernel/framework, HAL,
+2. **Finish framework integration.** Complete the real NSX bare-metal/FreeRTOS integration fixtures in PR #31, then
+   the BME688 Zephyr wrapper and integration checks. Product examples can follow. Select and pin actual kernel/framework, HAL,
    SDK and toolchain revisions; add separate reproducible integration checks.
    A Zephyr wrapper for one driver does not qualify the other drivers.
 3. **Measure resource costs.** Record per-context and NSX scratch sizes, linked

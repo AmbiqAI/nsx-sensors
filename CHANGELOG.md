@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased compilation-context fix
+
+- Propagate NSX board compilation settings to every portable core and vendor
+  source, keeping enum layouts and CPU/FPU settings consistent with callers.
+- Allow an explicit interface compilation profile for other integrations;
+  installed packages require the producer's profile target before discovery.
+- Add linked C/C++ ABI and relocated-package regressions using actual targets.
+
 ## Unreleased Spark device support
 
 - Add native TSL2540/TSL2541 I2C core with explicit variant identity, configurable

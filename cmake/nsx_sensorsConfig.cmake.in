@@ -1,5 +1,17 @@
 @PACKAGE_INIT@
+set(nsx_sensors_COMPILE_CONTEXT "@nsx_sensor_compile_context@")
+if(nsx_sensors_COMPILE_CONTEXT AND NOT TARGET "${nsx_sensors_COMPILE_CONTEXT}")
+    set(nsx_sensors_FOUND FALSE)
+    set(nsx_sensors_NOT_FOUND_MESSAGE
+        "Load compilation-context target '${nsx_sensors_COMPILE_CONTEXT}' with matching CPU/FPU/ABI settings before nsx_sensors")
+    return()
+endif()
 include("${CMAKE_CURRENT_LIST_DIR}/nsxSensorTargets.cmake")
+if(nsx_sensors_COMPILE_CONTEXT)
+    # Restore the external profile without exporting the framework's own graph.
+    set_property(TARGET nsx::sensor_common APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+        "${nsx_sensors_COMPILE_CONTEXT}")
+endif()
 if("port_nsx" IN_LIST nsx_sensors_FIND_COMPONENTS AND
    EXISTS "${CMAKE_CURRENT_LIST_DIR}/nsxSensorNsxTargets.cmake")
     if(NOT TARGET nsx::i2c OR NOT TARGET nsx::spi)

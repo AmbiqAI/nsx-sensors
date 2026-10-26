@@ -28,6 +28,9 @@ jobs:
       - name: NSX adapter host contracts
         run: tests/nsx_port_host.sh
 
+      - name: Framework compilation context and installed ABI contracts
+        run: tests/compile_context.sh
+
       - name: Validate version coherence
         shell: bash
         run: |
@@ -72,6 +75,9 @@ jobs:
 
       - name: Compile vendored subset with the host compiler
         run: tests/vendor_compile_smoke.sh cc
+
+      - name: Verify linked firmware checks against actual Arm ELF files
+        run: tests/firmware_link_contract.sh
 
   nested-cmake-contract:
     name: Nested CMake consumer contract

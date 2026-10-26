@@ -4,6 +4,9 @@ See the [v1 readiness audit](v1-readiness.md) for the exact current baseline,
 platform matrix and remaining release gates. Historical evidence below must not
 be treated as qualification of the final v1 candidate.
 
+See [firmware link validation](firmware-validation.md) for the explicit executable
+and retained-symbol checks required by the opt-in consumer smoke script.
+
 ## Unreleased portable foundation
 
 All eight driver cores have portable CMake targets and offline host tests. The
