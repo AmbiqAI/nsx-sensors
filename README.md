@@ -16,9 +16,11 @@ Current drivers:
 | ams OSRAM TSL2540 / TSL2541 light | I2C | `include/nsx/sensors/tsl254x.h` |
 | TDK T5838 microphone AAD control | THSEL one-wire; audio separate | `include/nsx/sensors/t5838.h` |
 
-This branch implements the first stage of [RFC 0001 (PR #17)](https://github.com/AmbiqAI/nsx-sensors/pull/17).
+The portable architecture is defined by [RFC 0001](docs/rfcs/0001-portable-sensor-driver-architecture.md)
+and the [v1 source contract](docs/v1-api-contract.md).
 All eight driver cores are portable. ICM-45605 retains the TDK basic
-implementation with per-device transport callbacks. The shared NSX port is available; Zephyr wrappers remain follow-up work. This is an
+implementation with per-device transport callbacks. The shared NSX port and [Zephyr I2C/SPI endpoints](docs/zephyr.md) are available,
+with a Zephyr BME688 temperature/pressure/humidity wrapper. Other Zephyr wrappers remain follow-up work. This is an
 unreleased API transition, not a v1 release or a drop-in v0 replacement.
 
 See [TSL254x](docs/tsl254x.md), [T5838 control/audio boundaries](docs/t5838.md) and
