@@ -98,7 +98,7 @@ nsx_sensor_status_t nsx_sensor_zephyr_bind_spi(nsx_sensor_zephyr_context_t *ctx,
         return NSX_SENSOR_E_ARGUMENT;
     if (SPI_WORD_SIZE_GET(spec->config.operation) != 8 ||
         (spec->config.operation & (SPI_OP_MODE_SLAVE | SPI_TRANSFER_LSB |
-         SPI_HALF_DUPLEX | SPI_HOLD_ON_CS | SPI_LOCK_ON | SPI_LINES_MASK |
+         SPI_MODE_LOOP | SPI_HALF_DUPLEX | SPI_HOLD_ON_CS | SPI_LOCK_ON | SPI_LINES_MASK |
          SPI_FRAME_FORMAT_TI)))
         return NSX_SENSOR_E_UNSUPPORTED;
 #ifndef CONFIG_SPI

@@ -327,6 +327,11 @@ ZTEST(nsx_zephyr, test_spi_single_transaction_fill_and_ownership)
     spec.config.operation |= SPI_HOLD_ON_CS;
     zassert_equal(nsx_sensor_zephyr_bind_spi(&b, &spec), NSX_SENSOR_E_UNSUPPORTED);
     zassert_equal(spi_calls, calls);
+    spec.config.operation = SPI_WORD_SET(8) | SPI_MODE_LOOP;
+    zassert_equal(nsx_sensor_zephyr_bind_spi(&b, &spec), NSX_SENSOR_E_UNSUPPORTED);
+    zassert_equal(spi_calls, calls);
+    zassert_equal(b._spi, &spec_b);
+    zassert_equal(b.last_native_status, 0);
     t.rx_size = NSX_SENSOR_ZEPHYR_MAX_TRANSFER + 1;
     zassert_not_equal(nsx_sensor_bus_transfer(&a.bus, &t), NSX_SENSOR_OK);
     zassert_equal(spi_calls, calls);

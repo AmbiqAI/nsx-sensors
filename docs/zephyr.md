@@ -86,7 +86,7 @@ there is no dynamic allocation. Register format, page selection and read bits
 remain in each core.
 
 SPI supports master, Motorola framing, 8-bit, MSB-first, single-line operation.
-Half duplex, held CS, bus-lock retention and unsupported word/line modes are
+Loopback, half duplex, held CS, bus-lock retention and unsupported word/line modes are
 rejected before I/O. Invalid requests do not overwrite `last_native_status`;
 it records the last invoked native transfer result. Status helpers translate
 between the portable status enum and Zephyr errno values; unknown native errors
