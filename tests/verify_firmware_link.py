@@ -9,6 +9,8 @@ import struct
 import subprocess
 import sys
 
+from firmware_link_map import parse_map
+
 # Actual API functions, not archive names: nsx::sensors is an interface target.
 DRIVER_SYMBOLS = {
     "bme688": "bme688_validate_config",
@@ -24,7 +26,7 @@ DRIVER_SYMBOLS = {
 }
 
 
-def verify(firmware: Path, drivers: list[str], nm: str) -> None:
+def verify(firmware: Path, drivers: list[str], nm: str, link_map: Path) -> None:
     with firmware.open("rb") as stream:
         header = stream.read(20)
     if len(header) < 20 or header[:4] != b"\x7fELF" or header[4] != 1 or header[5] not in (1, 2):
@@ -38,25 +40,33 @@ def verify(firmware: Path, drivers: list[str], nm: str) -> None:
     )
     # Undefined/data symbols cannot prove that a driver function was linked.
     functions = {
-        fields[0]
+        fields[0]: int(fields[2], 16)
         for line in result.stdout.splitlines()
-        if len(fields := line.split()) >= 2 and fields[1] in ("T", "t")
+        if len(fields := line.split()) >= 3 and fields[1] in ("T", "t")
     }
     missing = [DRIVER_SYMBOLS[driver] for driver in drivers if DRIVER_SYMBOLS[driver] not in functions]
     if missing:
         raise ValueError("missing linked functions: " + ", ".join(missing))
+    evidence = parse_map(link_map.read_text())
+    for driver in drivers:
+        component = "port_nsx" if driver.startswith("port_nsx_") else driver
+        member = "nsx.c" if component == "port_nsx" else f"{component}.c"
+        symbol = DRIVER_SYMBOLS[driver]
+        evidence.verify(symbol, functions[symbol], f"libnsx_sensor_{component}.a", member)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("firmware", type=Path)
+    parser.add_argument("--map", required=True, type=Path, dest="link_map",
+                        help="matching GNU ld, LLVM lld, or Arm --map --symbols linker map")
     parser.add_argument("drivers", nargs="+", choices=DRIVER_SYMBOLS)
     args = parser.parse_args()
     nm = shutil.which("arm-none-eabi-nm") or shutil.which("llvm-nm")
     if not nm:
         parser.error("install arm-none-eabi-nm or llvm-nm to inspect firmware symbols")
     try:
-        verify(args.firmware, args.drivers, nm)
+        verify(args.firmware, args.drivers, nm, args.link_map)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         print(f"firmware link check: {error}", file=sys.stderr)
         return 1

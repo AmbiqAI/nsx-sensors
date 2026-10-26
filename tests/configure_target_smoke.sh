@@ -11,7 +11,7 @@
 # "green" always means the build really ran.
 #
 # Usage:
-#   tests/configure_target_smoke.sh <consumer_root> <toolchain> <board> <firmware-relative-path> <driver> [driver ...]
+#   tests/configure_target_smoke.sh <consumer_root> <toolchain> <board> <firmware-relative-path> <map-relative-path> <driver> [driver ...]
 #
 # toolchain is one of: arm-none-eabi-gcc | armclang | atfe
 #
@@ -24,7 +24,8 @@ consumer_root=${1:?usage: configure_target_smoke.sh <consumer_root> <toolchain> 
 toolchain=${2:?usage: configure_target_smoke.sh <consumer_root> <toolchain> <board>}
 board=${3:?usage: configure_target_smoke.sh <consumer_root> <toolchain> <board>}
 firmware_relative=${4:?provide the unstripped executable path relative to the build directory}
-shift 4
+map_relative=${5:?provide the matching linker map path relative to the build directory}
+shift 5
 [ "$#" -gt 0 ] || { echo 'target smoke: select at least one driver (e.g. bme688 port_nsx_i2c)' >&2; exit 1; }
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -91,20 +92,23 @@ cmake -S "$consumer_root" -B "$build_dir" \
 cmake --build "$build_dir" --parallel 2
 
 # Never accept an old executable outside the freshly rebuilt output tree.
-firmware=$(python3 - "$build_dir" "$firmware_relative" <<'PY'
+resolve_artifact() {
+    python3 - "$build_dir" "$1" <<'PYMAP'
 from pathlib import Path
 import sys
 root = Path(sys.argv[1]).resolve()
 relative = Path(sys.argv[2])
 path = (root / relative).resolve()
 if relative.is_absolute() or not path.is_relative_to(root):
-    sys.exit("target smoke: firmware path must stay inside the build directory")
+    sys.exit("target smoke: executable and map paths must stay inside the build directory")
 print(path)
-PY
-)
+PYMAP
+}
+firmware=$(resolve_artifact "$firmware_relative")
+link_map=$(resolve_artifact "$map_relative")
 
 # An archive's presence does not prove that its code survived the firmware link.
 # Check the explicitly selected executable and driver implementations instead.
-python3 "$repo_root/tests/verify_firmware_link.py" "$firmware" "$@"
+python3 "$repo_root/tests/verify_firmware_link.py" "$firmware" --map "$link_map" "$@"
 
 echo "target smoke passed: $toolchain / $board"
