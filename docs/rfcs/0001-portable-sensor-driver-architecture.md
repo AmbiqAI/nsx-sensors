@@ -1,7 +1,7 @@
 # RFC 0001: Portable Sensor Driver Architecture for v1.0
 
-Status: acceptance and v1 source-freeze decision submitted in PR #32; effective
-on approval and merge, not already accepted by this draft.
+Status: accepted by approval and merge of PR #32 on 2026-10-26
+(`f3b313a`). The v1 source contract is frozen; release qualification is separate.
 Original proposal: 2026-10-24; decision revision: 2026-10-26.
 Repository: `AmbiqAI/nsx-sensors`.
 
@@ -13,7 +13,7 @@ headers replace this RFC's original rough C declarations, illustrative paths,
 target names and intermediate migration inventories. The original proposal
 remains in git history; its sketches are not alternative supported interfaces.
 
-Approval and merge of this decision freezes the documented source contract at
+Approval and merge of this decision froze the documented source contract at
 the approved revision. It does not release v1, bump version metadata, qualify
 hardware or waive the remaining release gates. Version stays 0.3.0 until the
 release process selects and validates the final v1 commit.
@@ -84,8 +84,8 @@ provides cached current scale; T5838 frames have >50 clock cycles on both sides.
 These are implemented source behaviors, not hardware evidence.
 
 PR #31 merged real NSX bare-metal and FreeRTOS firmware link fixtures against a
-pinned SDK. PR #32 submits Zephyr integration and this source-freeze decision for
-review. An implementation or synthetic link does not alone satisfy a final
+pinned SDK. PR #32 merged Zephyr integration and accepted this source-freeze
+decision. An implementation or synthetic link does not alone satisfy a final
 release-candidate gate. Record test/review results at their actual revisions in
 the audit; do not infer completion from acceptance of architecture.
 

@@ -1,13 +1,71 @@
 # v1 RFC readiness audit
 
-Audited baseline: `149cb782b0845aa556a656745a56ea9453019964` (PR #31),
-updated after PR #31 merged.
-All eight implemented cores are now on main. PR #28 was reviewed at
-`717baf0d0886eed2112d5cdc3e1707f8228abc61` before squash merge.
-This is an implementation and release-evidence audit against
-[RFC 0001](rfcs/0001-portable-sensor-driver-architecture.md), not a fresh
-independent driver review or a freeze of the v1 API. Version metadata
-remains `0.3.0`; the breaking portable transition is unreleased.
+Audited snapshot: `f3b313a773f3e2eb39fc16fc340fbd8c94ae75bf` (merged PR #32),
+2026-10-26. Three fresh reviewers examined the complete snapshot, with separate
+API/lifecycle, driver and build/integration emphases; a coordinating reviewer
+checked release controls and reconciled evidence. Initial discovery did not use
+the historical audit below. This is a software audit, not hardware qualification.
+
+All eight cores, shared CMake integration and the v1 source-contract decision are
+merged. Approval and merge of PR #32 accepted the source API freeze. Version
+metadata remains `0.3.0`; release qualification and publication are not complete.
+
+## Current actionable finding
+
+**P2 — the publication gate ignores Zephyr CI.**
+[release.yml at the audited revision](https://github.com/AmbiqAI/nsx-sensors/blob/f3b313a773f3e2eb39fc16fc340fbd8c94ae75bf/.github/workflows/release.yml#L85)
+queries only `ci.yml`, then allows publication. The independently running
+`zephyr.yml` can fail, remain pending, or be absent without affecting this gate.
+That permits publication without the Zephyr final-candidate evidence required by
+RFC 0001. This blocks release readiness, not acceptance of the source API.
+
+The coordinator extracted the actual gate shell unchanged and executed it with
+an offline `gh` stand-in: exact-SHA push/main CI succeeded and Zephyr was modeled
+as failed. The gate returned success and never queried Zephyr. The build reviewer
+independently confirmed the source path and requirement mismatch after recording
+its own initial candidate ledger. No tag or release was created.
+
+Require successful runs of both workflows on the exact release SHA, push event
+and main branch, plus successful required jobs. Add behavioral tests for absent,
+failed, cancelled, pending and skipped integration checks, and an all-success
+control. Include the real firmware job in the explicit job list as skip protection;
+current overall `ci.yml` success already rejects an ordinary firmware-job failure.
+
+## Current evidence and limits
+
+The fresh review checks and unresolved qualification work are distinguished from
+historical PR evidence below. Reports are full-snapshot reviews; a clean result
+means no consequential defect was substantiated in that scope, not proof of all
+supported configurations or silicon behavior.
+
+- API/lifecycle: all eight cores, both ports, wrapper, shared bus and relevant
+  SDK/TDK paths inspected; actual NSX adapter contracts pass ASan/UBSan using
+  SDK helper stand-ins. No consequential finding.
+- Drivers: all eight core implementations, BME688 compensation and relevant TDK
+  transport/vendor paths inspected. Two additional ASan/UBSan probes passed:
+  BME688 trigger-write side effect followed by an error, and MAX86150 full-FIFO
+  status consumption/shutdown/partial drain/restart transitions. TSL2541 register
+  and saturation semantics and MAX86150 FIFO transitions were cross-checked with
+  manufacturer documents. No consequential driver defect was substantiated.
+  This was not a register-by-register audit of every device datasheet.
+- Build/integration: shared root targets/source lists, transitive compilation
+  profile and installed profile reattachment inspected. Real pinned SDK
+  bare-metal/FreeRTOS links with verifier negative tests and busless Zephyr T5838
+  build pass in separate temporary storage. The source/relocated C++ ABI probe
+  completed its expected output without logged errors, but its process exit code
+  was not retained; treat that run as supporting evidence only. The release
+  gate finding above is the confirmed build/release defect.
+- Resource/stack costs remain unqualified. Record per-context and adapter sizes,
+  linked flash/RAM and compiler stack-usage on named target/toolchain/optimization
+  settings; distinguish static estimates from runtime high-water measurements.
+- Provenance and release docs need current source mappings and clear historical
+  labeling. `NOTICE` still names relocated Bosch files; `CATALOG.md` retains the
+  old version/six-device inventory. Retain original notices and record maintainer
+  provenance approval; this audit does not supply legal signoff.
+- Final release metadata and exact-candidate CI are still required. Historical
+  PR checks and even current-main checks do not qualify a later release commit.
+- Electrical/timing/accuracy qualification, T5838 board timing/audio, other Zephyr
+  wrappers and advanced driver features remain explicit deferred work.
 
 ## Driver inventory
 
@@ -90,7 +148,7 @@ No review establishes physical waveform correctness or hardware qualification.
 | Plain CMake / application HAL | Eight independently selectable cores; common bus/runtime and T5838 timed endpoint | Offline tests, ASan/UBSan, source and relocated installed C/C++ consumers; C++ consumer references functions from every driver | Real board HAL/example and resource measurements |
 | NSX | Shared I2C/SPI adapter for seven cores; T5838 needs a board timing endpoint | Actual adapter with mocked SDK helpers, 3/5-byte command limits, installed consumers; real SDK configure; all eight declared SoCs compile with Arm GNU; real Apollo4 Plus bare-metal/FreeRTOS links | Representative real firmware link on the final release candidate; electrical qualification later |
 | FreeRTOS | Portable cores usable through application bus/timing/locking callbacks | Real kernel/HAL/task/port link at pinned SDK, with strong handler/vector checks; no runtime execution | Final-candidate revalidation; hardware scheduler/bus qualification remains pending |
-| Zephyr | Portable C cores only | No Zephyr sensor wrapper, devicetree binding, native simulation or cross-build | BME688 wrapper/example, pinned Zephyr version, mocked-bus/native tests and board cross-build |
+| Zephyr | Shared root CMake targets, I2C/SPI endpoints and BME688 wrapper; eight directly selectable cores | Pinned native mock-controller tests, Arm cross-link/provenance and busless T5838 build | Final-candidate rerun; other wrappers and actual controller/sensor qualification remain separate |
 
 Main CI [run 40234941475](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40234941475)
 passed all four jobs at the preceding six-core baseline `2ac3039`. See `.github/workflows/ci.yml`,
@@ -190,20 +248,19 @@ At final head `b9b4ccfd406ce5676617e689fa8a6f108ec29241`, the
 all five [existing CI jobs](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40404641799)
 pass, including all eight SoCs and real NSX bare-metal/FreeRTOS links. The
 firmware job passed on a fresh-runner retry after stalled package installation
-was cancelled. No consequential review findings remain; PR #32 is ready for
-maintainer merge approval.
-PR #32 and its API-freeze decision remain
-unmerged; this evidence does not change the audited main baseline or establish
-accepted release evidence. Freeze takes effect only on approval and merge.
+was cancelled. Those PR reviews had no unresolved findings at merge; PR #32
+was subsequently squash-merged as `f3b313a`. The fresh whole-snapshot audit above
+identifies the separate publication-gate defect.
+Its source-contract freeze is accepted; these checks still do not establish
+release or hardware qualification.
 Resource qualification, provenance signoff, final-candidate revalidation and
 release metadata remain open. No firmware execution or hardware qualification
 is claimed by these builds.
 
-## RFC decisions to record before freezing v1
+## Accepted RFC source-contract decisions
 
-The implementation resolves several proposed choices; maintainers still need to
-record these as the frozen v1 source contract. The merged cleanup and its
-reviews above are complete; the remaining decision is final RFC acceptance:
+PR #32 records these choices in the accepted v1 source contract. The following
+list is a summary; the contract and public headers are authoritative:
 
 - `<nsx/sensors/port_nsx.h>` is the implemented port header, rather than the
   RFC sketch's `<nsx/sensors/ports/nsx.h>`.
@@ -222,40 +279,36 @@ reviews above are complete; the remaining decision is final RFC acceptance:
   status reads, failure recovery and context lifetime have been reviewed and
   documented in the API migration guide; preserve these contracts in wrappers.
 
-The historical RFC implementation notes describe intermediate commits. This
-snapshot supersedes them as the current progress inventory, not as an automatic
-change to RFC acceptance requirements.
+The accepted RFC and source contract supersede the original sketches. Historical
+PR evidence retains its actual revision and does not establish
+qualification of future release candidates.
 
 ## Ordered release checklist
 
-PRs #28–#31 are merged; the eight-core main baseline is recorded above. Final RFC
-acceptance and release qualification remain separate from this merge.
+PRs #28–#32 are merged. Source acceptance and representative framework integration
+are complete; final release qualification remains separate.
 
-1. **Record final RFC acceptance.** The API cleanup is reviewed and merged.
-   Record acceptance of the choices above and any explicit scope amendments
-   before freezing v1; this is not another request to redo the completed reviews.
-2. **Finish framework integration.** PR #31 supplies real NSX bare-metal/FreeRTOS link fixtures. Complete the
-   BME688 Zephyr wrapper and integration checks in PR #32. Product examples can follow. Select and pin actual kernel/framework, HAL,
-   SDK and toolchain revisions; add separate reproducible integration checks.
-   A Zephyr wrapper for one driver does not qualify the other drivers.
-3. **Measure resource costs.** Record per-context and NSX scratch sizes, linked
-   flash/RAM and compiler stack-usage evidence on a named target/toolchain with
-   optimization settings. Include deepest vendor/callback paths and distinguish
-   static estimates from measured runtime high-water marks.
-4. **Validate the release candidate.** Rerun the offline suites and eight-SoC
-   compile matrix on the final SHA; link a real NSX firmware consumer and the
-   FreeRTOS/Zephyr examples. Record which toolchains were actually rerun.
-5. **Finish provenance and migration review.** Retain vendor notices and review
-   documented patches; record maintainer review per `OWNERS.md`. The automated
-   PR #24 license evidence check is not a separately recorded maintainer approval.
-   Audit remaining historical path references in NOTICE/PROVENANCE and make
-   current source mappings explicit without rewriting original license terms.
-6. **Prepare v1 metadata in a release PR.** Update `version.txt`,
-   `nsx-module.yaml`, CMake version, changelog, catalog and compatibility claims
-   together. Verify repository controls tracked by
-   [issue #5](https://github.com/AmbiqAI/nsx-sensors/issues/5). Publish only through
-   the immutable workflow after exact-main-commit CI passes. Coordinate a
-   downstream registry update separately; do not silently repin applications.
+1. **Repair publication gating.** Require the separate Zephyr workflow and all
+   required integration jobs on the exact release SHA, with offline negative
+   tests of the actual gate. Resolve the confirmed P2 finding before publication.
+2. **Measure resource costs.** Record per-context/adapter scratch sizes, linked
+   flash/RAM and compiler stack-usage evidence on named target/toolchain and
+   optimization settings. Include vendor/callback paths; distinguish static
+   estimates from runtime high-water marks, which require execution.
+3. **Finish provenance and migration review.** Map historical source names to
+   current paths, distinguish old release scope from the accepted v1 contract,
+   and align NOTICE/PROVENANCE/CATALOG without rewriting original license terms.
+   Record required maintainer signoff per OWNERS.md. Automated notice tests and
+   technical review are not a substitute for that recorded approval.
+4. **Prepare coherent v1 metadata.** Update version.txt, nsx-module.yaml, CMake
+   version, changelog, catalog and compatibility claims together in a release PR.
+   Verify repository controls tracked by [issue #5](https://github.com/AmbiqAI/nsx-sensors/issues/5).
+   No registry repin or publication is implied by preparing these files.
+5. **Qualify and publish the exact final candidate.** Rerun offline suites,
+   eight-SoC compile matrix, real NSX bare-metal/FreeRTOS links and pinned Zephyr
+   tests/cross-build on the final SHA. Record toolchains actually rerun. Publish
+   only after required exact-main-commit checks and maintainer approval through
+   the immutable workflow. Coordinate downstream registry promotion separately.
 
 ## Deferred hardware qualification
 
@@ -278,3 +331,6 @@ pins for the pair, shared programming/PDM-clock handoff, and waveform/WAKE/stere
 capture validation. Do not substitute ordinary RTOS delays for bounded pulse timing.
 These board/audio tasks are separate from portable-driver merge readiness.
 Expanded BME688 operation (#14) and ICM advanced features (#23) remain follow-ups.
+The fresh driver audit also leaves MAX86150 A_FULL status behavior with external
+interrupts disabled for explicit hardware confirmation; the available datasheet
+wording and mock evidence did not establish a source defect.
