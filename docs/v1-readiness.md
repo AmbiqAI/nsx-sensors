@@ -170,14 +170,29 @@ Focused follow-up also tested rejected rebind and endpoint storage reuse. Local
 Copilot CLI 1.0.103 continued independently after its `/review` worker returned no
 report; it ran native/Arm/T5838 validation on `c991ad9` and found missing loopback
 rejection. That regression fails the old code; the final fix rejects before I/O
-or mutation and received a clean focused independent review. Copilot did not
-rereview the fixes. Initial hosted CI exposed incompatible Ubuntu newlib; the
+or mutation and received a clean focused independent review. A fresh local
+Copilot CLI 1.0.103 `/review` subsequently reviewed `149cb78..ab18f1f` including
+all fixes, found no actionable findings, and independently passed native4/4,
+Arm/newlib link/provenance and busless T5838 checks. Initial hosted CI exposed
+incompatible Ubuntu newlib; the
 reviewed fix provisions checksum-verified official Arm GNU 15.2.Rel1 and checks
 its actual newlib prerequisite without bypassing the framework assertion.
 
-At the final head, the [Zephyr CI job](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40395653867)
-passes, as do four of five [existing CI jobs](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40395654340).
-The eight-SoC job remains in toolchain installation. PR #32 and its API-freeze decision remain
+The eight-SoC hosted job later failed because its NSX-only smoke script globbed
+all platform adapters, including Zephyr. Commit `7990dc1` selects `src/ports/nsx.c`
+explicitly and retains the 13-source and produced-object guards. All eight SoCs
+pass locally against the exact CI SDK `1f18f01555897ed8e06437ff9727f2bb61771e70`.
+That commit and `b9b4ccf` bound stalled package downloads; focused independent
+review of both CI-only fixes is clean. Copilot's full review precedes these fixes.
+
+At final head `b9b4ccfd406ce5676617e689fa8a6f108ec29241`, the
+[Zephyr job](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40404641628) and
+all five [existing CI jobs](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40404641799)
+pass, including all eight SoCs and real NSX bare-metal/FreeRTOS links. The
+firmware job passed on a fresh-runner retry after stalled package installation
+was cancelled. No consequential review findings remain; PR #32 is ready for
+maintainer merge approval.
+PR #32 and its API-freeze decision remain
 unmerged; this evidence does not change the audited main baseline or establish
 accepted release evidence. Freeze takes effect only on approval and merge.
 Resource qualification, provenance signoff, final-candidate revalidation and
