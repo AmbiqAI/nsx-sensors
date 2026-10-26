@@ -408,8 +408,11 @@ class ReleaseAutomationTests(unittest.TestCase):
         # trigger set rather than the absence of one literal spelling: a `push:`
         # added after `workflow_dispatch:` would not contain "on:\n  push:".
         self.assertEqual({"workflow_dispatch"}, top_level_trigger_keys(self.release))
-        self.assertIn("--workflow ci.yml", self.release)
-        self.assertIn("headSha", self.release)
+        self.assertIn("python3 scripts/release_gate.py", self.release)
+        self.assertIn('--sha "$RELEASE_SHA"', self.release)
+        gate = (ROOT / "scripts/release_gate.py").read_text()
+        for workflow in ("ci.yml", "zephyr.yml"):
+            self.assertIn(workflow, gate)
         self.assertIn("Refusing to retarget", self.release)
         for job in (
             "Host release and API contracts",
@@ -417,7 +420,7 @@ class ReleaseAutomationTests(unittest.TestCase):
             "Nested CMake consumer contract",
             "Module compile smoke (all declared SoCs, Arm GNU)",
         ):
-            self.assertIn(job, self.release)
+            self.assertIn(job, gate)
 
     def test_ci_runs_on_push_and_pull_request(self) -> None:
         self.assertEqual(
