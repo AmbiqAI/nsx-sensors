@@ -28,7 +28,7 @@ static int initialize_core(struct nsx_bme688_data *data)
     bme688_config_t config = bme688_default_config();
     return nsx_sensor_zephyr_errno(bme688_init(&data->core, &config));
 }
-static int fetch(const struct device *dev, enum sensor_channel channel)
+static int nsx_bme688_fetch(const struct device *dev, enum sensor_channel channel)
 {
     if (!supported(channel)) return -ENOTSUP;
     struct nsx_bme688_data *data = dev->data;
@@ -94,7 +94,7 @@ static int initialize(const struct device *dev)
     return initialize_core(data);
 }
 static DEVICE_API(sensor, nsx_bme688_api) = {
-    .sample_fetch = fetch,
+    .sample_fetch = nsx_bme688_fetch,
     .channel_get = channel_get,
 };
 #define NSX_BME688_CONFIG(inst) \
