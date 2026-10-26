@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: BSD-3-Clause
+menuconfig NSX_SENSORS
+	bool "NSX portable sensor cores and Zephyr bus adapter"
+	help
+	  Caller-owned portable cores. No NSX SDK dependency. Individual cores
+	  remain usable directly without a Zephyr sensor API wrapper.
+
+if NSX_SENSORS
+config NSX_SENSOR_BME688
+	bool "BME688 portable core"
+	help
+	  Requires a complete C library (for example NEWLIB_LIBC or PICOLIBC),
+	  or the native host libc. Minimal libc lacks required math facilities.
+config NSX_SENSOR_LEDSTICK
+	bool "LED Stick portable core"
+config NSX_SENSOR_INA228
+	bool "INA228 portable core"
+	help
+	  Requires a complete C library (for example NEWLIB_LIBC or PICOLIBC),
+	  or the native host libc. Minimal libc lacks required math facilities.
+config NSX_SENSOR_MPU6050
+	bool "MPU6050 portable core"
+config NSX_SENSOR_MAX86150
+	bool "MAX86150 portable core"
+config NSX_SENSOR_ICM45605
+	bool "ICM-45605 portable core"
+	help
+	  Requires a complete C library (for example NEWLIB_LIBC or PICOLIBC),
+	  or the native host libc. Minimal libc lacks required math facilities.
+config NSX_SENSOR_TSL254X
+	bool "TSL254x portable core"
+config NSX_SENSOR_T5838
+	bool "T5838 portable control core"
+
+config NSX_SENSOR_BME688_ZEPHYR
+	bool "BME688 Zephyr temperature/pressure/humidity wrapper"
+	depends on SENSOR && (I2C || SPI)
+	depends on DT_HAS_AMBIQ_NSX_BME688_ENABLED
+	select NSX_SENSOR_BME688
+	default y
+	help
+	  Forced mode, core default oversampling/filter, gas heater disabled.
+	  Each fetch updates all three channels. No attributes or triggers.
+endif
