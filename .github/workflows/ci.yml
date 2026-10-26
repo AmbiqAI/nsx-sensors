@@ -167,3 +167,37 @@ jobs:
           for soc in "${socs[@]}"; do
             tests/module_compile_smoke.sh "$NSX_AMBIQ_SDK_ROOT" arm-none-eabi-gcc "$soc"
           done
+
+  firmware-integration:
+    name: Real NSX bare-metal and FreeRTOS final links
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Checkout immutable SDK including vendored HAL and FreeRTOS
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AmbiqAI/nsx-ambiq-sdk
+          ref: 40b893d859672caf0b17b0e51db351a77b423e56
+          path: .deps/firmware-sdk
+          persist-credentials: false
+      - name: Install Arm GNU
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Build and verify both firmware modes
+        run: python3 tests/nsx_firmware_integration.py .deps/firmware-sdk
+      - name: Preserve link evidence and diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nsx-firmware-integration
+          path: |
+            build/firmware-integration/evidence.json
+            build/firmware-integration/*/*.elf
+            build/firmware-integration/*/*.map
+            build/firmware-integration/*/*.bin
+            build/firmware-integration/*/*.log
+            build/firmware-integration/*/*.txt
+            build/firmware-integration/*/compile_commands.json
+          if-no-files-found: error

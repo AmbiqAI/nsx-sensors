@@ -36,7 +36,7 @@ def verify(firmware: Path, drivers: list[str], nm: str, link_map: Path) -> None:
         raise ValueError("expected a linked Arm executable (ET_EXEC/EM_ARM), not a host binary or object")
     result = subprocess.run(
         [nm, "--defined-only", "--format=posix", str(firmware)],
-        check=True, capture_output=True, text=True,
+        check=True, capture_output=True, text=True, timeout=120,
     )
     # Undefined/data symbols cannot prove that a driver function was linked.
     functions = {
@@ -67,7 +67,7 @@ def main() -> int:
         parser.error("install arm-none-eabi-nm or llvm-nm to inspect firmware symbols")
     try:
         verify(args.firmware, args.drivers, nm, args.link_map)
-    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(f"firmware link check: {error}", file=sys.stderr)
         return 1
     print(f"firmware link verified: {args.firmware} ({', '.join(args.drivers)})")
