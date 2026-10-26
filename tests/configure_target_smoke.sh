@@ -11,7 +11,7 @@
 # "green" always means the build really ran.
 #
 # Usage:
-#   tests/configure_target_smoke.sh <consumer_root> <toolchain> <board>
+#   tests/configure_target_smoke.sh <consumer_root> <toolchain> <board> <firmware-relative-path> <driver> [driver ...]
 #
 # toolchain is one of: arm-none-eabi-gcc | armclang | atfe
 #
@@ -23,6 +23,9 @@ set -euo pipefail
 consumer_root=${1:?usage: configure_target_smoke.sh <consumer_root> <toolchain> <board>}
 toolchain=${2:?usage: configure_target_smoke.sh <consumer_root> <toolchain> <board>}
 board=${3:?usage: configure_target_smoke.sh <consumer_root> <toolchain> <board>}
+firmware_relative=${4:?provide the unstripped executable path relative to the build directory}
+shift 4
+[ "$#" -gt 0 ] || { echo 'target smoke: select at least one driver (e.g. bme688 port_nsx_i2c)' >&2; exit 1; }
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 build_dir="$repo_root/build/target-${toolchain}-${board}"
@@ -38,6 +41,10 @@ require_tool() {
 
 test -d "$consumer_root" || fail "consumer root '$consumer_root' is not a directory"
 require_tool cmake
+require_tool python3
+if ! command -v arm-none-eabi-nm >/dev/null 2>&1 && ! command -v llvm-nm >/dev/null 2>&1; then
+    fail "arm-none-eabi-nm or llvm-nm is required to inspect firmware"
+fi
 
 case "$toolchain" in
     arm-none-eabi-gcc)
@@ -83,8 +90,21 @@ cmake -S "$consumer_root" -B "$build_dir" \
 
 cmake --build "$build_dir" --parallel 2
 
-# The module must actually be part of the consumer build, not silently dropped.
-find "$build_dir" -name 'libnsx_sensors.a' -print -quit | grep -q . \
-    || fail "libnsx_sensors.a was not produced for $toolchain/$board"
+# Never accept an old executable outside the freshly rebuilt output tree.
+firmware=$(python3 - "$build_dir" "$firmware_relative" <<'PY'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1]).resolve()
+relative = Path(sys.argv[2])
+path = (root / relative).resolve()
+if relative.is_absolute() or not path.is_relative_to(root):
+    sys.exit("target smoke: firmware path must stay inside the build directory")
+print(path)
+PY
+)
+
+# An archive's presence does not prove that its code survived the firmware link.
+# Check the explicitly selected executable and driver implementations instead.
+python3 "$repo_root/tests/verify_firmware_link.py" "$firmware" "$@"
 
 echo "target smoke passed: $toolchain / $board"

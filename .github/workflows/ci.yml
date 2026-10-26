@@ -76,6 +76,9 @@ jobs:
       - name: Compile vendored subset with the host compiler
         run: tests/vendor_compile_smoke.sh cc
 
+      - name: Verify linked firmware checks against actual Arm ELF files
+        run: tests/firmware_link_contract.sh
+
   nested-cmake-contract:
     name: Nested CMake consumer contract
     runs-on: ubuntu-latest
