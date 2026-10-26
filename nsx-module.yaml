@@ -7,9 +7,9 @@ module:
 
 support:
   ambiqsuite: true
-  zephyr: false
+  zephyr: true
 
-summary: Eight portable driver cores; shared NSX I2C/SPI adapter and separate T5838 AAD control.
+summary: Eight portable driver cores; shared NSX/Zephyr I2C/SPI adapters and separate T5838 AAD control.
 # nsx::sensors aggregates the selected portable cores. NSX endpoints use the
 # separate nsx::sensor_port_nsx target; see docs/migration/icm45605.md.
 
@@ -57,6 +57,7 @@ build:
     targets:
       - nsx::sensors
 
+# NSX resolver dependencies; external Zephyr integration uses zephyr/module.yml.
 depends:
   required:
     - nsx-core

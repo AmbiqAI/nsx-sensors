@@ -65,8 +65,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 update
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 install --no-install-recommends -y \
             gcc-arm-none-eabi libnewlib-arm-none-eabi
           arm-none-eabi-gcc --version
 
@@ -131,6 +131,7 @@ jobs:
     env:
       NSX_AMBIQ_SDK_ROOT: ${{ github.workspace }}/.deps/nsx-ambiq-sdk
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
@@ -153,8 +154,8 @@ jobs:
 
       - name: Install Arm GNU
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 update
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 install --no-install-recommends -y \
             gcc-arm-none-eabi libnewlib-arm-none-eabi
       - name: Verify Arm GNU
         run: |
@@ -183,8 +184,8 @@ jobs:
           persist-credentials: false
       - name: Install Arm GNU
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 update
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 install --no-install-recommends -y gcc-arm-none-eabi libnewlib-arm-none-eabi
       - name: Build and verify both firmware modes
         run: python3 tests/nsx_firmware_integration.py .deps/firmware-sdk
       - name: Preserve link evidence and diagnostics

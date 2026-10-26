@@ -1,0 +1,37 @@
+name: Zephyr integration
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zephyr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install host build and archive tools
+        run: |
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 update
+          sudo apt-get -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o Acquire::Retries=2 install -y --no-install-recommends gcc g++ curl xz-utils device-tree-compiler
+      - name: Provision exact Zephyr and manifest dependencies, run native tests and Arm link
+        run: python tests/zephyr_integration.py --provision --provision-arm-toolchain --workspace "$RUNNER_TEMP/nsx-zephyr"
+      - name: Upload version, command, test and link evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: zephyr-integration-evidence
+          path: |
+            ${{ runner.temp }}/nsx-zephyr/evidence/
+            ${{ runner.temp }}/nsx-zephyr/build-arm/zephyr/zephyr.elf
+            ${{ runner.temp }}/nsx-zephyr/build-arm/zephyr/zephyr.map
+            ${{ runner.temp }}/nsx-zephyr/build-arm/zephyr/.config
+            ${{ runner.temp }}/nsx-zephyr/build-native/zephyr/.config
