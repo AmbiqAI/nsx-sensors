@@ -1,0 +1,5 @@
+tests:
+  nsx.sensors.zephyr:
+    tags: [sensor, i2c, spi]
+    platform_allow: [native_sim/native/64, qemu_cortex_m3]
+    integration_platforms: [native_sim/native/64]
