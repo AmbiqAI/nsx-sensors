@@ -51,7 +51,7 @@ section, excluding debug sections and output-section summaries.
 For an existing artifact, run the inspector directly:
 
 ```sh
-python3 tests/verify_firmware_link.py build/app.axf app.map bme688 port_nsx_i2c
+python3 tests/verify_firmware_link.py build/app.axf --map build/app.map bme688 port_nsx_i2c
 ```
 
 This checks linked inclusion and the defining archive/object recorded by the
