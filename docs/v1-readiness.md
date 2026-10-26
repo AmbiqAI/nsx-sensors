@@ -154,9 +154,33 @@ follow-up is clean. Copilot did not rereview that fix. The representative NSX
 bare-metal/FreeRTOS link gate is complete at this baseline, with final release
 candidate revalidation still required. Polished examples remain deferred.
 
-[Draft PR #32](https://github.com/AmbiqAI/nsx-sensors/pull/32) proposes Zephyr
-integration and final RFC/source-contract acceptance. That work and its API-freeze
-decision remain unmerged and must not yet be treated as accepted release evidence.
+[PR #32](https://github.com/AmbiqAI/nsx-sensors/pull/32) implements Zephyr
+integration and submits final RFC/source-contract acceptance. At reviewed head
+`ab18f1f4f6ed669955caf6cf3d10ca10e11e05c1`, local validation passes four native
+mock-controller tests, an actual Arm cross-link with defining-object checks,
+a busless T5838 build and 48 existing contract tests. The module consumes the
+shared root CMake targets, supplies reusable Zephyr endpoints, and exposes a
+BME688 temperature/pressure/humidity wrapper. Other cores are directly selectable;
+this is not a claim that every core has a Zephyr sensor wrapper.
+
+Two independent reviews and local Copilot covered the proposal. The independent
+API review found SPI configuration-pointer caching across rebind; immutable
+persistent caller specs and a failing-before/passing-after regression resolve it.
+Focused follow-up also tested rejected rebind and endpoint storage reuse. Local
+Copilot CLI 1.0.103 continued independently after its `/review` worker returned no
+report; it ran native/Arm/T5838 validation on `c991ad9` and found missing loopback
+rejection. That regression fails the old code; the final fix rejects before I/O
+or mutation and received a clean focused independent review. Copilot did not
+rereview the fixes. Initial hosted CI exposed incompatible Ubuntu newlib; the
+reviewed fix provisions checksum-verified official Arm GNU 15.2.Rel1 and checks
+its actual newlib prerequisite without bypassing the framework assertion.
+
+Final-head hosted CI is pending. PR #32 and its API-freeze decision remain
+unmerged; this evidence does not change the audited main baseline or establish
+accepted release evidence. Freeze takes effect only on approval and merge.
+Resource qualification, provenance signoff, final-candidate revalidation and
+release metadata remain open. No firmware execution or hardware qualification
+is claimed by these builds.
 
 ## RFC decisions to record before freezing v1
 
