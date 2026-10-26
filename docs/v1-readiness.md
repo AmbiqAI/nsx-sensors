@@ -175,7 +175,9 @@ rereview the fixes. Initial hosted CI exposed incompatible Ubuntu newlib; the
 reviewed fix provisions checksum-verified official Arm GNU 15.2.Rel1 and checks
 its actual newlib prerequisite without bypassing the framework assertion.
 
-Final-head hosted CI is pending. PR #32 and its API-freeze decision remain
+At the final head, the [Zephyr CI job](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40395653867)
+passes, as do four of five [existing CI jobs](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40395654340).
+The eight-SoC job remains in toolchain installation. PR #32 and its API-freeze decision remain
 unmerged; this evidence does not change the audited main baseline or establish
 accepted release evidence. Freeze takes effect only on approval and merge.
 Resource qualification, provenance signoff, final-candidate revalidation and
