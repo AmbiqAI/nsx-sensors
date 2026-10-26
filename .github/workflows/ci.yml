@@ -28,6 +28,9 @@ jobs:
       - name: NSX adapter host contracts
         run: tests/nsx_port_host.sh
 
+      - name: Framework compilation context and installed ABI contracts
+        run: tests/compile_context.sh
+
       - name: Validate version coherence
         shell: bash
         run: |
