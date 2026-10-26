@@ -135,11 +135,21 @@ passed in [run 40377920546](https://github.com/AmbiqAI/nsx-sensors/actions/runs/
 before squash merge. These checks cover production targets in synthetic firmware,
 not a real board application or hardware operation.
 
-[Draft PR #31](https://github.com/AmbiqAI/nsx-sensors/pull/31) proposes real NSX
-bare-metal and FreeRTOS integration fixtures with explicit pinned dependencies,
-real startup/HAL/kernel code and final ELF/map checks. It is pending work, not
-accepted integration evidence. Polished examples are deferred; the immediate
-priority is the shared build, API and platform contracts.
+[Draft PR #31](https://github.com/AmbiqAI/nsx-sensors/pull/31) implements real NSX
+bare-metal and FreeRTOS link fixtures for `apollo4p_evb` against SDK
+`40b893d859672caf0b17b0e51db351a77b423e56`. At proposal head `6cfc68a`, clean local
+builds and an independent reviewer reproduced both links. The new real-firmware
+job passed in [run 40383232141](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40383232141).
+Checks cover all eight cores, both bindings, startup/HAL/kernel provenance,
+strong FreeRTOS handlers, actual vector routing and shared compilation profiles.
+The fixture deliberately leaves controllers uninitialized; no sensor I/O or
+scheduler execution was tested. SDK/HAL/kernel are pinned, while CI records its
+Ubuntu-provided compiler version rather than pinning that package.
+
+This is evidence from an unmerged proposal, separate from the audited main
+baseline. Final Copilot/CI reconciliation and merge approval remain pending;
+do not mark the release integration gate complete yet. Polished examples are
+deferred; the immediate priority is the shared build, API and platform contracts.
 
 ## RFC decisions to record before freezing v1
 
