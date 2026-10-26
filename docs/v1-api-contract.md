@@ -180,7 +180,12 @@ spec without I/O or a readiness check; the caller checks controller readiness.
 selections are opt-in. The devicetree-enabled BME688 wrapper defaults on when its
 SENSOR/bus dependencies are met and selects the BME688 core. The Zephyr library
 `nsx_sensor_port_zephyr` exists only with I2C or SPI enabled; portable-only cores
-can be selected without either controller subsystem.
+can be selected without either controller subsystem. BME688, INA228 and
+ICM-45605 require a complete C library for their math functions: an application
+using Zephyr minimal libc must explicitly select, for example,
+`CONFIG_NEWLIB_LIBC=y` or `CONFIG_PICOLIBC=y`. Configuration rejects these math
+cores with minimal libc; Kconfig does not select a replacement automatically.
+T5838 control can build without a bus and with minimal libc.
 
 Each direction supports up to `NSX_SENSOR_ZEPHYR_MAX_TRANSFER` (256) bytes.
 The endpoint has 1024 bytes of staging scratch; failed transfers preserve caller
@@ -226,7 +231,7 @@ wrappers. The proposal pins Zephyr v4.4.0 at
 build/test evidence must be recorded separately from this API decision.
 
 No source freeze proves resource/stack budgets, electrical timing, analog
-accuracy, hardware operation or publication readiness. The readiness audit and
+accuracy, hardware operation or publication readiness. The [readiness audit tracked in separate PR #25](https://github.com/AmbiqAI/nsx-sensors/pull/25) and
 [RFC release gates](rfcs/0001-portable-sensor-driver-architecture.md#release-acceptance-gates)
 retain those requirements. Version remains 0.3.0 until a separate release change.
 Async queues, advanced ICM features, expanded BME688 modes/BSEC/IAQ, other Zephyr

@@ -76,7 +76,7 @@ point. Normal configuration neither discovers sibling SDKs nor fetches dependenc
 ## Implementation and evidence
 
 All eight cores have migrated. The migration guides, public headers and
-[readiness audit](../v1-readiness.md) replace the obsolete per-stage status notes
+[readiness audit tracked in separate PR #25](https://github.com/AmbiqAI/nsx-sensors/pull/25) replace the obsolete per-stage status notes
 previously appended here. BME688 forced-mode freshness does not require advancing
 parallel-mode indices; MAX86150 consuming status failures invalidate configuration;
 MPU6050 names and MAX86150 configuration selections are typed/prefixed; INA228
