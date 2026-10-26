@@ -1,0 +1,3 @@
+description: Test-only synchronous I2C controller
+compatible: "test,nsx-i2c"
+include: i2c-controller.yaml

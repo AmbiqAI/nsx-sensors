@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+title: Bosch BME688 using the Ambiq NSX portable sensor core (i2c)
+
+description: |
+  Selects the NSX portable BME688 implementation and its temperature, pressure
+  and humidity wrapper. This integration-specific compatible deliberately
+  avoids claiming nodes handled by Zephyr's upstream Bosch drivers.
+
+compatible: "ambiq,nsx-bme688"
+
+include: [sensor-device.yaml, i2c-device.yaml]

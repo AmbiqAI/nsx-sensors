@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Module compile smoke against a real NSX SDK checkout.
 #
-# Compiles every nsx-sensors translation unit, including the vendored TDK
-# subset, against genuine nsx-core / nsx-i2c / nsx-spi and AmbiqSuite headers
+# Compiles the portable cores, NSX adapter and vendored TDK subset against
+# genuine nsx-core / nsx-i2c / nsx-spi and AmbiqSuite headers
 # for a chosen SoC and toolchain. This is the middle rung between the
 # dependency-free vendor smoke and the full consumer build:
 #
 #   vendor_compile_smoke.sh   vendored subset only, no NSX headers
-#   module_compile_smoke.sh   all module sources, real NSX + AmbiqSuite headers
+#   module_compile_smoke.sh   portable cores + NSX adapter, real SDK headers
 #   configure_target_smoke.sh full NSX consumer configure, build, and link
 #
 # It compiles only; it does not link and it does not flash. A clean run means
@@ -155,7 +155,9 @@ esac
 rm -rf "$out_dir"
 mkdir -p "$out_dir"
 
-sources=("$repo_root"/src/icm45605/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/*.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/src/tsl254x/*.c "$repo_root"/src/t5838/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
+# Select the NSX endpoint explicitly: other platform ports require their own
+# framework headers and are covered by separate integration gates.
+sources=("$repo_root"/src/icm45605/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/nsx.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/src/tsl254x/*.c "$repo_root"/src/t5838/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
 [ "${#sources[@]}" -eq 13 ] || fail "expected 13 translation units, found ${#sources[@]}"
 
 for source in "${sources[@]}"; do

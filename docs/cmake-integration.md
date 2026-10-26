@@ -2,7 +2,9 @@
 
 The root CMake file defines portable driver targets once. NSX bare-metal and
 FreeRTOS builds use those same targets; no RTOS-specific driver library is needed.
-Zephyr integration remains pending.
+The [Zephyr module](zephyr.md) selects these same root targets through Kconfig
+and supplies `zephyr_interface` as their compilation profile. Driver source lists
+remain defined only in the root CMake file.
 
 Every translation unit using a public sensor type must agree on CPU/FPU and C
 ABI settings, including enum size. Linking a framework target only to an

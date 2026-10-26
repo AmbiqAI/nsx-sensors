@@ -1,0 +1,23 @@
+/ {
+    mock_i2c: mock-i2c {
+        compatible = "test,nsx-i2c";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        clock-frequency = <100000>;
+        status = "okay";
+        sensor0: sensor@76 { compatible = "ambiq,nsx-bme688"; reg = <0x76>; status = "okay"; };
+        sensor1: sensor@77 { compatible = "ambiq,nsx-bme688"; reg = <0x77>; status = "okay"; };
+    };
+    mock_spi: mock-spi {
+        compatible = "test,nsx-spi";
+        sensor_spi: sensor@2 {
+            compatible = "ambiq,nsx-bme688";
+            reg = <2>;
+            spi-max-frequency = <1000000>;
+            status = "okay";
+        };
+        #address-cells = <1>;
+        #size-cells = <0>;
+        status = "okay";
+    };
+};

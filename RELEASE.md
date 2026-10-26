@@ -2,7 +2,8 @@
 
 ## Unreleased v1 transition
 
-All six portable migrations are implemented, but v1 acceptance is incomplete.
+All eight portable cores are implemented and the v1 source contract is accepted
+by merged PR #32. Release qualification is still incomplete.
 Use the [readiness audit](docs/v1-readiness.md) for current evidence and the
 ordered release checklist. Version metadata remains `0.3.0` until a coordinated
 release PR. The v0.1.0 scope below is historical.

@@ -16,11 +16,13 @@ Current drivers:
 | ams OSRAM TSL2540 / TSL2541 light | I2C | `include/nsx/sensors/tsl254x.h` |
 | TDK T5838 microphone AAD control | THSEL one-wire; audio separate | `include/nsx/sensors/t5838.h` |
 
-This branch implements the six portable driver migrations from [RFC 0001 (PR #17)](https://github.com/AmbiqAI/nsx-sensors/pull/17)
-and adds TSL254x and T5838 support. All eight driver cores are portable.
-ICM-45605 retains the TDK basic
-implementation with per-device transport callbacks. The shared NSX port is available; Zephyr wrappers remain follow-up work. This is an
+The portable architecture is defined by [RFC 0001](docs/rfcs/0001-portable-sensor-driver-architecture.md)
+and the [v1 source contract](docs/v1-api-contract.md).
+All eight driver cores are portable. ICM-45605 retains the TDK basic
+implementation with per-device transport callbacks. The shared NSX port and [Zephyr I2C/SPI endpoints](docs/zephyr.md) are available,
+with a Zephyr BME688 temperature/pressure/humidity wrapper. Other Zephyr wrappers remain follow-up work. This is an
 unreleased API transition, not a v1 release or a drop-in v0 replacement.
+See the [v1 readiness audit](docs/v1-readiness.md) for current evidence and remaining release gates.
 
 See [TSL254x](docs/tsl254x.md), [T5838 control/audio boundaries](docs/t5838.md) and
 [Spark integration examples](examples/spark/README.md). T5838 needs a board
@@ -81,7 +83,6 @@ release. See `docs/compatibility.md` before relying on any device.
 | Document | Purpose |
 | --- | --- |
 | `CHANGELOG.md` | What changed, including breaking changes and known caveats |
-| [v1 readiness audit](docs/v1-readiness.md) | Current RFC coverage, remaining integration work and release checklist |
 | `RELEASE.md` | Versioning policy, compatibility surfaces, publication process |
 | `PROVENANCE.md` | Exact port lineage and the vendored TDK subset |
 | `docs/compatibility.md` | Declared vs build-verified vs runtime-validated |
@@ -92,7 +93,7 @@ release. See `docs/compatibility.md` before relying on any device.
 
 ## Licensing
 
-Ambiq-authored code in `include/` and `src/` is BSD-3-Clause; see
+Ambiq-authored code in `includes-api/` and `src/` is BSD-3-Clause; see
 `LICENSE`. `vendor/tdk-icm45605/` is third-party TDK InvenSense code
 redistributed under its own permissive terms and is **not** relicensed. See
 `NOTICE` and `PROVENANCE.md`. The native BME688 compensation/calibration/heater

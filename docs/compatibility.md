@@ -11,17 +11,19 @@ and retained-symbol checks required by the opt-in consumer smoke script.
 
 All eight driver cores have portable CMake targets and offline host tests. The
 seven I2C/SPI cores share the NSX adapter; T5838 uses a caller-supplied THSEL
-waveform endpoint and the separate audio layer. Zephyr wrappers remain pending.
+waveform endpoint and the separate audio layer. [Zephyr integration](zephyr.md)
+provides selectable portable cores, reusable I2C/SPI endpoints and a BME688
+temperature/pressure/humidity wrapper. Other Zephyr wrappers remain pending.
 `nsx::sensors` aggregates the selected portable cores without SDK dependencies. Metadata dependencies below
 describe NSX integration, not portable-core requirements. No framework or hardware
 qualification is implied by portable compilation.
 
 | Drivers | Portable core | NSX integration | Zephyr wrapper | Hardware |
 | --- | --- | --- | --- | --- |
-| BME688, LED Stick, INA228, MPU6050, MAX86150 | Implemented; host tested and linked | Shared NSX adapter | Pending | Unqualified |
-| ICM-45605 basic SPI | Implemented; per-instance TDK state, direct reads and explicit calibration | Shared NSX adapter | Pending | Unqualified |
-
-| TSL2540/TSL2541 | Implemented shared core with explicit variant; host tested | Shared NSX I2C adapter | Pending | Unqualified |
+| BME688 | Implemented; host tested and linked | Shared NSX adapter | T/P/H fetch/get; pinned native tests and Arm link | Unqualified |
+| LED Stick, INA228, MPU6050, MAX86150 | Implemented; host tested and linked | Shared NSX adapter | Direct cores available; wrappers pending | Unqualified |
+| ICM-45605 basic SPI | Implemented; per-instance TDK state, direct reads and explicit calibration | Shared NSX adapter | Direct core available; wrapper pending | Unqualified |
+| TSL2540/TSL2541 | Implemented shared core with explicit variant; host tested | Shared NSX I2C adapter | Direct core available; wrapper pending | Unqualified |
 | T5838 AAD control | Implemented Analog/D1/D2 control and waveform encoder; host tested | Board waveform endpoint and audio clock handoff pending | Pending | Unqualified |
 
 ## What the declarations mean
