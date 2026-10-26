@@ -32,6 +32,8 @@ Portable CMake builds need no SDK, RTOS, network, or sibling repository:
 
 See [shared CMake compilation settings](docs/cmake-integration.md) for framework
 CPU/FPU/ABI propagation and installed-package requirements.
+[Real NSX firmware link validation](docs/firmware-validation.md) provides an
+explicit pinned-SDK command for bare-metal and FreeRTOS integration evidence.
 
 ```cmake
 add_subdirectory(third_party/nsx-sensors)

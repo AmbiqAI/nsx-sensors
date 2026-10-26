@@ -1,7 +1,7 @@
 # v1 RFC readiness audit
 
-Audited baseline: `d3cda01c8f0e167a086942bb3a75784b1b7d357e` (PR #30),
-updated 2026-10-26 after PRs #29 and #30 merged.
+Audited baseline: `149cb782b0845aa556a656745a56ea9453019964` (PR #31),
+updated after PR #31 merged.
 All eight implemented cores are now on main. PR #28 was reviewed at
 `717baf0d0886eed2112d5cdc3e1707f8228abc61` before squash merge.
 This is an implementation and release-evidence audit against
@@ -88,8 +88,8 @@ No review establishes physical waveform correctness or hardware qualification.
 | Platform | Available integration | Evidence at audited baseline | Remaining acceptance work |
 | --- | --- | --- | --- |
 | Plain CMake / application HAL | Eight independently selectable cores; common bus/runtime and T5838 timed endpoint | Offline tests, ASan/UBSan, source and relocated installed C/C++ consumers; C++ consumer references functions from every driver | Real board HAL/example and resource measurements |
-| NSX | Shared I2C/SPI adapter for seven cores; T5838 needs a board timing endpoint | Actual adapter with mocked SDK helpers, 3/5-byte command limits, installed consumers; real SDK configure; all eight declared SoCs compile with Arm GNU | Representative real firmware link on the final release candidate; electrical qualification later |
-| FreeRTOS | Portable cores usable through application bus/timing/locking callbacks | No FreeRTOS example or pinned kernel/HAL integration build in this repository | Implement and link a task-based example with correct sub-tick delays and shared-bus serialization |
+| NSX | Shared I2C/SPI adapter for seven cores; T5838 needs a board timing endpoint | Actual adapter with mocked SDK helpers, 3/5-byte command limits, installed consumers; real SDK configure; all eight declared SoCs compile with Arm GNU; real Apollo4 Plus bare-metal/FreeRTOS links | Representative real firmware link on the final release candidate; electrical qualification later |
+| FreeRTOS | Portable cores usable through application bus/timing/locking callbacks | Real kernel/HAL/task/port link at pinned SDK, with strong handler/vector checks; no runtime execution | Final-candidate revalidation; hardware scheduler/bus qualification remains pending |
 | Zephyr | Portable C cores only | No Zephyr sensor wrapper, devicetree binding, native simulation or cross-build | BME688 wrapper/example, pinned Zephyr version, mocked-bus/native tests and board cross-build |
 
 Main CI [run 40234941475](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40234941475)
@@ -135,11 +135,11 @@ passed in [run 40377920546](https://github.com/AmbiqAI/nsx-sensors/actions/runs/
 before squash merge. These checks cover production targets in synthetic firmware,
 not a real board application or hardware operation.
 
-[Draft PR #31](https://github.com/AmbiqAI/nsx-sensors/pull/31) implements real NSX
+[Merged PR #31](https://github.com/AmbiqAI/nsx-sensors/pull/31) implements real NSX
 bare-metal and FreeRTOS link fixtures for `apollo4p_evb` against SDK
-`40b893d859672caf0b17b0e51db351a77b423e56`. At proposal head `cc72e41`, clean local builds reproduced both links. An
+`40b893d859672caf0b17b0e51db351a77b423e56`. At reviewed head `cc72e41`, clean local builds reproduced both links. An
 independent reviewer also built the preceding implementation and checked the
-final timeout fix. The new real-firmware job passed in
+final timeout fix. All five CI jobs, including real firmware integration, passed in
 [run 40384579683](https://github.com/AmbiqAI/nsx-sensors/actions/runs/40384579683).
 Checks cover all eight cores, both bindings, startup/HAL/kernel provenance,
 strong FreeRTOS handlers, actual vector routing and shared compilation profiles.
@@ -147,13 +147,16 @@ The fixture deliberately leaves controllers uninitialized; no sensor I/O or
 scheduler execution was tested. SDK/HAL/kernel are pinned, while CI records its
 Ubuntu-provided compiler version rather than pinning that package.
 
-This is evidence from an unmerged proposal, separate from the audited main
-baseline. Independent and local Copilot reviews completed. Copilot found an unbounded
-symbol-inspector subprocess; `cc72e41` adds a timeout and clean CLI failure. The
-regression fails the old code; focused independent follow-up is clean. Copilot
-did not rereview that fix. Full final-head CI and merge approval remain pending;
-do not mark the release integration gate complete yet. Polished examples are
-deferred; the immediate priority is the shared build, API and platform contracts.
+PR #31 merged as `149cb78` after independent and local Copilot reviews.
+Copilot found an unbounded symbol-inspector subprocess; `cc72e41` adds a timeout
+and clean CLI failure. The regression fails the old code; focused independent
+follow-up is clean. Copilot did not rereview that fix. The representative NSX
+bare-metal/FreeRTOS link gate is complete at this baseline, with final release
+candidate revalidation still required. Polished examples remain deferred.
+
+[Draft PR #32](https://github.com/AmbiqAI/nsx-sensors/pull/32) proposes Zephyr
+integration and final RFC/source-contract acceptance. That work and its API-freeze
+decision remain unmerged and must not yet be treated as accepted release evidence.
 
 ## RFC decisions to record before freezing v1
 
@@ -184,14 +187,14 @@ change to RFC acceptance requirements.
 
 ## Ordered release checklist
 
-PRs #28–#30 are merged; the eight-core main baseline is recorded above. Final RFC
+PRs #28–#31 are merged; the eight-core main baseline is recorded above. Final RFC
 acceptance and release qualification remain separate from this merge.
 
 1. **Record final RFC acceptance.** The API cleanup is reviewed and merged.
    Record acceptance of the choices above and any explicit scope amendments
    before freezing v1; this is not another request to redo the completed reviews.
-2. **Finish framework integration.** Complete the real NSX bare-metal/FreeRTOS integration fixtures in PR #31, then
-   the BME688 Zephyr wrapper and integration checks. Product examples can follow. Select and pin actual kernel/framework, HAL,
+2. **Finish framework integration.** PR #31 supplies real NSX bare-metal/FreeRTOS link fixtures. Complete the
+   BME688 Zephyr wrapper and integration checks in PR #32. Product examples can follow. Select and pin actual kernel/framework, HAL,
    SDK and toolchain revisions; add separate reproducible integration checks.
    A Zephyr wrapper for one driver does not qualify the other drivers.
 3. **Measure resource costs.** Record per-context and NSX scratch sizes, linked

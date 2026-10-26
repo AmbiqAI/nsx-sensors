@@ -145,13 +145,14 @@ functionality is explicitly unqualified for this release. Do not read a declared
 SoC, a green CI run, or a successful consumer build as evidence that a driver
 talks correctly to real silicon.
 
-Three smoke levels back these claims, in increasing fidelity:
+The existing smoke levels are complemented by the explicit real SDK fixture:
 
 | Script | Scope | Needs |
 | --- | --- | --- |
 | `tests/vendor_compile_smoke.sh` | vendored TDK subset only, no NSX headers | any C compiler |
 | `tests/module_compile_smoke.sh` | all module sources against real NSX and AmbiqSuite headers | an `nsx-ambiq-sdk` checkout plus a cross toolchain |
 | `tests/configure_target_smoke.sh` | full NSX consumer configure, build, and link | an NSX consumer workspace plus a cross toolchain |
+| `tests/nsx_firmware_integration.py` | real apollo4p_evb bare-metal and FreeRTOS final links; all eight cores and both NSX bindings | exact pinned SDK plus Arm GNU/newlib |
 
 Hosted CI checks out the exact qualified `nsx-ambiq-sdk v5.2.24` commit and
 compiles all 8 declared SoCs with Arm GNU using `-Wall -Wextra -Werror`. The
@@ -167,8 +168,9 @@ workspace, `cmake`, cross compiler, SDK payload, or ATfE `clang` is a hard
 failure. An ATfE request is additionally checked against the compiler's version
 banner and target list, so a host `clang` cannot be mistaken for ATfE.
 
-None of the three links a firmware image against real hardware, and none of them
-exercises a sensor.
+The explicit integration fixture links real board/startup/HAL/transport and, in
+FreeRTOS mode, the kernel/port. None of these commands executes a sensor or
+flashes hardware; see [recorded scope and prerequisites](firmware-validation.md).
 
 `tests/vendor_compile_smoke.sh` runs unconditionally in CI and compiles the
 vendored TDK subset standalone as C11 with `-Wall -Wextra -Werror`. Warnings are
@@ -194,7 +196,7 @@ It supports T/P/H and optional raw gas resistance in forced mode, over I2C and
 | Module compile, all 8 declared SoCs, Arm Compiler 6.23 (HSK early access) | pass, same sources/warnings |
 | Module compile, all 8 declared SoCs, ATfE 22.1.0 | pass, same sources/warnings |
 | Nested CMake/export contract | configure passed |
-| Real consumer firmware link with BME688 calls | not performed |
+| Real NSX firmware links with BME688 and all other core validation calls | pass, apollo4p_evb bare-metal + FreeRTOS; see firmware validation |
 | BME688 hardware runtime | **not performed; unqualified** |
 
 These new compile checks used `nsx-ambiq-sdk` commit
@@ -207,10 +209,10 @@ At the initial foundation stage, synthetic BME688/LED Stick protocol and
 lifecycle tests, host ASan/UBSan, C/C++ consumer linkage, relocated package
 installation, selected-driver configurations and all eight GCC SoC compile
 checks passed. That foundation had 10 translation units (including the shared
-bus and retained TDK subset). The shared NSX port was pending at that stage and
-is now implemented. A real firmware link on the final v1 candidate and hardware
-tests remain outstanding;
-Armclang and ATfE have not been rerun for the full migration.
+bus and retained TDK subset). The shared NSX port and real bare-metal/FreeRTOS
+links now have contract/link evidence. Final-candidate revalidation and hardware
+qualification remain outstanding; Armclang and ATfE have not been rerun for the
+full migration.
 
 Hardware qualification still needs a recorded board, sensor/module revision,
 SDK revision, toolchain, bus speed/mode, and results for:
