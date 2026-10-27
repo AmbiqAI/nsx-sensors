@@ -25,6 +25,18 @@ jobs:
       - name: Portable drivers, installed consumers, and sanitizers
         run: tests/portable_build.sh
 
+      - name: Bounded sensor mutation controls
+        timeout-minutes: 3
+        run: python3 tests/sensor_mutations.py --output "$RUNNER_TEMP/sensor-mutations"
+
+      - name: Preserve sensor mutation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sensor-mutation-evidence
+          path: ${{ runner.temp }}/sensor-mutations
+          if-no-files-found: warn
+
       - name: NSX adapter host contracts
         run: tests/nsx_port_host.sh
 
