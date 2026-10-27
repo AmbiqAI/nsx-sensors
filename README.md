@@ -22,6 +22,7 @@ All eight driver cores are portable. ICM-45605 retains the TDK basic
 implementation with per-device transport callbacks. The shared NSX port and [Zephyr I2C/SPI endpoints](docs/zephyr.md) are available,
 with a Zephyr BME688 temperature/pressure/humidity wrapper. Other Zephyr wrappers remain follow-up work. This is an
 unreleased API transition, not a v1 release or a drop-in v0 replacement.
+See the [v1 readiness audit](docs/v1-readiness.md) for current evidence and remaining release gates.
 
 See [TSL254x](docs/tsl254x.md), [T5838 control/audio boundaries](docs/t5838.md) and
 [Spark integration examples](examples/spark/README.md). T5838 needs a board

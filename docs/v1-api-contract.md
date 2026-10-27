@@ -1,8 +1,7 @@
 # v1 source API contract
 
-Status: acceptance and source-freeze decision submitted in PR #32. It takes
-effect when that PR is approved and merged; this draft does not assert an
-already completed freeze. [RFC 0001](rfcs/0001-portable-sensor-driver-architecture.md)
+Status: accepted and source-frozen by approval and merge of PR #32 on
+2026-10-26 (`f3b313a`). [RFC 0001](rfcs/0001-portable-sensor-driver-architecture.md)
 records the architectural decision. Release acceptance, version metadata and
 hardware qualification remain separate.
 

@@ -1,5 +1,9 @@
 # Compatibility
 
+See the [v1 readiness audit](v1-readiness.md) for the exact current baseline,
+platform matrix and remaining release gates. Historical evidence below must not
+be treated as qualification of the final v1 candidate.
+
 See [firmware link validation](firmware-validation.md) for the explicit executable
 and retained-symbol checks required by the opt-in consumer smoke script.
 
@@ -203,12 +207,14 @@ payload. This records the evidence for the new driver; it does not replace the
 historical SDK pin above. The existing CI matrix will also compile the new
 sources against the pinned SDK on each PR.
 
-The portable foundation now passes synthetic BME688/LED Stick protocol and
+At the initial foundation stage, synthetic BME688/LED Stick protocol and
 lifecycle tests, host ASan/UBSan, C/C++ consumer linkage, relocated package
 installation, selected-driver configurations and all eight GCC SoC compile
-checks. The foundation has 10 translation units (including the shared bus and
-retained TDK subset). The shared NSX port and real bare-metal/FreeRTOS links now have
-contract/link evidence; hardware tests remain pending; Armclang and ATfE have not been rerun for this migration.
+checks passed. That foundation had 10 translation units (including the shared
+bus and retained TDK subset). The shared NSX port and real bare-metal/FreeRTOS
+links now have contract/link evidence. Final-candidate revalidation and hardware
+qualification remain outstanding; Armclang and ATfE have not been rerun for the
+full migration.
 
 Hardware qualification still needs a recorded board, sensor/module revision,
 SDK revision, toolchain, bus speed/mode, and results for:
@@ -242,7 +248,8 @@ perform:
 
 ## Shared NSX port (unreleased)
 
-The portable BME688 and LED Stick drivers now have a shared NSX adapter.
+Seven portable cores use the shared NSX I2C/SPI adapter. T5838 instead requires
+a board-provided timed THSEL endpoint; PDM capture remains in the audio layer.
 It requires SDK PR #130; see [the adapter guide](nsx-port.md) for the exact
 CI revision, transfer limits, locking, and remaining hardware checks.
 

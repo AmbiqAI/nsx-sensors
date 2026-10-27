@@ -4,7 +4,8 @@ Version metadata remains `0.3.0`. V1 is unreleased: this qualification work
 neither bumps the version nor creates a tag, release, registry pin or hardware
 qualification. PR #32, merged at baseline `f3b313a`, established the v1 source
 contract. Release acceptance remains a separate maintainer decision under
-[OWNERS.md](OWNERS.md).
+[OWNERS.md](OWNERS.md). See the [readiness audit](docs/v1-readiness.md)
+for merged qualification evidence and remaining release steps.
 
 `version.txt` is the version source of truth and must match `nsx-module.yaml`
 and the standalone CMake project version. Historical v0.1.0 foundation evidence
