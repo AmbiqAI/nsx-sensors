@@ -31,6 +31,44 @@ failed, cancelled, pending and skipped integration checks, and an all-success
 control. Include the real firmware job in the explicit job list as skip protection;
 current overall `ci.yml` success already rejects an ordinary firmware-job failure.
 
+## Qualification follow-up: PR #33 (unmerged)
+
+[PR #33](https://github.com/AmbiqAI/nsx-sensors/pull/33) implements the technical portions of the first three
+recommended actions at `b93a315cc0a572d2d2afbd52035ac293662b95c8`. This is pending
+change evidence, not a claim that the audited main publication gate is repaired.
+
+- Publication now checks both exact-SHA push/main workflows, latest runs/current
+  attempts, all required jobs, complete pagination and bounded waiting. Offline
+  positive/negative tests exercise the actual gate. A fresh independent gate
+  review found no blocking issue. Copilot's publication timing finding was fixed
+  by rerunning the gate in the publish job immediately before tag creation/retry;
+  a failing gate is exercised through the actual workflow shell.
+- Resource evidence records all eight context sizes, both adapter/scratch layouts,
+  complete-API retained flash, framework fixture costs, maps/commands and compiler
+  stack frames. Independent full reproduction matched all layouts/footprints and
+  portable ELF hashes exactly. A fresh run from clean `12609fe` additionally
+  checks pinned clean SDK, Zephyr, CMSIS and CMSIS 6 trees before/after building,
+  addressing Copilot's external-input finding. Final artifact hashes and sizes
+  were independently checked. Largest frames/source paths are not worst-case
+  task stacks; runtime high-water and actual controller/ISR paths remain open.
+- NOTICE paths, historical/current provenance, eight-core catalog, release policy
+  and migration defaults/recovery were reconciled. Independent technical review
+  found no lost license text or consequential migration discrepancy. OWNERS
+  maintainer approval is still separate; no legal signoff is manufactured.
+- Existing portable/selected/installed-consumer and ASan/UBSan, NSX adapter, ABI
+  profile and INA228 suites pass. All 73 Python tests and all six hosted CI checks
+  pass at this head. Production driver/header/vendor/CMake/Zephyr trees are
+  unchanged from the audited baseline. Focused independent and local Copilot
+  reviews found no consequential issue in the fixes. Copilot's final artifact
+  supplement at `b93a315` verified all four pins, 45 input hashes, archive
+  integrity and 10 portable ELF hashes with no consequential findings.
+
+The [hardware plan at that revision](https://github.com/AmbiqAI/nsx-sensors/blob/b93a315cc0a572d2d2afbd52035ac293662b95c8/docs/hardware-validation.md)
+starts with a preserved known-good application/firmware snapshot, explicit
+configuration, identity/readback, stable-input acquisition and isolated recovery
+checks before FIFO/concurrency/clock handoff. Hardware cannot readily be added at present; simulation qualification is
+tracked separately in PR #34. No hardware was flashed and no existing driver behavior changed.
+
 ## Current evidence and limits
 
 The fresh review checks and unresolved qualification work are distinguished from
