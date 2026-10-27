@@ -1,23 +1,32 @@
 # v1 RFC readiness audit
 
-Audited snapshot: `f3b313a773f3e2eb39fc16fc340fbd8c94ae75bf` (merged PR #32),
-2026-10-26. Three fresh reviewers examined the complete snapshot, with separate
-API/lifecycle, driver and build/integration emphases; a coordinating reviewer
-checked release controls and reconciled evidence. Initial discovery did not use
-the historical audit below. This is a software audit, not hardware qualification.
+Current merged snapshot: `c7707fa6accc58b0f4eb796a4aaf331d45f25144` (PR #34),
+2026-10-27. This refresh reconciles merged qualification PR #33 (`29c6315`) and
+simulation PR #34 with the earlier audit. It is not a new full-source audit.
+
+The full-snapshot audit at `f3b313a773f3e2eb39fc16fc340fbd8c94ae75bf` (PR #32),
+2026-10-26, used three fresh reviewers with API/lifecycle, driver and
+build/integration emphases, plus coordinating release-control checks. Subsequent
+reviews covered the qualification and simulation deltas, including fixes and
+final evidence. Production driver/header/vendor/CMake/Zephyr implementation is
+unchanged from that full-audit baseline. No hardware qualification is claimed.
 
 All eight cores, shared CMake integration and the v1 source-contract decision are
 merged. Approval and merge of PR #32 accepted the source API freeze. Version
 metadata remains `0.3.0`; release qualification and publication are not complete.
 
-## Current actionable finding
+## Resolved publication finding
 
-**P2 — the publication gate ignores Zephyr CI.**
+**Closed by merged PR #33 — publication previously ignored Zephyr CI.**
+The following reproduction describes the original `f3b313a` defect, not current
+main. The fix and verification are recorded below.
+
+At the original baseline,
 [release.yml at the audited revision](https://github.com/AmbiqAI/nsx-sensors/blob/f3b313a773f3e2eb39fc16fc340fbd8c94ae75bf/.github/workflows/release.yml#L85)
 queries only `ci.yml`, then allows publication. The independently running
 `zephyr.yml` can fail, remain pending, or be absent without affecting this gate.
 That permits publication without the Zephyr final-candidate evidence required by
-RFC 0001. This blocks release readiness, not acceptance of the source API.
+RFC 0001. This blocked release readiness, not acceptance of the source API.
 
 The coordinator extracted the actual gate shell unchanged and executed it with
 an offline `gh` stand-in: exact-SHA push/main CI succeeded and Zephyr was modeled
@@ -25,17 +34,19 @@ as failed. The gate returned success and never queried Zephyr. The build reviewe
 independently confirmed the source path and requirement mismatch after recording
 its own initial candidate ledger. No tag or release was created.
 
-Require successful runs of both workflows on the exact release SHA, push event
-and main branch, plus successful required jobs. Add behavioral tests for absent,
+The required correction was successful runs of both workflows on the exact release SHA, push event
+and main branch, plus successful required jobs. Behavioral tests were required for absent,
 failed, cancelled, pending and skipped integration checks, and an all-success
-control. Include the real firmware job in the explicit job list as skip protection;
-current overall `ci.yml` success already rejects an ordinary firmware-job failure.
+control, including the real firmware job in the explicit job list as skip protection;
+the old overall `ci.yml` success already rejected an ordinary firmware-job failure.
 
-## Qualification follow-up: PR #33 (unmerged)
+## Merged qualification: PR #33
 
-[PR #33](https://github.com/AmbiqAI/nsx-sensors/pull/33) implements the technical portions of the first three
-recommended actions at `b93a315cc0a572d2d2afbd52035ac293662b95c8`. This is pending
-change evidence, not a claim that the audited main publication gate is repaired.
+[PR #33](https://github.com/AmbiqAI/nsx-sensors/pull/33) merged as
+`29c6315c190b98432c0fac8f6d2a12989978c4ba`, completing the publication fix,
+static resource measurements and technical provenance/migration review. Reviewed
+PR head was `b93a315cc0a572d2d2afbd52035ac293662b95c8`; maintainer release
+signoff remains separate from technical completion.
 
 - Publication now checks both exact-SHA push/main workflows, latest runs/current
   attempts, all required jobs, complete pagination and bounded waiting. Offline
@@ -66,10 +77,31 @@ change evidence, not a claim that the audited main publication gate is repaired.
 The [hardware plan at that revision](https://github.com/AmbiqAI/nsx-sensors/blob/b93a315cc0a572d2d2afbd52035ac293662b95c8/docs/hardware-validation.md)
 starts with a preserved known-good application/firmware snapshot, explicit
 configuration, identity/readback, stable-input acquisition and isolated recovery
-checks before FIFO/concurrency/clock handoff. Hardware cannot readily be added at present; simulation qualification is
-tracked separately in PR #34. No hardware was flashed and no existing driver behavior changed.
+checks before FIFO/concurrency/clock handoff. Hardware cannot readily be added
+at present. No hardware was flashed and no existing driver behavior changed.
 
-## Current evidence and limits
+## Merged simulation qualification: PR #34
+
+[PR #34](https://github.com/AmbiqAI/nsx-sensors/pull/34) merged as
+`c7707fa6accc58b0f4eb796a4aaf331d45f25144`. Reviewed head was
+`c2f446a2b7abd42dd1e1944046c8b4779ad7f328`, with all six CI checks passing.
+It adds bounded time-driven FIFO/model checks and before/after-effect init
+failure/recovery tests, retaining existing coverage where sufficient.
+
+Nine compiling mutations across eight cores were rejected; restored controls
+passed. Actual pre-migration INA228 and current source agreed on 22 independently
+asserted vectors. This is not a side-by-side comparison of every former driver.
+Independent review reproduced these checks and eight sanitizer tests, and rejected
+three separately selected model corruptions. Local Copilot found no consequential
+findings. Sources, scenario assumptions and limitations are recorded in
+[sensor simulation](sensor-simulation.md). No physical accuracy, electrical
+waveform or real-time scheduling qualification follows from these models.
+
+## Original full-audit evidence and subsequent closure
+
+The following observations are from `f3b313a`. PR #33 closes the publication,
+static-resource and technical documentation gaps; PR #34 adds simulation evidence.
+Maintainer signoff and final-release-candidate qualification remain open.
 
 The fresh review checks and unresolved qualification work are distinguished from
 historical PR evidence below. Reports are full-snapshot reviews; a clean result
@@ -92,14 +124,13 @@ supported configurations or silicon behavior.
   build pass in separate temporary storage. The source/relocated C++ ABI probe
   completed its expected output without logged errors, but its process exit code
   was not retained; treat that run as supporting evidence only. The release
-  gate finding above is the confirmed build/release defect.
-- Resource/stack costs remain unqualified. Record per-context and adapter sizes,
-  linked flash/RAM and compiler stack-usage on named target/toolchain/optimization
-  settings; distinguish static estimates from runtime high-water measurements.
-- Provenance and release docs need current source mappings and clear historical
-  labeling. `NOTICE` still names relocated Bosch files; `CATALOG.md` retains the
-  old version/six-device inventory. Retain original notices and record maintainer
-  provenance approval; this audit does not supply legal signoff.
+  gate finding above was the confirmed build/release defect, now fixed by PR #33.
+- Static resource/stack evidence was missing at the full-audit baseline and is
+  now recorded in [resource qualification](resource-qualification.md) by PR #33.
+  Runtime high-water and worst-case call-chain budgets remain unqualified.
+- PR #33 corrected stale NOTICE paths, catalog scope and historical/current
+  provenance labeling. Original license text remains intact. Technical review
+  is complete; recorded maintainer provenance approval remains separate.
 - Final release metadata and exact-candidate CI are still required. Historical
   PR checks and even current-main checks do not qualify a later release commit.
 - Electrical/timing/accuracy qualification, T5838 board timing/audio, other Zephyr
@@ -288,11 +319,12 @@ pass, including all eight SoCs and real NSX bare-metal/FreeRTOS links. The
 firmware job passed on a fresh-runner retry after stalled package installation
 was cancelled. Those PR reviews had no unresolved findings at merge; PR #32
 was subsequently squash-merged as `f3b313a`. The fresh whole-snapshot audit above
-identifies the separate publication-gate defect.
+identified the separate publication-gate defect subsequently fixed by PR #33.
 Its source-contract freeze is accepted; these checks still do not establish
 release or hardware qualification.
-Resource qualification, provenance signoff, final-candidate revalidation and
-release metadata remain open. No firmware execution or hardware qualification
+At that PR #32 baseline, resource qualification, provenance signoff,
+final-candidate revalidation and release metadata remained open. The current
+checklist below supersedes that historical status. No firmware execution or hardware qualification
 is claimed by these builds.
 
 ## Accepted RFC source-contract decisions
@@ -323,30 +355,26 @@ qualification of future release candidates.
 
 ## Ordered release checklist
 
-PRs #28–#32 are merged. Source acceptance and representative framework integration
-are complete; final release qualification remains separate.
+PRs #28–#34 are merged. Source API acceptance, representative framework
+integration, publication-gate repair, static resource evidence, technical
+provenance/migration review and bounded regression simulation are complete.
+No unresolved consequential software finding remains from these reviews.
 
-1. **Repair publication gating.** Require the separate Zephyr workflow and all
-   required integration jobs on the exact release SHA, with offline negative
-   tests of the actual gate. Resolve the confirmed P2 finding before publication.
-2. **Measure resource costs.** Record per-context/adapter scratch sizes, linked
-   flash/RAM and compiler stack-usage evidence on named target/toolchain and
-   optimization settings. Include vendor/callback paths; distinguish static
-   estimates from runtime high-water marks, which require execution.
-3. **Finish provenance and migration review.** Map historical source names to
-   current paths, distinguish old release scope from the accepted v1 contract,
-   and align NOTICE/PROVENANCE/CATALOG without rewriting original license terms.
-   Record required maintainer signoff per OWNERS.md. Automated notice tests and
-   technical review are not a substitute for that recorded approval.
-4. **Prepare coherent v1 metadata.** Update version.txt, nsx-module.yaml, CMake
+1. **Record maintainer release/provenance signoff.** Confirm the current scope,
+   source mappings and retained notices under OWNERS.md. Technical review and PR
+   merge approval do not by themselves record the final release signoff.
+2. **Prepare coherent v1 metadata.** Update version.txt, nsx-module.yaml, CMake
    version, changelog, catalog and compatibility claims together in a release PR.
    Verify repository controls tracked by [issue #5](https://github.com/AmbiqAI/nsx-sensors/issues/5).
    No registry repin or publication is implied by preparing these files.
-5. **Qualify and publish the exact final candidate.** Rerun offline suites,
+3. **Qualify and publish the exact final candidate.** Rerun offline suites,
    eight-SoC compile matrix, real NSX bare-metal/FreeRTOS links and pinned Zephyr
    tests/cross-build on the final SHA. Record toolchains actually rerun. Publish
    only after required exact-main-commit checks and maintainer approval through
    the immutable workflow. Coordinate downstream registry promotion separately.
+
+Hardware qualification is a separately disclosed limitation of any software API
+release, not an automatically completed result or a newly imposed blocker.
 
 ## Deferred hardware qualification
 

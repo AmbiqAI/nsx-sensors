@@ -207,10 +207,12 @@ static void test_failures(void)
     fake_t f; mpu6050_context_t ctx;
     /* Every transaction of initialization must propagate an I/O failure. */
     init_fake(&ctx, &f); size_t init_calls = f.calls - 2;
-    for (size_t i = 1; i <= init_calls; ++i) {
-        bind_fake(&ctx, &f); f.fail_at = i;
+    for (unsigned after = 0; after < 2; ++after) for (size_t i = 1; i <= init_calls; ++i) {
+        bind_fake(&ctx, &f); f.fail_at = i; f.fail_after_read = after != 0;
         mpu6050_config_t c = mpu6050_default_config();
         assert(mpu6050_init(&ctx, &c) == NSX_SENSOR_E_IO && !ctx._configured);
+        f.fail_at = 0;
+        assert(mpu6050_init(&ctx, &c) == NSX_SENSOR_OK);
     }
     init_fake(&ctx, &f);
     mpu6050_raw_sample_t raw = {.temperature = 123}, saved = raw;
@@ -466,6 +468,24 @@ static nsx_sensor_status_t conversion_transfer(void *user, const nsx_sensor_tran
     }
     return transfer(&t->device, transfer_desc);
 }
+/* RM-MPU-6000A-00 rev4.2 sections 4.2, 4.14, 4.16-4.17: configured 100 Hz,
+ * latest output persists; INT_STATUS reads clear DRDY, output reads do not
+ * unless INT_RD_CLEAR is set. Test the model without any driver call first. */
+static void test_conversion_model(void)
+{
+    timed_fake_t t = {0};
+    conversion_delay(&t, 9999);
+    assert(t.produced == 0 && t.device.regs[0x3a] == 0);
+    conversion_delay(&t, 1);
+    assert(t.produced == 1 && word(t.device.regs + 0x3b) == 100);
+    conversion_delay(&t, 20000); /* No polling: intermediate result is replaced. */
+    assert(t.produced == 3 && word(t.device.regs + 0x3b) == 300);
+    uint8_t status = 0, reg = 0x3a;
+    const nsx_sensor_transfer_t read_status = {&reg, 1, &status, 1};
+    assert(transfer(&t.device, &read_status) == NSX_SENSOR_OK && status == 1);
+    assert(transfer(&t.device, &read_status) == NSX_SENSOR_OK && status == 0);
+    assert(word(t.device.regs + 0x3b) == 300);
+}
 static void test_fresh_average(void)
 {
     for (unsigned any_read_clear = 0; any_read_clear < 2; ++any_read_clear) {
@@ -493,7 +513,7 @@ int main(void)
 {
     test_lifecycle(); test_config_and_data(); test_failures(); test_fifo();
     test_fifo_formats(); test_offsets_and_calibration(); test_instances_and_recovery();
-    test_fifo_enable_and_batches(); test_fresh_average();
+    test_fifo_enable_and_batches(); test_conversion_model(); test_fresh_average();
     puts("MPU6050: lifecycle, register fields, samples, FIFO recovery, offsets and bounded calibration passed");
     return 0;
 }

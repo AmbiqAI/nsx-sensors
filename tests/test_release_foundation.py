@@ -10,6 +10,9 @@ smoke in ``tests/vendor_compile_smoke.sh``.
 from __future__ import annotations
 
 import io
+import os
+import tempfile
+import textwrap
 import re
 import subprocess
 import tarfile
@@ -408,8 +411,11 @@ class ReleaseAutomationTests(unittest.TestCase):
         # trigger set rather than the absence of one literal spelling: a `push:`
         # added after `workflow_dispatch:` would not contain "on:\n  push:".
         self.assertEqual({"workflow_dispatch"}, top_level_trigger_keys(self.release))
-        self.assertIn("--workflow ci.yml", self.release)
-        self.assertIn("headSha", self.release)
+        self.assertIn("python3 scripts/release_gate.py", self.release)
+        self.assertIn('--sha "$RELEASE_SHA"', self.release)
+        gate = (ROOT / "scripts/release_gate.py").read_text()
+        for workflow in ("ci.yml", "zephyr.yml"):
+            self.assertIn(workflow, gate)
         self.assertIn("Refusing to retarget", self.release)
         for job in (
             "Host release and API contracts",
@@ -417,13 +423,39 @@ class ReleaseAutomationTests(unittest.TestCase):
             "Nested CMake consumer contract",
             "Module compile smoke (all declared SoCs, Arm GNU)",
         ):
-            self.assertIn(job, self.release)
+            self.assertIn(job, gate)
 
     def test_ci_runs_on_push_and_pull_request(self) -> None:
         self.assertEqual(
             {"push", "pull_request", "workflow_dispatch"},
             top_level_trigger_keys(self.ci),
         )
+
+    def test_publish_gate_failure_prevents_tag_mutation(self) -> None:
+        publish = self.release.split('\n  publish:', 1)[1]
+        self.assertIn('actions: read', publish)
+        step = publish.split('- name: Create the annotated tag', 1)[1].split('\n      - name:', 1)[0]
+        self.assertIn('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}', step)
+        self.assertIn('RELEASE_SHA: ${{ needs.validate.outputs.sha }}', step)
+        script = textwrap.dedent(step.split('        run: |\n', 1)[1])
+        self.assertLess(script.index('python3 scripts/release_gate.py'), script.index('git tag -a'))
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            # Execute the actual workflow shell with bounded fake executables.
+            # A failed publication-side gate must stop before tag lookup/write.
+            (directory / 'git').write_text('#!/bin/sh\necho "$*" >> "$TRACE"\n'
+                                          'if [ "$1" = rev-parse ]; then echo "$RELEASE_SHA"; fi\n')
+            (directory / 'python3').write_text('#!/bin/sh\necho "gate $*" >> "$TRACE"\nexit 1\n')
+            for name in ('git', 'python3'):
+                (directory / name).chmod(0o755)
+            env = dict(os.environ, PATH=tmp + os.pathsep + os.environ['PATH'],
+                       TRACE=str(directory / 'trace'), RELEASE_SHA='a' * 40,
+                       RELEASE_TAG='v0.3.0', GITHUB_REPOSITORY='test/sensors')
+            result = subprocess.run(['bash', '-c', script], env=env, capture_output=True, timeout=10)
+            self.assertNotEqual(result.returncode, 0)
+            lines = (directory / 'trace').read_text().splitlines()
+            self.assertEqual(lines, ['rev-parse HEAD',
+                'gate scripts/release_gate.py --repository test/sensors --sha ' + 'a' * 40])
 
     def test_release_creates_an_immutable_annotated_tag_with_checksum(self) -> None:
         self.assertIn("git tag -a", self.release)

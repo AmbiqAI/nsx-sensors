@@ -21,7 +21,8 @@ permissions:
 
 jobs:
   validate:
-    name: Validate exact main CI
+    name: Validate exact main CI and Zephyr
+    timeout-minutes: 40
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -74,61 +75,22 @@ jobs:
       - name: Run host contracts on the release commit
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Wait for successful CI on the exact commit
+      - name: Require exact-main CI and Zephyr jobs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_SHA: ${{ steps.release.outputs.sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 60); do
-            runs="$(gh run list --workflow ci.yml --commit "$RELEASE_SHA" \
-              --json databaseId,event,headBranch,status,conclusion,headSha --limit 20)"
-            match="$(printf '%s' "$runs" | jq -c --arg sha "$RELEASE_SHA" \
-              '[.[] | select(.headSha == $sha and .event == "push" and
-                .headBranch == "main")] | first // {}')"
-            state="$(printf '%s' "$match" | jq -r \
-              'if .status == null then "missing" else "\(.status)|\(.conclusion)" end')"
-            case "$state" in
-              completed\|success)
-               run_id="$(printf '%s' "$match" | jq -r '.databaseId')"
-               jobs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs?per_page=100")"
-               required=(
-                 "Host release and API contracts"
-                 "Vendored TDK subset standalone compile"
-                 "Nested CMake consumer contract"
-                 "Module compile smoke (all declared SoCs, Arm GNU)"
-               )
-               for name in "${required[@]}"; do
-                 count="$(printf '%s' "$jobs" | jq --arg name "$name" \
-                   '[.jobs[] | select(.name == $name and .conclusion == "success")] | length')"
-                 if [[ "$count" != "1" ]]; then
-                   echo "Required CI job did not pass for ${RELEASE_SHA}: ${name}" >&2
-                   exit 1
-                 fi
-               done
-               echo "Required CI jobs succeeded for ${RELEASE_SHA}."
-               exit 0
-               ;;
-              completed\|*)
-                echo "CI failed for ${RELEASE_SHA}: $state" >&2
-                exit 1
-                ;;
-              *)
-                echo "CI state ${state} (${attempt}/60)"
-                sleep 30
-                ;;
-            esac
-          done
-          echo "Timed out waiting for CI on ${RELEASE_SHA}" >&2
-          exit 1
+        run: >-
+          python3 scripts/release_gate.py
+          --repository "$GITHUB_REPOSITORY" --sha "$RELEASE_SHA"
 
   publish:
     name: Publish immutable annotated tag and archive
+    timeout-minutes: 40
     needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -136,12 +98,16 @@ jobs:
 
       - name: Create the annotated tag
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          # Validation may have queued this job before a newer CI rerun started.
+          # Recheck for both new tags and existing-tag asset retries.
+          python3 scripts/release_gate.py --repository "$GITHUB_REPOSITORY" --sha "$RELEASE_SHA"
           if git ls-remote --exit-code origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
             git fetch --no-tags origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
             test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"
