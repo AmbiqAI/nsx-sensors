@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.20)
+project(sensor_resource_qualification C)
+add_library(resource_profile INTERFACE)
+target_compile_options(resource_profile INTERFACE
+    -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+    -Os -fshort-enums -ffunction-sections -fdata-sections -fstack-usage)
+target_link_options(resource_profile INTERFACE
+    -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+    -nostartfiles --specs=nosys.specs -Wl,-e,main)
+set(NSX_SENSOR_COMPILE_CONTEXT resource_profile)
+set(NSX_SENSOR_PORT_NSX OFF CACHE BOOL "" FORCE)
+add_subdirectory(../.. sensors)
+add_library(layout OBJECT layout.c)
+target_link_libraries(layout PRIVATE nsx::sensors)
+set(drivers bme688 ledstick ina228 mpu6050 max86150 icm45605 tsl254x t5838)
+foreach(name baseline ${drivers} aggregate)
+    add_executable(${name} main.c)
+    target_link_libraries(${name} PRIVATE resource_profile)
+    if(name STREQUAL aggregate)
+        set(retained nsx_sensor_common)
+        foreach(driver IN LISTS drivers)
+            list(APPEND retained nsx_sensor_${driver})
+        endforeach()
+        target_link_libraries(${name} PRIVATE -Wl,--whole-archive ${retained} -Wl,--no-whole-archive)
+    elseif(NOT name STREQUAL baseline)
+        target_link_libraries(${name} PRIVATE -Wl,--whole-archive nsx_sensor_${name} nsx_sensor_common -Wl,--no-whole-archive)
+    endif()
+    # No GC: retain every selected core/vendor function, including uncalled APIs.
+    target_link_options(${name} PRIVATE "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/${name}.map")
+endforeach()

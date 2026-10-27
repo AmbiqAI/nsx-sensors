@@ -13,7 +13,7 @@ No generic sensor object, heap allocation, queues, or framework wrapper is added
 
 The shared [NSX adapter](../nsx-port.md) supplies endpoints using the genuine
 combined I2C operation from SDK PR #130. TDK callbacks and ICM-45605 have now
-been migrated to per-instance state; all six cores are portable. Existing BME688
+been migrated to per-instance state; all eight cores are portable. Existing BME688
 and LED Stick NSX call sites need the endpoint and lifecycle changes below.
 
 ## Shared contracts
@@ -106,18 +106,21 @@ An attempted address-change command invalidates the binding even on success.
 The application must establish the resulting address, construct/rebind its
 endpoint, and initialize again. On error either address may be active; do not
 blindly retry at the old address. Failed length writes also invalidate cached
-configuration; set the length successfully or initialize before other commands.
+configuration; initialize before other commands, following the public recovery contract.
 
 ## Build and migration status
 
 Portable default targets are `nsx::sensor_common`, `nsx::sensor_bme688`,
-`nsx::sensor_ledstick`, `nsx::sensor_ina228`, `nsx::sensor_mpu6050`, and `nsx::sensor_max86150`. Disable individual drivers with `NSX_SENSOR_*` options.
+`nsx::sensor_ledstick`, `nsx::sensor_ina228`, `nsx::sensor_mpu6050`,
+`nsx::sensor_max86150`, `nsx::sensor_icm45605`, `nsx::sensor_tsl254x`, and
+`nsx::sensor_t5838`. Disable individual drivers with `NSX_SENSOR_*` options.
 Only enabled driver headers/libraries are installed. Installed and nested
 consumers use the same target names; `find_package` components are `bme688`,
-`ledstick`, `ina228`, `mpu6050`, `max86150`, `icm45605`, and `common`. Package exports contain no SDK paths or implicit
+`ledstick`, `ina228`, `mpu6050`, `max86150`, `icm45605`, `tsl254x`, `t5838`,
+and `common`. Package exports contain no SDK paths or implicit
 repository discovery. Until v1, package version compatibility is exact.
 
-All six cores are now portable. The transitional `NSX_SENSORS_LEGACY_NSX`
+All eight cores are now portable. The transitional `NSX_SENSORS_LEGACY_NSX`
 option is removed. `nsx::sensors` is an interface aggregate of selected driver
 targets and ships in the same portable package export. It exists with or without
 NSX. Link `nsx::sensor_port_nsx` separately for NSX endpoints; only that adapter

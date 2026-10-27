@@ -1,38 +1,49 @@
 # Module catalog entry
 
-This is the catalog view intended for downstream neuralSPOT-X registry
-promotion **after** the release is published. The registry should continue to
-point at this project and should move to the immutable tag, not a branch.
+Current metadata is `0.3.0`; the v1 source contract was accepted in merged
+PR #32 (`f3b313a`) and v1 publication remains separate. This inventory describes
+the current source tree, not the historical v0.1.0 release audit. Downstream
+registry promotion requires an explicitly selected immutable tag or full SHA;
+this qualification work does not repin consumers.
 
-| Module | Metadata | CMake target | Required dependencies | Release version |
-| --- | --- | --- | --- | --- |
-| `nsx-sensors` | `nsx-module.yaml` | `nsx::sensors` | `nsx-core`, `nsx-i2c`, `nsx-spi` | `0.1.0` |
+| Module | Metadata | Aggregate target | NSX resolver dependencies |
+| --- | --- | --- | --- |
+| `nsx-sensors` | `nsx-module.yaml` | `nsx::sensors` | `nsx-core`, `nsx-i2c`, `nsx-spi` |
 
-## Devices
+The dependencies above apply to NSX resolution. Portable cores and their
+`nsx::sensors` interface aggregate build without the SDK. All eight ordinary
+CMake source options default ON; the aggregate includes only selected cores.
 
-| Device | Bus | Public header |
-| --- | --- | --- |
-| Bosch BME688 T/P/H/raw gas (forced mode) | I2C / 4-wire SPI | `include/nsx/sensors/bme688.h` |
-| MAX86150 ECG/PPG | I2C | `include/nsx/sensors/max86150.h` |
-| MPU6050 6-axis IMU | I2C | `include/nsx/sensors/mpu6050.h` |
-| INA228 power/current monitor | I2C | `include/nsx/sensors/ina228.h` |
-| SparkFun Qwiic LED Stick | I2C | `include/nsx/sensors/ledstick.h` |
-| TDK ICM-45605 6-axis IMU | SPI | `include/nsx/sensors/icm45605.h` |
+| Core | Interface | Public header under `include/nsx/sensors/` | Target / option suffix / installed component |
+| --- | --- | --- | --- |
+| BME688 forced T/P/H/raw gas | I2C / 4-wire SPI | `bme688.h` | `nsx::sensor_bme688` / `BME688` / `bme688` |
+| MAX86150 ECG/PPG | I2C | `max86150.h` | `nsx::sensor_max86150` / `MAX86150` / `max86150` |
+| MPU6050 6-axis IMU | I2C | `mpu6050.h` | `nsx::sensor_mpu6050` / `MPU6050` / `mpu6050` |
+| INA228 power/current monitor | I2C | `ina228.h` | `nsx::sensor_ina228` / `INA228` / `ina228` |
+| Qwiic LED Stick | I2C | `ledstick.h` | `nsx::sensor_ledstick` / `LEDSTICK` / `ledstick` |
+| ICM-45605 basic 6-axis IMU | 4-wire SPI | `icm45605.h` | `nsx::sensor_icm45605` / `ICM45605` / `icm45605` |
+| TSL2540/TSL2541 raw visible/IR counts | I2C | `tsl254x.h` | `nsx::sensor_tsl254x` / `TSL254X` / `tsl254x` |
+| T5838 acoustic activity control | Timed CLK/THSEL waveform | `t5838.h` | `nsx::sensor_t5838` / `T5838` / `t5838` |
 
-The compatibility declaration covers the Apollo3, Apollo3P, Apollo4L, Apollo4P,
-Apollo330P, Apollo510, Apollo510B, and Apollo510L families declared by
-`nsx-i2c` and `nsx-spi`. Catalog support is a build expectation, not a claim of
-hardware validation: no driver in `v0.1.0` is hardware-in-the-loop qualified.
-See `docs/compatibility.md` for the evidence and for why `apollo5b` is
-deliberately excluded.
+Options use the `NSX_SENSOR_` prefix. `nsx::sensor_common` supplies shared bus
+helpers (`common` installed component); `bus.h`, `runtime.h`, and `status.h`
+define shared contracts. Disabled device headers and libraries are not installed.
+Portable exports use `nsxSensorTargets` with namespace `nsx::`.
 
-The current registry lock already pins `nsx-sensors` at
-`9a73d590fee7b377011af0b998a7563571acc228`. No registry, `neuralspotx`,
-`neuralSPOT`, `ns-sensors`, or application repository is changed by this
-release-preparation branch.
+NSX users explicitly link `nsx::sensor_port_nsx` and include `port_nsx.h`.
+Its default is ON only when the enclosing build already provides `nsx::core`,
+`nsx::i2c`, and `nsx::spi`. Installed `port_nsx` is opt-in through
+`NSX_SENSOR_INSTALL_NSX_PORT` and requires consumer-loaded SDK bus targets.
+Zephyr uses `zephyr/module.yml` and opt-in Kconfig core selection, the same
+production core targets, `port_zephyr.h`, and `nsx_sensor_port_zephyr` when I2C
+or SPI is enabled. Only BME688 has a Zephyr sensor API wrapper. Neither shared
+bus adapter implements T5838 waveform delivery or PDM/PCM capture.
 
-Unreleased migration: all six cores have portable per-driver targets.
-`nsx::sensors` aggregates selected cores without SDK dependencies. Link the
-shared `nsx::sensor_port_nsx` explicitly in NSX applications. ICM-45605 exposes
-the basic SPI subset; see `docs/migration/icm45605.md`. Registry consumers must
-not repin automatically during this transition.
+The compatibility declaration covers Apollo3, Apollo3P, Apollo4L, Apollo4P,
+Apollo330P, Apollo510, Apollo510B, and Apollo510L. This is a build expectation,
+not hardware qualification; see [compatibility](docs/compatibility.md),
+[firmware validation](docs/firmware-validation.md), and
+[Zephyr validation](docs/zephyr-validation.md) for scoped evidence.
+The [source contract](docs/v1-api-contract.md) requires recompilation and
+promises no stable binary ABI. See the [migration review](docs/migration/release-review.md)
+for defaults, recovery, historical lineage and remaining release gates.

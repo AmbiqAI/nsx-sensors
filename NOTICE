@@ -2,8 +2,8 @@ nsx-sensors
 Copyright (c) 2026, Ambiq
 
 This distribution contains the NSX external sensor and accessory drivers. The
-Ambiq-authored sources in `includes-api/` and `src/` are licensed under the
-BSD-3-Clause License in LICENSE. The existing drivers were ported from AmbiqAI's
+Ambiq-authored sources in `include/nsx/sensors/`, `src/`, and `zephyr/` are
+licensed under the BSD-3-Clause License in LICENSE. The existing drivers were ported from AmbiqAI's
 neuralSPOT drivers; the exact upstream files and revisions are recorded in
 PROVENANCE.md.
 
@@ -11,7 +11,7 @@ PROVENANCE.md.
 Third-party components
 --------------------------------------------------------------------------------
 
-src/nsx_bme688_compensation.c and adapted timing arithmetic in src/nsx_bme688.c
+src/bme688/compensation.c and adapted timing arithmetic in src/bme688/bme688.c
     Bosch Sensortec BME68x Sensor API v4.4.8, commit
     80ea120a8b8ac987d7d79eb68a9ed796736be845.
 

@@ -1,6 +1,16 @@
 # Provenance and release audit
 
-## Release identity
+## Current qualification scope
+
+Baseline: merged PR #32, `f3b313a`. Version metadata remains `0.3.0`; v1 is
+unreleased. The eight portable cores and shared adapters are inventoried in
+[CATALOG.md](CATALOG.md). The merged source contract is recorded in
+[docs/v1-api-contract.md](docs/v1-api-contract.md); it promises documented source
+compatibility after recompilation, not a stable binary ABI or context layout.
+The technical reconciliation and remaining approval/evidence gaps are recorded
+in [docs/migration/release-review.md](docs/migration/release-review.md).
+
+## Historical v0.1.0 release-foundation audit
 
 | Item | Value |
 | --- | --- |
@@ -11,12 +21,14 @@
 | Commits after the registry pin | 0 |
 | Release tag policy | immutable annotated `vMAJOR.MINOR.PATCH` tag |
 
-The audited source is the fetched `origin/main` commit above, which is byte-for-byte
-the revision the stable neuralSPOT-X registry lock already pins for `nsx-sensors`.
-The eventual `v0.1.0` tag must point at the later `main` commit that merges this
-release foundation; that merge SHA is deliberately not guessed or published here.
+At that historical audit, the audited source was the fetched `origin/main`
+commit above, byte-for-byte the revision then pinned by the stable
+neuralSPOT-X registry lock for `nsx-sensors`.
+The audit did not establish the eventual tag SHA. These values are historical
+reproduction evidence, not a claim about the current registry pin, release tag,
+or successful CI for the v1 qualification commit.
 
-## Dependency pins
+## Historical v0.1.0 dependency pins
 
 | Dependency | Exact revision | Role |
 | --- | --- | --- |
@@ -29,7 +41,7 @@ not vendored copies and this release does not request a registry change.
 
 ## Ambiq-authored source lineage
 
-The five existing drivers listed below are Ambiq-authored ports. The new native
+The five original drivers listed below are Ambiq-authored ports. The new native
 BME688 driver and its Bosch-derived calculations are documented separately
 below. Ports are
 line-level derivations, not verbatim copies: the NSX ports drop `ns_core_api_t`
@@ -49,6 +61,28 @@ All listed revisions are reachable from the `main` branch of their repository.
 `AmbiqAI/neuralSPOT` and `AmbiqAI/ns-sensors` are both BSD-3-Clause and are
 Ambiq-owned, so the BSD-3-Clause `LICENSE` in this repository covers the ported
 result. No third-party copyright was absorbed by these ports.
+
+## Current source path map
+
+Historical paths above identify the original port and must not be used as current
+include instructions. The later portable migrations retain that lineage:
+
+| Historical repository path | Current public header / implementation |
+| --- | --- |
+| `includes-api/nsx_max86150.h`, `src/nsx_max86150.c` | `include/nsx/sensors/max86150.h`, `src/max86150/max86150.c` |
+| `includes-api/nsx_mpu6050.h`, `src/nsx_mpu6050.c` | `include/nsx/sensors/mpu6050.h`, `src/mpu6050/mpu6050.c` |
+| `includes-api/nsx_icm45605.h`, `src/nsx_icm45605.c` | `include/nsx/sensors/icm45605.h`, `src/icm45605/icm45605.c` |
+| `includes-api/nsx_ina228.h`, `src/nsx_ina228.c` | `include/nsx/sensors/ina228.h`, `src/ina228/ina228.c` |
+| `includes-api/nsx_ledstick.h`, `src/nsx_ledstick.c` | `include/nsx/sensors/ledstick.h`, `src/ledstick/ledstick.c` |
+| `includes-api/nsx_bme688.h`, `src/nsx_bme688.c`, `src/nsx_bme688_compensation.c` | `include/nsx/sensors/bme688.h`, `src/bme688/bme688.c`, `src/bme688/compensation.c` |
+| New portable cores (no legacy path) | `include/nsx/sensors/tsl254x.h`, `src/tsl254x/tsl254x.c`; `include/nsx/sensors/t5838.h`, `src/t5838/t5838.c` |
+
+Shared Ambiq-authored code is in `src/common/bus.c`, `src/ports/nsx.c`,
+`src/ports/zephyr.c`, and the Zephyr BME688 wrapper `zephyr/bme688.c`. Public
+shared declarations are `status.h`, `bus.h`, `runtime.h`, `port_nsx.h`, and
+`port_zephyr.h` under `include/nsx/sensors/`. CMake compiles the ICM wrapper
+with the same two TDK sources recorded below. Source relocation does not
+relicense those files or Bosch-derived arithmetic.
 
 ## Native BME688 and adapted Bosch calculations
 
@@ -170,13 +204,13 @@ with the package. Vendor code is not relicensed as BSD-3-Clause. Maintainer
 licensing review remains part of PR review per OWNERS.md. There is no new vendor
 intake and no advanced/eDMP/self-test source in this change.
 
-## Release-relevant changes since the previous audit point
+## Historical v0.1.0 changes since its previous audit point
 
 | Change | Where | Release treatment |
 | --- | --- | --- |
 | `float32_t` -> `float` across the INA228 public API and implementation, dropping the `arm_math.h` include | `includes-api/nsx_ina228.h`, `src/nsx_ina228.c`, commit `9a73d59` | Included. `float32_t` is a CMSIS-DSP typedef for `float`, and nsx-sensors never declared or linked CMSIS-DSP, so every consumer failed to build on a missing `arm_math.h`. The two types are identical, so this is source- and ABI-compatible for any consumer that could previously compile. |
 | ICM-45605 driver and TDK vendor subset added | commit `9a73d59` | Included, first appearance in a release. |
-| Removal of the unimplemented `frame_available_cb`, `frame_size`, and `frame_buffer` context fields | this release branch | Included. See `CHANGELOG.md`; the fields were never read or written by the driver. |
+| Removal of the unimplemented `frame_available_cb`, `frame_size`, and `frame_buffer` context fields | v0.1.0 release-foundation branch | Included. See `CHANGELOG.md`; the fields were never read or written by the driver. |
 
 ## Portable foundation migration
 
