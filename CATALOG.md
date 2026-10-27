@@ -1,10 +1,10 @@
 # Module catalog entry
 
-Current metadata is `0.3.0`; the v1 source contract was accepted in merged
+Current metadata is `1.0.0`; the v1 source contract was accepted in merged
 PR #32 (`f3b313a`) and v1 publication remains separate. This inventory describes
 the current source tree, not the historical v0.1.0 release audit. Downstream
 registry promotion requires an explicitly selected immutable tag or full SHA;
-this qualification work does not repin consumers.
+release preparation does not repin consumers.
 
 | Module | Metadata | Aggregate target | NSX resolver dependencies |
 | --- | --- | --- | --- |

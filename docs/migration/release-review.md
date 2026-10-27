@@ -2,7 +2,8 @@
 
 Reviewed baseline: merged PR #32, `f3b313a`; qualification proposal follows in
 `aa3cb50`. This record reconciles documentation against that local source tree.
-Version metadata is still `0.3.0`; v1 remains unreleased. It is a technical
+At that review baseline version metadata was `0.3.0`; the current
+[v1.0.0 candidate](../releases/v1.0.0.md) is a separate metadata change. It is a technical
 review record, not maintainer release approval or a new legal opinion.
 
 ## Evidence and source boundary

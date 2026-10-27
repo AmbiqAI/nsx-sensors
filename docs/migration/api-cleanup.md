@@ -1,6 +1,6 @@
 # Pre-v1 API cleanup
 
-This unreleased source-breaking cleanup follows the portable migrations. Update
+This v1 source-breaking cleanup follows the portable migrations. Update
 callers and recompile; no compatibility aliases retain the old global names.
 Register encodings, default device settings and measurement units are unchanged.
 It does not bump the module version or claim hardware qualification.

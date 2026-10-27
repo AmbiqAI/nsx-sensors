@@ -242,6 +242,6 @@ build/test evidence must be recorded separately from this API decision.
 No source freeze proves resource/stack budgets, electrical timing, analog
 accuracy, hardware operation or publication readiness. The [readiness audit tracked in separate PR #25](https://github.com/AmbiqAI/nsx-sensors/pull/25) and
 [RFC release gates](rfcs/0001-portable-sensor-driver-architecture.md#release-acceptance-gates)
-retain those requirements. Version remains 0.3.0 until a separate release change.
+retain those requirements. Candidate metadata is 1.0.0; [publication approval](releases/v1.0.0.md) remains separate.
 Async queues, advanced ICM features, expanded BME688 modes/BSEC/IAQ, other Zephyr
 wrappers and T5838 board/audio integration remain separate work.

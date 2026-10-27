@@ -1,6 +1,36 @@
 # Changelog
 
-## Unreleased compilation-context fix
+All notable changes to `nsx-sensors` are documented here. This project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - Unreleased
+
+Release candidate: publication and maintainer signoff are pending. This major
+version adopts the accepted [v1 source contract](docs/v1-api-contract.md).
+It breaks v0 source compatibility: migrate headers, target selection, context
+lifetimes and lifecycle calls using [the migration guide](docs/migration/api-cleanup.md)
+and per-device guides. Recompile applications and libraries together; context
+layout and binary ABI are not stable contracts.
+
+### Shared integration and qualification
+
+- Use one production CMake target/source definition for NSX, standalone CMake
+  (including application-provided FreeRTOS endpoints) and Zephyr.
+- Provide shared NSX and Zephyr synchronous I2C/SPI endpoints, plus a Zephyr
+  BME688 temperature/pressure/humidity sensor wrapper. Other cores are directly
+  selectable; other Zephyr wrappers remain separate work.
+- Verify actual NSX bare-metal/FreeRTOS and Zephyr firmware links, retained
+  implementation provenance, installed C/C++ consumers and shared CPU/FPU/ABI.
+- Require exact-main-commit CI and Zephyr jobs before immutable publication,
+  including a publication-side recheck and negative gate tests.
+- Record context/scratch, linked footprint and individual compiler stack frames
+  with pinned clean framework dependencies. These are not runtime stack bounds.
+- Add bounded sensor models, before/after-effect failure recovery, nine compiling
+  mutation controls across eight cores and 22 actual old/new INA228 vectors.
+- Preserve hardware-unqualified status for every device. T5838 waveform delivery,
+  shared-clock/audio integration, analog accuracy and bus timing need bench work.
+
+### compilation-context fix
 
 - Propagate NSX board compilation settings to every portable core and vendor
   source, keeping enum layouts and CPU/FPU settings consistent with callers.
@@ -8,7 +38,7 @@
   installed packages require the producer's profile target before discovery.
 - Add linked C/C++ ABI and relocated-package regressions using actual targets.
 
-## Unreleased Spark device support
+### Spark device support
 
 - Add native TSL2540/TSL2541 I2C core with explicit variant identity, configurable
   gain/integration/interrupts, raw channels, saturation and factory visible scale.
@@ -19,7 +49,7 @@
   qualification remain explicit integration work.
 
 
-## Unreleased API cleanup
+### API cleanup
 
 - Prefix MPU6050 enums and I2C address constants consistently; rename MAX86150
   slot names/type and add typed configuration selections without changing native
@@ -30,7 +60,7 @@
 - Document lifecycle/recovery differences, BME688 consuming-read cancellation,
   and per-device versus per-transaction locking. See the API cleanup guide.
 
-## Unreleased deep-review fixes
+### deep-review fixes
 
 - Require MAX86150 reinitialization after a failed consuming interrupt-status
   read: the transfer may have erased power-reset evidence, making cached
@@ -40,7 +70,7 @@
   buffers for nonzero phases remain invalid.
 - Add status-consumption/reset recovery and I2C/SPI descriptor regressions.
 
-## Unreleased ICM-45605 portable basic migration
+### ICM-45605 portable basic migration
 
 - Replace the NSX-only singleton API with `<nsx/sensors/icm45605.h>` and
   `nsx::sensor_icm45605`: caller-owned typed TDK state and per-instance callbacks.
@@ -51,12 +81,12 @@
   and vendor interrupt reserved bits. Keep all TDK notices and record patches.
 - Complete core portability: `nsx::sensors` aggregates all selected cores in the
   portable export; remove `NSX_SENSORS_LEGACY_NSX` and the last legacy header.
-  NSX users link the shared adapter separately. Version remains 0.3.0 pending v1.
+  NSX users link the shared adapter separately. All callers must migrate and recompile.
 - Add fake indirect-register/two-device/failure/calibration tests and installed
   C/C++/NSX build coverage. FIFO/APEX/additional interfaces follow in issue #23;
   Spark integration and hardware qualification remain pending in #13/#4.
 
-## Unreleased MAX86150 portable migration
+### MAX86150 portable migration
 
 - Fix review findings: retain one frame during continuous reads to prevent stale
   A_FULL from fabricating full queues, invalidate ambiguous pre-burst read failures,
@@ -65,7 +95,7 @@
 
 - Move MAX86150 to `<nsx/sensors/max86150.h>` / `nsx::sensor_max86150`, using
   shared bus/runtime/status types, pure bind/probe/validation, idle init, and
-  explicit start. Only ICM-45605 remains in the legacy aggregate.
+  explicit start.
 - Audit/fix empty/full FIFO accounting, signed 18-bit ECG decoding, ignored
   transfer errors, unsafe caller-supplied slot counts, invalid LED selectors and
   reserved range encodings. Use native-width endian-independent decoding.
@@ -76,15 +106,14 @@
   unsupported automatic proximity mode, continuous loss-detection limits, and
   deferred hardware qualification. Add fault/slot/overflow/multi-instance tests.
 
-## Unreleased MPU6050 portable migration
+### MPU6050 portable migration
 
 - Address review findings: clear stale DRDY before each averaged sample, reject
   FIFO consumption while disabled, and batch complete FIFO frames to reduce I2C
   overhead. Add independently timed conversion, disabled-read, multi-frame burst,
   failure/overflow publication, and bus-clock-budget regressions.
 
-- Move MPU6050 to `<nsx/sensors/mpu6050.h>` and `nsx::sensor_mpu6050`;
-  the transitional aggregate now contains only MAX86150 and ICM-45605.
+- Move MPU6050 to `<nsx/sensors/mpu6050.h>` and `nsx::sensor_mpu6050`.
 - Separate pure binding/validation, identity probe, initialization into sleep,
   and explicit acquisition start. Use caller-owned common bus/runtime descriptors.
 - Correct full-scale register bit positions, signed decoding, FIFO data register
@@ -96,7 +125,7 @@
   relocated C/C++ consumers and shared NSX adapter coverage. Hardware qualification
   remains pending. See `docs/migration/mpu6050.md` for breaking API changes.
 
-## Unreleased INA228 portable migration
+### INA228 portable migration
 
 - Move INA228 to `include/nsx/sensors/ina228.h` / `src/ina228/ina228.c` and
   `nsx::sensor_ina228`; remove it from the legacy aggregate.
@@ -111,20 +140,15 @@
 - Extend portable host, sanitizer, package, adapter, and SoC compile coverage.
 
 
-All notable changes to `nsx-sensors` are documented here. This project follows
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-### Portable foundation (draft, breaking)
+### Portable foundation (breaking)
 
 - Introduce shared synchronous bus/status/runtime contracts and portable BME688
   and LED Stick targets, with selectable builds and relocatable CMake exports.
 - Split BME688 bind/probe/validate/init; reset now requires reinitialization.
-  Remove device-specific NSX adapters pending the shared port. Use common statuses.
+  Replace device-specific NSX adapters with the shared port. Use common statuses.
 - Validate LED commands and invalidate bindings after attempted address changes.
-- Keep the four unmigrated drivers in a `NSX_SENSORS_LEGACY_NSX` aggregate,
-  enabled by default when the enclosing build supplies the NSX dependencies. See the migration guide; this branch is not a drop-in v0 upgrade.
+- All eight cores are portable; remove the transitional legacy aggregate.
+  Link the NSX port explicitly. This is not a drop-in v0 upgrade.
 - Add offline protocol, lifecycle, deadline, package-link and sanitizer checks.
 
 
