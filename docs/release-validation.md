@@ -29,12 +29,16 @@ incomplete pagination, the filtered-runs API's 1,000-result ceiling, malformed
 responses, permissions failures and CLI errors fail closed. Each `gh` subprocess
 is limited to 60 seconds (or the remaining overall deadline); the gate has a
 30-minute overall deadline and polls at most every 30 seconds. The enclosing
-validation job has a 40-minute timeout.
+validation and publication jobs each have a 40-minute timeout.
+
+The publish job invokes the same gate immediately before tag creation or
+existing-tag retry, with Actions read access. A rerun started while publication
+was queued therefore cannot reuse the earlier validation result.
 
 Both run selections are rechecked after all jobs have been read to detect reruns
 or new runs during validation. GitHub provides no atomic snapshot across workflow
 runs or across validation and publication; this check cannot prevent someone
-starting another rerun after validation has finished. Treat release-time reruns
+starting another rerun after the final publication-side check has finished. Treat release-time reruns
 as a reason to stop and revalidate publication.
 
 Run the actual gate offline test suite with:

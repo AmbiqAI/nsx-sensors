@@ -85,10 +85,12 @@ jobs:
 
   publish:
     name: Publish immutable annotated tag and archive
+    timeout-minutes: 40
     needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -96,12 +98,16 @@ jobs:
 
       - name: Create the annotated tag
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          # Validation may have queued this job before a newer CI rerun started.
+          # Recheck for both new tags and existing-tag asset retries.
+          python3 scripts/release_gate.py --repository "$GITHUB_REPOSITORY" --sha "$RELEASE_SHA"
           if git ls-remote --exit-code origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
             git fetch --no-tags origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
             test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"

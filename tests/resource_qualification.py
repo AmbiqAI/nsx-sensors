@@ -14,6 +14,8 @@ import subprocess
 import tarfile
 
 from verify_firmware_link import verify
+from nsx_firmware_integration import SDK_REVISION
+from zephyr_integration import ZEPHYR_SHA, PROJECTS
 
 ROOT = Path(__file__).resolve().parents[1]
 DRIVERS = ('bme688', 'ledstick', 'ina228', 'mpu6050', 'max86150', 'icm45605', 'tsl254x', 't5838')
@@ -26,6 +28,30 @@ def parse_sizes(output):
         if len(fields) == 4 and fields[0].startswith('resource_size_'):
             result[fields[0].removeprefix('resource_size_')] = int(fields[3], 16)
     return result
+
+
+def external_inputs(sdk_root, zephyr_workspace, run):
+    """Require actual clean repository roots at the integration fixtures' pins."""
+    inputs = {'sdk': (sdk_root, SDK_REVISION),
+              'zephyr': (zephyr_workspace / 'zephyr', ZEPHYR_SHA)}
+    inputs.update({name: (zephyr_workspace / relative, revision)
+                   for name, (relative, revision) in PROJECTS.items()})
+    evidence = {}
+    for name, (path, expected) in inputs.items():
+        path = path.resolve()
+        if not path.is_dir():
+            raise ValueError(f'{name}: missing checkout {path}')
+        top = Path(run(['git', '-C', path, 'rev-parse', '--show-toplevel']).strip()).resolve()
+        if top != path:
+            raise ValueError(f'{name}: expected a repository root at {path}')
+        revision = run(['git', '-C', path, 'rev-parse', 'HEAD']).strip()
+        if revision != expected:
+            raise ValueError(f'{name}: expected revision {expected}, found {revision}')
+        status = run(['git', '-C', path, 'status', '--porcelain', '--untracked-files=all'])
+        if status.strip():
+            raise ValueError(f'{name}: checkout must be clean, including untracked files')
+        evidence[name] = {'path': str(path), 'revision': revision, 'status': status}
+    return evidence
 
 
 def main():
@@ -58,10 +84,12 @@ def main():
         return completed.stdout
 
     prefix = args.arm_prefix
+    dependencies = external_inputs(args.sdk_root, args.zephyr_workspace, run)
     report = {'schema_version': 1, 'source_revision': run(['git', 'rev-parse', 'HEAD']).strip(),
               'compiler': run([prefix + 'gcc', '--version']).splitlines()[0],
-              'sdk_revision': run(['git', '-C', args.sdk_root, 'rev-parse', 'HEAD']).strip(),
-              'zephyr_revision': run(['git', '-C', args.zephyr_workspace / 'zephyr', 'rev-parse', 'HEAD']).strip(),
+              'sdk_revision': dependencies['sdk']['revision'],
+              'external_inputs': dependencies,
+              'zephyr_revision': dependencies['zephyr']['revision'],
               'links': {}, 'layouts': {}, 'framework_links': {}, 'adapter_objects': {},
               'scope': 'Static all-API retention links; no startup, contexts, adapters, heap or runtime stack in portable ELF.',
               'production_baseline': 'f3b313a',
@@ -71,7 +99,8 @@ def main():
         for file in sorted((ROOT / directory).rglob('*')):
             if file.is_file():
                 report['input_sha256'][str(file.relative_to(ROOT))] = hashlib.sha256(file.read_bytes()).hexdigest()
-    for relative in ('CMakeLists.txt', 'tests/resource_qualification.py', 'zephyr/CMakeLists.txt'):
+    for relative in ('CMakeLists.txt', 'tests/resource_qualification.py', 'tests/nsx_firmware_integration.py',
+                     'tests/zephyr_integration.py', 'zephyr/CMakeLists.txt'):
         report['input_sha256'][relative] = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
     report['production_diff_from_baseline'] = run(['git', 'diff', 'f3b313a', '--',
         'src', 'include', 'vendor', 'cmake', 'CMakeLists.txt', 'zephyr'])
@@ -151,6 +180,8 @@ def main():
             dest = raw / 'stack' / label / file.relative_to(build)
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(file, dest)
+    if external_inputs(args.sdk_root, args.zephyr_workspace, run) != dependencies:
+        raise RuntimeError('External inputs changed during qualification')
     # Raw reports, maps, commands and stack frames are portable evidence; ELF/builds
     # remain in the requested output directory for deeper local inspection.
     with tarfile.open(out / 'raw.tar.gz', 'w:gz') as archive:
