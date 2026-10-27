@@ -12,7 +12,7 @@ typedef struct {
     nsx_sensor_bus_kind_t interface;
     unsigned operations, reads, writes, fail_at, reset_count, page_writes;
     uint64_t delayed_us;
-    bool stuck_mode, fail_page_write, page_error_has_side_effect;
+    bool fail_after, stuck_mode, fail_page_write, page_error_has_side_effect;
     uint32_t finish_after_us;
 } fake_t;
 
@@ -28,18 +28,19 @@ static uint32_t fake_read(void *user, uint8_t wire, uint8_t *data, size_t length
     uint8_t reg = wire;
     assert(length > 0 && length <= 23);
     ++f->reads;
-    if (++f->operations == f->fail_at) return ERROR_CODE;
+    bool fail = ++f->operations == f->fail_at;
+    if (fail && !f->fail_after) return ERROR_CODE;
     if (f->interface == NSX_SENSOR_BUS_SPI) {
         assert((wire & 0x80) != 0);
         reg = wire & 0x7f;
-        if (reg == 0x73 && length == 1) { data[0] = f->page; return 0; }
+        if (reg == 0x73 && length == 1) { data[0] = f->page; return fail ? ERROR_CODE : 0; }
         if ((f->page & 0x10) == 0) reg |= 0x80;
     }
     assert((unsigned)reg + length <= 256);
     memcpy(data, f->memory + reg, length);
     /* Reading a complete field consumes its new-data indication. */
     if (reg == 0x1d && length == 17) f->memory[0x1d] &= 0x7f;
-    return 0;
+    return fail ? ERROR_CODE : 0;
 }
 
 static uint32_t fake_write(void *user, uint8_t wire, const uint8_t *data, size_t length)
@@ -48,7 +49,8 @@ static uint32_t fake_write(void *user, uint8_t wire, const uint8_t *data, size_t
     uint8_t reg = wire;
     assert(length == 1); /* Both buses require address/value pairs, never autoincrement writes. */
     ++f->writes;
-    if (++f->operations == f->fail_at) return ERROR_CODE;
+    bool fail = ++f->operations == f->fail_at;
+    if (fail && !f->fail_after) return ERROR_CODE;
     if (f->interface == NSX_SENSOR_BUS_SPI) {
         assert((wire & 0x80) == 0);
         if (wire == 0x73) {
@@ -59,20 +61,20 @@ static uint32_t fake_write(void *user, uint8_t wire, const uint8_t *data, size_t
                 if (f->page_error_has_side_effect) f->page = data[0];
                 return ERROR_CODE;
             }
-            f->page = data[0]; return 0;
+            f->page = data[0]; return fail ? ERROR_CODE : 0;
         }
         if ((f->page & 0x10) == 0) reg |= 0x80;
     }
     if (reg == 0xe0) {
         assert(data[0] == 0xb6); ++f->reset_count;
         /* Model reset configuration, but preserve factory calibration/identity. */
-        memset(f->memory + 0x50, 0, 0x29); f->page = 0xa0; return 0;
+        memset(f->memory + 0x50, 0, 0x29); f->page = 0xa0; return fail ? ERROR_CODE : 0;
     }
     if (reg == 0x74 && (data[0] & 3) == 0 &&
-        (f->stuck_mode || f->finish_after_us != 0)) return 0;
+        (f->stuck_mode || f->finish_after_us != 0)) return fail ? ERROR_CODE : 0;
     if (reg != 0x74) assert((f->memory[0x74] & 3) == 0);
     f->memory[reg] = data[0];
-    return 0;
+    return fail ? ERROR_CODE : 0;
 }
 
 static void fake_delay(void *user, uint32_t duration)
@@ -314,10 +316,12 @@ static void test_failures(nsx_sensor_bus_kind_t interface)
     unsigned operations = f.operations;
     /* Every initialization transfer must propagate a failure, including reset,
      * all calibration banks, page writes, and each default setting. */
-    for (unsigned n = 1; n <= operations; ++n) {
-        prepare(&f, interface); f.fail_at = n;
+    for (unsigned after = 0; after < 2; ++after) for (unsigned n = 1; n <= operations; ++n) {
+        prepare(&f, interface); f.fail_at = n; f.fail_after = after != 0;
         assert(initialize(&ctx, &f) == NSX_SENSOR_E_IO);
         assert(!ctx._initialized);
+        f.fail_at = 0;
+        assert(initialize(&ctx, &f) == NSX_SENSOR_OK);
     }
     prepare(&f, interface);
     assert(initialize(&ctx, &f) == NSX_SENSOR_OK);

@@ -10,7 +10,8 @@ typedef struct {
     bool stuck_reset, fail_after, frozen_clock, overflow_during_read;
     /* Inject independent production/reset at transfer boundaries. */
     unsigned push_after_call, pushes_after_call, power_before_call;
-    uint64_t time;
+    uint64_t time, next_sample;
+    unsigned period_us, generated;
     size_t max_read;
 } fake_t;
 static unsigned width(fake_t *f)
@@ -67,7 +68,19 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *t)
         for (unsigned i=0;i<f->pushes_after_call;++i) push(f,100+i);
     return fail?NSX_SENSOR_E_IO:NSX_SENSOR_OK;
 }
-static void delay(void *user,uint32_t us) { ((fake_t *)user)->time+=us; }
+/* Optional scenario clock: 400 complete frames/s, no averaging. This is an
+ * externally selected schedule, not an implementation of ADC rate adjustment.
+ * Rev2 FIFO/System Control register descriptions: FIFO production requires FIFO_EN and no shutdown. */
+static void advance(fake_t *f, uint32_t us)
+{
+    uint64_t end = f->time + us;
+    if (f->period_us) while (f->next_sample <= end) {
+        push(f, f->generated++);
+        f->next_sample += f->period_us;
+    }
+    f->time = end;
+}
+static void delay(void *user,uint32_t us) { advance(user, us); }
 static uint64_t now(void *user) { fake_t *f=user; return f->frozen_clock?0:f->time; }
 static const nsx_sensor_bus_ops_t ops={transfer};
 static void bind_fake(max86150_context_t *c,fake_t *f,size_t max_read)
@@ -109,9 +122,11 @@ static void test_lifecycle_and_errors(void)
     f.reg[255]=0x1e; f.fail_at=f.calls+1; f.fail_after=true;
     assert(max86150_probe(&c,&id)==NSX_SENSOR_E_IO && id==0x1e);
     init_fake(&c,&f,12); unsigned total=f.calls;
-    for (unsigned i=1;i<=total;++i) {
-        bind_fake(&c,&f,12); f.fail_at=i; max86150_config_t cfg=max86150_default_config();
+    for (unsigned after=0;after<2;++after) for (unsigned i=1;i<=total;++i) {
+        bind_fake(&c,&f,12); f.fail_at=i; f.fail_after=after!=0; max86150_config_t cfg=max86150_default_config();
         assert(max86150_init(&c,&cfg)==NSX_SENSOR_E_IO && !c._configured);
+        f.fail_at=0;
+        assert(max86150_init(&c,&cfg)==NSX_SENSOR_OK);
     }
     init_fake(&c,&f,12); f.stuck_reset=true; f.frozen_clock=true;
     assert(max86150_reset(&c,2500)==NSX_SENSOR_E_TIMEOUT && f.time==2500);
@@ -434,8 +449,42 @@ static void test_typed_settings(void)
     assert(f.reg[14]==0xd3); /* Preserve ADC range and pulse width. */
     assert(max86150_set_ecg_ia_gain(&c,MAX86150_ECG_IA_GAIN_50)==NSX_SENSOR_OK && f.reg[62]==11);
 }
+/* Device-only controls prevent the test model silently following driver
+ * behavior. Rev2 FIFO pointers/overflow sections, pp22-25,44. */
+static void test_clocked_fifo(void)
+{
+    fake_t f = {0};
+    f.reg[9] = 1; f.reg[13] = 4; /* One PPG slot, FIFO enabled. */
+    f.period_us = 2500; f.next_sample = 2500;
+    advance(&f, 2499); assert(f.count == 0);
+    advance(&f, 1); assert(f.count == 1 && f.reg[4] == 1);
+    advance(&f, 31 * 2500); assert(f.count == 32 && f.reg[4] == f.reg[6]);
+    advance(&f, 2500); assert(f.count == 32 && f.reg[5] == 1 && f.reg[6] == 0);
+    f.reg[8] |= 16; /* Rollover replaces oldest frame. */
+    advance(&f, 2500); assert(f.count == 32 && f.reg[6] == 1 && f.reg[4] == 1);
+    f.reg[13] |= 2; advance(&f, 2500); assert(f.reg[5] == 2);
+
+    max86150_context_t c; init_fake(&c, &f, 96);
+    assert(max86150_start(&c) == NSX_SENSOR_OK);
+    f.period_us = 2500; f.next_sample = f.time + 2500;
+    max86150_frame_t frames[32]; size_t done;
+    advance(&f, 2499);
+    assert(max86150_read_fifo(&c, frames, 32, &done) == NSX_SENSOR_AGAIN && done == 0);
+    advance(&f, 7501); /* Four frames exist, regardless of polling frequency. */
+    assert(max86150_read_fifo(&c, frames, 32, &done) == NSX_SENSOR_OK && done == 3);
+    assert(frames[0].value[0] == 0 && frames[2].value[0] == 20);
+    advance(&f, 33 * 2500); /* Task stops servicing the FIFO. */
+    assert(max86150_read_fifo(&c, frames, 32, &done) == NSX_SENSOR_E_OVERFLOW && done == 0);
+    f.period_us = 0;
+    assert(max86150_clear_fifo(&c) == NSX_SENSOR_OK);
+    assert(max86150_start(&c) == NSX_SENSOR_OK);
+    f.period_us = 2500; f.next_sample = f.time + 2500;
+    advance(&f, 5000);
+    assert(max86150_read_fifo(&c, frames, 32, &done) == NSX_SENSOR_OK && done == 1);
+}
 int main(void)
 {
+    test_clocked_fifo();
     test_typed_settings();
     test_lifecycle_and_errors(); test_fifo(); test_slots_and_limits(); test_status_and_instances();
     test_continuous_guards_and_failures(); test_continuous_interleavings();
