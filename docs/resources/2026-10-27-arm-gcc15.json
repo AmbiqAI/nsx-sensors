@@ -1,8 +1,30 @@
 {
   "schema_version": 1,
-  "source_revision": "c55658f3ed06ecbd8b66ff85114001039a42baa5",
+  "source_revision": "12609fe15d97c8fdccecbe19df3348282e0d982d",
   "compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 15.2.Rel1 (Build arm-15.86)) 15.2.1 20251203",
   "sdk_revision": "40b893d859672caf0b17b0e51db351a77b423e56",
+  "external_inputs": {
+    "sdk": {
+      "path": "/home/adamp/Ambiq/neuralspotx/nsx-sdk-i2c-combined",
+      "revision": "40b893d859672caf0b17b0e51db351a77b423e56",
+      "status": ""
+    },
+    "zephyr": {
+      "path": "/home/adamp/Ambiq/neuralspotx/tmp/zephyr-v1/zephyr",
+      "revision": "684c9e8f32e4373a21098559f748f06915f950c9",
+      "status": ""
+    },
+    "cmsis": {
+      "path": "/home/adamp/Ambiq/neuralspotx/tmp/zephyr-v1/modules/hal/cmsis",
+      "revision": "512cc7e895e8491696b61f7ba8066b4a182569b8",
+      "status": ""
+    },
+    "cmsis_6": {
+      "path": "/home/adamp/Ambiq/neuralspotx/tmp/zephyr-v1/modules/hal/cmsis_6",
+      "revision": "30a859f44ef8ab4dc8f84b03ed586fd16ccf9d74",
+      "status": ""
+    }
+  },
   "zephyr_revision": "684c9e8f32e4373a21098559f748f06915f950c9",
   "links": {
     "baseline": {
@@ -165,7 +187,7 @@
   },
   "scope": "Static all-API retention links; no startup, contexts, adapters, heap or runtime stack in portable ELF.",
   "production_baseline": "f3b313a",
-  "working_tree_status": " M CATALOG.md\n M NOTICE\n M PROVENANCE.md\n M RELEASE.md\n M docs/migration/icm45605.md\n M docs/migration/mpu6050.md\n M docs/migration/portable-foundation.md\n?? docs/hardware-validation.md\n?? docs/migration/release-review.md\n?? tests/resource_qualification.py\n?? tests/resources/\n?? tests/test_resource_qualification.py\n",
+  "working_tree_status": "",
   "input_sha256": {
     "src/bme688/bme688.c": "ea2be689d08167d526f433c667ab6c60b7596d7ccbdfa2dee1a0e7ec1e279eb0",
     "src/bme688/compensation.c": "58040e699cad720aa6e9a4c495633e017b306f7c701210f11db0adfa1c395cc3",
@@ -208,9 +230,11 @@
     "tests/resources/layout.c": "d3a2f06bd820c6e634351372f812f4b6587a01b25960b63deb70f23d54e24cca",
     "tests/resources/main.c": "aadd325b7e06456168166f7697b914e9601d1f2ab5b30fa4113af2c535b39cf7",
     "CMakeLists.txt": "0231cd05793dadf2fc9b91a095da6b07300cc0916a0549b323d392524357c650",
-    "tests/resource_qualification.py": "8d9d2a828dd797871ea9ac9994324b45aa8a2c0f84a44bff1d8dcf5ab72bb0e4",
+    "tests/resource_qualification.py": "13b977fb783ce06b4a73b41d98b4224cbed615e51e018b172928176fa6dcf692",
+    "tests/nsx_firmware_integration.py": "152e30d625cfd71a0f52e5b3ceec4f716db4ce5d7ec487c6f239bab37766a102",
+    "tests/zephyr_integration.py": "721741b93cbbc043261b151b55c0148ae2afb9cafaf2006b45c4138b832593d2",
     "zephyr/CMakeLists.txt": "2be6b590c3cdb8fc830e43e98e7942e6e6a1a7e5e3a1d7805e74d938189bfe87"
   },
   "production_diff_from_baseline": "",
-  "raw_archive_sha256": "c61561239e1e92fd7daba380aaf2c40241434091387a08a6fb491a21e63ae865"
+  "raw_archive_sha256": "f449863667469fca6c06f926f9c968edb388b120111fa5bfc6f10b5b7f466a73"
 }

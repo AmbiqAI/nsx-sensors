@@ -1,14 +1,15 @@
 # Resource qualification: eight cores and transport adapters
 
-Measured 2026-10-26 using Arm GNU Toolchain 15.2.Rel1, GCC 15.2.1
+Measured 2026-10-27 using Arm GNU Toolchain 15.2.Rel1, GCC 15.2.1
 20251203. This is static build evidence, not a hardware measurement or a runtime
 stack high-water guarantee. Production sources match `f3b313a`; the report records
 the observed checkout HEAD, uncommitted-file status and SHA-256 input manifest.
-The qualification harness was uncommitted during measurement: this is not evidence
-of a clean build at a future final release SHA.
+The run used clean source revision `12609fe15d97c8fdccecbe19df3348282e0d982d`.
+The resulting evidence is committed separately; it does not qualify a future
+release SHA automatically.
 
-[Machine-readable results](resources/2026-10-26-arm-gcc15.json) and
-[raw evidence archive](resources/2026-10-26-arm-gcc15-raw.tar.gz) preserve commands,
+[Machine-readable results](resources/2026-10-27-arm-gcc15.json) and
+[raw evidence archive](resources/2026-10-27-arm-gcc15-raw.tar.gz) preserve commands,
 compile databases, linker maps, symbol sizes and GCC `.su` stack reports. The JSON
 contains the archive checksum. Full ELF files remain in the fresh build directory;
 the JSON records the portable ELF hashes. No original integration evidence or
@@ -19,7 +20,13 @@ provisioned checkout was overwritten.
 Use already provisioned dependencies matching the recorded revisions:
 NSX SDK `40b893d859672caf0b17b0e51db351a77b423e56` and Zephyr
 `684c9e8f32e4373a21098559f748f06915f950c9` (with the CMSIS modules and Python
-venv from `tests/zephyr_integration.py`). From the repository root:
+venv from `tests/zephyr_integration.py`). The runner reuses the integration
+fixtures' pins, checks all four repository roots and rejects staged, unstaged or
+untracked changes before building and before accepting results. Revisions, paths
+and clean status are recorded for SDK, Zephyr, CMSIS and CMSIS 6. Ignored build
+artifacts and the pre-provisioned Python environment are not content-attested.
+Do not mutate dependencies during measurement; endpoint checks cannot detect
+edits reverted between checks. From the repository root:
 
 ```sh
 python3 tests/resource_qualification.py \
