@@ -1,5 +1,9 @@
 # Resource qualification: eight cores and transport adapters
 
+This dated measurement covers the original eight-core baseline. ICM-42670-P was
+added later and is not included in the tables/artifacts below; the measurement
+tool now selects it for future candidate runs.
+
 Measured 2026-10-27 using Arm GNU Toolchain 15.2.Rel1, GCC 15.2.1
 20251203. This is static build evidence, not a hardware measurement or a runtime
 stack high-water guarantee. Production sources match `f3b313a`; the report records

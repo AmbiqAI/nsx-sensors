@@ -97,8 +97,9 @@ nsx_sensor_status_t icm42670_reset(icm42670_context_t *ctx)
     nsx_sensor_status_t s = icm42670_probe(ctx, &id);
     if (s != NSX_SENSOR_OK) return s;
     s = write_reg(ctx, REG_RESET, 0x10);
-    /* A failed write may have reached the device. Respect reset settling. */
-    ctx->runtime.delay_us(ctx->runtime.user, 1000);
+    /* Reset can turn a running gyro off. Also cover the >20 ms off-to-on
+     * interval before a caller can start again, including uncertain writes. */
+    ctx->runtime.delay_us(ctx->runtime.user, 21000);
     if (s != NSX_SENSOR_OK) return s;
     uint8_t status;
     s = read_regs(ctx, REG_INT_STATUS, &status, 1);

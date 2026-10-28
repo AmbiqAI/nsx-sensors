@@ -1,5 +1,11 @@
 # v1 RFC readiness audit
 
+ICM-42670-P is the ninth core added after the eight-core qualification recorded
+below. Its current contract is in [the driver guide](icm42670.md). Historical
+resource and mutation evidence below covers the original eight cores; it must
+not be read as ICM-42670-P hardware or resource qualification. Publication needs
+a fresh final-candidate review and integration checks including the new core.
+
 Audited merged snapshot: `c7707fa6accc58b0f4eb796a4aaf331d45f25144` (PR #34),
 2026-10-27. This refresh reconciles merged qualification PR #33 (`29c6315`) and
 simulation PR #34 with the earlier audit. It is not a new full-source audit.

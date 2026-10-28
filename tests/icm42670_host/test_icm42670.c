@@ -49,6 +49,7 @@ static nsx_sensor_status_t transfer(void *user, const nsx_sensor_transfer_t *t)
         assert(m->spi || address != 1); /* Forbidden in I2C mode. */
         if (address == 2 && (value & 0x10)) {
             if (m->running) assert(m->us - m->on_at >= 45000);
+            if (m->running) { m->off_at = m->us; m->has_stopped = true; }
             defaults(m);
             m->quiet_until = m->us + 1000;
         } else {
@@ -122,6 +123,10 @@ static void happy_path(bool spi)
     assert(icm42670_read(&ctx, &value) == NSX_SENSOR_E_STATE && m.calls == calls);
     assert(icm42670_start(&ctx) == NSX_SENSOR_OK); /* off-to-on guard */
     assert(icm42670_reset(&ctx) == NSX_SENSOR_OK && !ctx._initialized);
+    assert(icm42670_init(&ctx, &config) == NSX_SENSOR_OK);
+    assert(icm42670_start(&ctx) == NSX_SENSOR_OK);
+    assert(icm42670_init(&ctx, &config) == NSX_SENSOR_OK); /* reset running gyro */
+    assert(icm42670_start(&ctx) == NSX_SENSOR_OK);
 }
 static void failures(bool spi)
 {
@@ -137,6 +142,16 @@ static void failures(bool spi)
             assert(icm42670_init(&ctx, &c) == NSX_SENSOR_E_IO);
             assert(m.calls == n && !ctx._initialized); /* stop at first error */
             assert(icm42670_start(&ctx) == NSX_SENSOR_E_STATE);
+            assert(icm42670_init(&ctx, &c) == NSX_SENSOR_OK);
+        }
+        /* Every configure read/write can fail, including after write effect. */
+        for (unsigned n = 1; n <= 11; ++n) {
+            model_t m; bind_model(&ctx, &m, spi);
+            assert(icm42670_init(&ctx, &c) == NSX_SENSOR_OK);
+            unsigned before = m.calls;
+            m.fail_at = before + n; m.after_effect = after != 0;
+            assert(icm42670_configure(&ctx, &c) == NSX_SENSOR_E_IO);
+            assert(m.calls == before + n && !ctx._initialized);
             assert(icm42670_init(&ctx, &c) == NSX_SENSOR_OK);
         }
         for (unsigned operation = 0; operation < 2; ++operation) {

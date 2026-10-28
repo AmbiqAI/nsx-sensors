@@ -8,7 +8,7 @@ cmake -S "$root/tests/firmware_link" -B "$out/build" \
     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
 cmake --build "$out/build" --parallel
 python3 "$root/tests/verify_firmware_link.py" "$out/build/firmware" --map "$out/build/firmware.map" \
-    bme688 ledstick ina228 mpu6050 max86150 icm45605 tsl254x t5838
+    bme688 ledstick ina228 mpu6050 max86150 icm42670 icm45605 tsl254x t5838
 reject() {
     local artifact=$1 reason=$2 map=${3:-"$out/build/firmware.map"}
     if python3 "$root/tests/verify_firmware_link.py" "$artifact" --map "$map" bme688 > "$out/rejected.log" 2>&1; then
