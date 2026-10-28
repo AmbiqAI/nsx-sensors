@@ -26,9 +26,15 @@ untracked changes before building and before accepting results. Revisions, paths
 and clean status are recorded for SDK, Zephyr, CMSIS and CMSIS 6. Ignored build
 artifacts and the pre-provisioned Python environment are not content-attested.
 Do not mutate dependencies during measurement; endpoint checks cannot detect
-edits reverted between checks. From the repository root:
+edits reverted between checks.
+
+Reproduce the archived report in an isolated checkout of its recorded source
+revision. The local git object must be available (use a clone with the relevant
+history); these commands do not fetch dependencies. From a repository checkout:
 
 ```sh
+git worktree add --detach /tmp/nsx-resource-source 12609fe15d97c8fdccecbe19df3348282e0d982d
+cd /tmp/nsx-resource-source
 python3 tests/resource_qualification.py \
   --output /tmp/nsx-resource-new-run \
   --arm-prefix /usr/local/arm-gnu-toolchain/bin/arm-none-eabi- \
@@ -36,6 +42,13 @@ python3 tests/resource_qualification.py \
   --zephyr-workspace /home/adamp/Ambiq/neuralspotx/tmp/zephyr-v1
 python3 -m unittest discover -s tests -p 'test_resource_qualification.py'
 ```
+
+The source worktree and output paths must not already exist. The runner refuses
+production changes relative to its qualification baseline, including the later
+v1 CMake version bump. Running it directly from a newer release checkout is not
+reproduction of this archived report. Qualification of a changed source baseline
+requires a separately reviewed measurement; do not remove the guard or relabel
+these results.
 
 The output directory must not exist. All builds go there. The runner performs no
 installation, flashing or target execution. Adjust paths for local provisioning;

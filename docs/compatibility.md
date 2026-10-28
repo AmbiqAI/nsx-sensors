@@ -1,13 +1,14 @@
 # Compatibility
 
 See the [v1 readiness audit](v1-readiness.md) for the exact current baseline,
-platform matrix and remaining release gates. Historical evidence below must not
+platform matrix and remaining release gates. Candidate metadata is `1.0.0`;
+[the release checklist](releases/v1.0.0.md) records publication prerequisites. Historical evidence below must not
 be treated as qualification of the final v1 candidate.
 
 See [firmware link validation](firmware-validation.md) for the explicit executable
 and retained-symbol checks required by the opt-in consumer smoke script.
 
-## Unreleased portable foundation
+## V1 portable integration
 
 All eight driver cores have portable CMake targets and offline host tests. The
 seven I2C/SPI cores share the NSX adapter; T5838 uses a caller-supplied THSEL
@@ -180,7 +181,7 @@ errors, so a future vendor intake that introduces one fails instead of passing
 green. That proves the vendored subset is self-contained and warning-clean. It
 proves nothing about sensor behavior.
 
-## BME688 forced-mode addition (unreleased)
+## BME688 forced-mode addition (historical implementation evidence)
 
 The original BME688 driver was added after the historical release qualification above.
 The following table records PR #16 before portable migration; its NSX adapter
@@ -246,7 +247,7 @@ perform:
 - own power, clock, and cache policy;
 - own sample storage and framing. No driver here buffers samples.
 
-## Shared NSX port (unreleased)
+## Shared NSX port
 
 Seven portable cores use the shared NSX I2C/SPI adapter. T5838 instead requires
 a board-provided timed THSEL endpoint; PDM capture remains in the audio layer.

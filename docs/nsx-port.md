@@ -6,7 +6,7 @@ Link `nsx::sensor_port_nsx` alongside the portable driver targets. Include
 INA228, MPU6050, MAX86150, ICM-45605, TSL254x, and future drivers using the common
 synchronous bus API.
 
-This unreleased adapter requires the combined-read addition in
+This adapter requires the combined-read addition in
 [SDK PR #130](https://github.com/AmbiqAI/nsx-ambiq-sdk/pull/130).
 CI pins SDK commit `1f18f01555897ed8e06437ff9727f2bb61771e70`.
 SDK v5.2.24 does not provide that API. The SDK prerequisite has merged. Repin to its released revision during the

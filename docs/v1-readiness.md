@@ -13,7 +13,9 @@ unchanged from that full-audit baseline. No hardware qualification is claimed.
 
 All eight cores, shared CMake integration and the v1 source-contract decision are
 merged. Approval and merge of PR #32 accepted the source API freeze. Version
-metadata remains `0.3.0`; release qualification and publication are not complete.
+metadata at this audited snapshot was `0.3.0`. The subsequent
+[v1.0.0 candidate preparation](releases/v1.0.0.md) selects release metadata;
+final-candidate qualification and publication remain separate.
 
 ## Resolved publication finding
 

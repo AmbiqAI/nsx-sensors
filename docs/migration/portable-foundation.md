@@ -1,9 +1,9 @@
 # Portable foundation: first RFC implementation slice
 
-This draft implements the first stage of [RFC 0001](https://github.com/AmbiqAI/nsx-sensors/pull/17),
-based on the fixed BME688 implementation in PR #16. It intentionally changes
-BME688 and LED Stick APIs. It is not a v1 release. Version metadata stays at
-v0.3.0 until the coordinated release; do not publish this branch under that tag.
+This guide records the BME688/LED Stick source migration begun in
+[RFC 0001](https://github.com/AmbiqAI/nsx-sensors/pull/17), based on PR #16.
+These breaking changes are included in the v1.0.0 candidate. All eight cores
+are now portable; publication is separate from this migration guide.
 
 ## Current scope and dependency order
 

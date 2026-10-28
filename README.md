@@ -20,8 +20,8 @@ The portable architecture is defined by [RFC 0001](docs/rfcs/0001-portable-senso
 and the [v1 source contract](docs/v1-api-contract.md).
 All eight driver cores are portable. ICM-45605 retains the TDK basic
 implementation with per-device transport callbacks. The shared NSX port and [Zephyr I2C/SPI endpoints](docs/zephyr.md) are available,
-with a Zephyr BME688 temperature/pressure/humidity wrapper. Other Zephyr wrappers remain follow-up work. This is an
-unreleased API transition, not a v1 release or a drop-in v0 replacement.
+with a Zephyr BME688 temperature/pressure/humidity wrapper. Other Zephyr wrappers remain follow-up work. The v1 API is source-breaking relative to v0; migrate callers and recompile.
+Version metadata alone does not establish publication.
 See the [v1 readiness audit](docs/v1-readiness.md) for current evidence and remaining release gates.
 
 See [TSL254x](docs/tsl254x.md), [T5838 control/audio boundaries](docs/t5838.md) and
@@ -76,7 +76,8 @@ Run `tests/portable_build.sh` for offline host tests and real consumer links.
 
 ## Release status
 
-Version metadata remains at v0.3.0 during this unreleased transition. **No driver is hardware-in-the-loop
+Version metadata is v1.0.0. Publication is a separate maintainer action; see
+the [release candidate checklist](docs/releases/v1.0.0.md). **No driver is hardware-in-the-loop
 qualified**; no board was flashed and no sensor part was exercised for this
 release. See `docs/compatibility.md` before relying on any device.
 
@@ -86,14 +87,14 @@ release. See `docs/compatibility.md` before relying on any device.
 | `RELEASE.md` | Versioning policy, compatibility surfaces, publication process |
 | `PROVENANCE.md` | Exact port lineage and the vendored TDK subset |
 | `docs/compatibility.md` | Declared vs build-verified vs runtime-validated |
-| [RFC 0001](docs/rfcs/0001-portable-sensor-driver-architecture.md) | Draft v1 portable architecture, API, and driver migration plan |
+| [RFC 0001](docs/rfcs/0001-portable-sensor-driver-architecture.md) | Accepted v1 portable architecture and migration decisions |
 | `tests/` | Host contracts and the three compile-smoke levels |
 | `CATALOG.md` | Downstream registry view |
 | `OWNERS.md` | What this repository owns and does not own |
 
 ## Licensing
 
-Ambiq-authored code in `includes-api/` and `src/` is BSD-3-Clause; see
+Ambiq-authored code in `include/nsx/sensors/` and `src/` is BSD-3-Clause; see
 `LICENSE`. `vendor/tdk-icm45605/` is third-party TDK InvenSense code
 redistributed under its own permissive terms and is **not** relicensed. See
 `NOTICE` and `PROVENANCE.md`. The native BME688 compensation/calibration/heater

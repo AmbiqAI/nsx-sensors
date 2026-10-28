@@ -1,11 +1,14 @@
 # Release policy and current qualification scope
 
-Version metadata remains `0.3.0`. V1 is unreleased: this qualification work
-neither bumps the version nor creates a tag, release, registry pin or hardware
-qualification. PR #32, merged at baseline `f3b313a`, established the v1 source
-contract. Release acceptance remains a separate maintainer decision under
-[OWNERS.md](OWNERS.md). See the [readiness audit](docs/v1-readiness.md)
-for merged qualification evidence and remaining release steps.
+Version metadata is `1.0.0`. This major version adopts the accepted v1 source
+contract and requires v0 callers to migrate and recompile. Publication is a
+separate gated maintainer action; metadata or PR merge alone does not create a
+tag, release or downstream registry pin. See the [candidate checklist](docs/releases/v1.0.0.md)
+for pending approval and the [readiness audit](docs/v1-readiness.md) for evidence.
+Release ownership is defined in [OWNERS.md](OWNERS.md).
+
+**No driver is hardware-in-the-loop qualified.** This software release scope
+makes no electrical timing, physical accuracy or runtime stack guarantee.
 
 `version.txt` is the version source of truth and must match `nsx-module.yaml`
 and the standalone CMake project version. Historical v0.1.0 foundation evidence

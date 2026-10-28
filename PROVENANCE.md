@@ -2,8 +2,9 @@
 
 ## Current qualification scope
 
-Baseline: merged PR #32, `f3b313a`. Version metadata remains `0.3.0`; v1 is
-unreleased. The eight portable cores and shared adapters are inventoried in
+Source-review baseline: merged PR #32, `f3b313a`; subsequent qualification is
+recorded in the readiness audit. Current release-candidate metadata is `1.0.0`;
+publication and maintainer release signoff remain separate. The eight portable cores and shared adapters are inventoried in
 [CATALOG.md](CATALOG.md). The merged source contract is recorded in
 [docs/v1-api-contract.md](docs/v1-api-contract.md); it promises documented source
 compatibility after recompilation, not a stable binary ABI or context layout.
@@ -180,7 +181,7 @@ explicitly in `CMakeLists.txt`.
 The original intake removed the `imu/` include prefix in `inv_imu_defs.h`,
 `inv_imu_driver.h`, `inv_imu_driver.c` and `inv_imu_transport.c`.
 
-The unreleased portable ICM-45605 migration adds these narrow local patches:
+The v1 portable ICM-45605 migration adds these narrow local patches:
 
 - `inv_imu_transport.h`: add a caller-owned `void *user` and pass it to read,
   write and sleep callbacks. Device layout still starts with the typed transport.
@@ -223,7 +224,7 @@ No additional vendor source was copied in this migration.
 
 ## Shared NSX adapter dependency
 
-The unreleased portable adapter is new Ambiq-authored code with no copied
+The v1 portable adapter is new Ambiq-authored code with no copied
 vendor implementation. Its CI SDK prerequisite is
 `1f18f01555897ed8e06437ff9727f2bb61771e70` (SDK PR #130), superseding the
 v5.2.24 CI baseline above for this branch. It supplies the genuine combined
@@ -268,7 +269,7 @@ audited against Maxim Integrated MAX86150 datasheet 19-8402, Rev 2 (12/18):
 also available as [the same manufacturer document mirrored by MikroElektronika](https://download.mikroe.com/documents/datasheets/MAX86150_datasheet.pdf).
 See `docs/migration/max86150.md` for audit corrections and deliberate API limits.
 
-### Unreleased ICM-45605 portable basic API
+### V1 ICM-45605 portable basic API
 
 `include/nsx/sensors/icm45605.h` and `src/icm45605/icm45605.c` replace the
 historical NSX wrapper listed above. The Ambiq wrapper uses the retained TDK
@@ -276,7 +277,7 @@ basic subset with caller-owned typed state, checked callbacks, native range
 validation, separate raw/scaled types and explicit fresh-sample calibration.
 Hardware remains unqualified. Future expansion is tracked in issue #23.
 
-## Native Spark additions (unreleased)
+## Native Spark additions for v1
 
 `src/tsl254x/` and `src/t5838/` are original implementations under the repository
 BSD-3-Clause license; no additional vendor code is imported. Register/protocol

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    project(nsx_sensors VERSION 0.3.0 LANGUAGES C)
+    project(nsx_sensors VERSION 1.0.0 LANGUAGES C)
 endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

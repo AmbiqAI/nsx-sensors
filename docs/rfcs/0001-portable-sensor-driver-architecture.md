@@ -15,8 +15,8 @@ remains in git history; its sketches are not alternative supported interfaces.
 
 Approval and merge of this decision froze the documented source contract at
 the approved revision. It does not release v1, bump version metadata, qualify
-hardware or waive the remaining release gates. Version stays 0.3.0 until the
-release process selects and validates the final v1 commit.
+hardware or waive the remaining release gates. The separate [v1.0.0 candidate preparation](../releases/v1.0.0.md)
+selects metadata; publication still requires the final approved main commit.
 
 ## Architecture and ownership
 
