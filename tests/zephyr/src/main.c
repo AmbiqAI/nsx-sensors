@@ -12,6 +12,7 @@
 #include <nsx/sensors/ina228.h>
 #include <nsx/sensors/mpu6050.h>
 #include <nsx/sensors/max86150.h>
+#include <nsx/sensors/icm42670.h>
 #include <nsx/sensors/icm45605.h>
 #include <nsx/sensors/tsl254x.h>
 #include <nsx/sensors/t5838.h>
@@ -361,5 +362,10 @@ ZTEST(nsx_zephyr, test_spi_rebind_configuration_identity)
     zassert_equal(nsx_sensor_bus_transfer(&endpoint.bus, &transfer), NSX_SENSOR_OK);
     zassert_equal(spi_effective_frequency, 2000000,
                   "Rebind retained the controller's previous frequency");
+}
+ZTEST(nsx_zephyr, test_icm42670_core_link)
+{
+    icm42670_config_t config = icm42670_default_config();
+    zassert_equal(icm42670_validate_config(&config), NSX_SENSOR_OK);
 }
 ZTEST_SUITE(nsx_zephyr, NULL, NULL, NULL, NULL, NULL);

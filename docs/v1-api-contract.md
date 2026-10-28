@@ -45,13 +45,14 @@ rules](migration/api-cleanup.md) and per-device guides below.
 | `ina228.h` | `nsx::sensor_ina228` | `NSX_SENSOR_INA228` / `ina228` |
 | `mpu6050.h` | `nsx::sensor_mpu6050` | `NSX_SENSOR_MPU6050` / `mpu6050` |
 | `max86150.h` | `nsx::sensor_max86150` | `NSX_SENSOR_MAX86150` / `max86150` |
+| `icm42670.h` | `nsx::sensor_icm42670` | `NSX_SENSOR_ICM42670` / `icm42670` |
 | `icm45605.h` | `nsx::sensor_icm45605` | `NSX_SENSOR_ICM45605` / `icm45605` |
 | `ledstick.h` | `nsx::sensor_ledstick` | `NSX_SENSOR_LEDSTICK` / `ledstick` |
 | `tsl254x.h` | `nsx::sensor_tsl254x` | `NSX_SENSOR_TSL254X` / `tsl254x` |
 | `t5838.h` | `nsx::sensor_t5838` | `NSX_SENSOR_T5838` / `t5838` |
 
 `status.h`, `bus.h` and `runtime.h` define shared contracts;
-`nsx::sensor_common` provides the bus helpers. All eight source options default
+`nsx::sensor_common` provides the bus helpers. All nine source options default
 ON in ordinary CMake builds. Disabled drivers are excluded from compilation.
 `nsx::sensors` is an interface aggregate of selected portable cores only.
 
@@ -160,6 +161,7 @@ freshness, atomic multi-register snapshots or effective acquisition rate.
 | INA228 | Init ADC shutdown; `set_mode` starts; mA, mV, mW, °C, J, C and exact integer 40-bit accumulators | Reset or failed calibration programming/readback invalidates scaling; rejected preflight calibration preserves it. Cached `get_current_lsb` is A/code. [Migration](migration/ina228.md) |
 | MPU6050 | Init asleep/FIFO off; explicit wake; raw and g/°/s/°C samples; bounded explicit stationary calibration | Ambiguous FIFO reads require `reset_fifo` then explicit enable; uncertain config writes require init. Calibration failure may leave offsets changed. [Migration](migration/mpu6050.md) |
 | MAX86150 | Init shutdown/FIFO off; `start` flushes; raw ECG/PPG frames, no clinical units | Ambiguous FIFO data allows clear/start; failed consuming interrupt reads require init. Continuous capture cannot guarantee loss detection; snapshots omit capture while draining. [Migration](migration/max86150.md) |
+| ICM-42670-P | Init stopped; I2C/SPI low-noise direct raw/scaled snapshots, DRDY, explicit start/stop | Failed mutation requires init; no FIFO/freshness guarantee. [Guide](icm42670.md) |
 | ICM-45605 | Init idle; explicit start/stop; SPI direct raw or g/°/s/°C latest snapshots; explicit calibration | Failed mutation or consuming reset-status read requires init; no FIFO/freshness guarantee. [Migration](migration/icm45605.md) |
 | TSL254x | Explicit 2540/2541 variant; init ALS off, start explicitly; visible/IR raw counts, saturation and cached 2541 scale, no lux | Failed mutation or external reset requires init; latest snapshot is not proof of a new conversion. [Guide](tsl254x.md) |
 | T5838 | Dedicated synchronous `t5838_control_t` timed-waveform endpoint; init leaves AAD disabled; no I2C/SPI or identity/readback fiction | Recover whole shared-clock group after uncertain writes/clock loss; invalidate caches and fully init. Delivery success does not prove presence. [Guide](t5838.md) |

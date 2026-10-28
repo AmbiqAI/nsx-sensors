@@ -1,5 +1,6 @@
 // Common application names must not collide with device enums.
 enum { CLOCK_INTERNAL, DLPF_044HZ, GYRO_FS_250DPS, ACCEL_FS_2G };
+#include <nsx/sensors/icm42670.h>
 #include <nsx/sensors/icm45605.h>
 #include <nsx/sensors/bme688.h>
 #include <nsx/sensors/ina228.h>
@@ -13,6 +14,7 @@ int main()
 {
     auto light = tsl254x_default_config();
     auto mic = t5838_default_config();
+    auto icm_new = icm42670_default_config();
     auto icm = icm45605_default_config();
     auto config = bme688_default_config();
     auto optical = max86150_default_config();
@@ -33,6 +35,7 @@ int main()
     ledstick_config_t leds = {10};
     return tsl254x_validate_config(&light) != NSX_SENSOR_OK ||
            t5838_validate_config(&mic) != NSX_SENSOR_OK ||
+           icm42670_validate_config(&icm_new) != NSX_SENSOR_OK ||
            icm45605_validate_config(&icm) != NSX_SENSOR_OK ||
            max86150_validate_config(&optical) != NSX_SENSOR_OK ||
            mpu6050_validate_config(&motion) != NSX_SENSOR_OK ||

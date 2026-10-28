@@ -5,6 +5,10 @@ All notable changes to `nsx-sensors` are documented here. This project follows
 
 ## [1.0.0] - 2026-10-28
 
+- Add native ICM-42670-P basic I2C/SPI core, caller-owned lifecycle, direct
+  accel/gyro/temperature sampling, DRDY and shared CMake/NSX/Zephyr selection.
+  Hardware qualification and FIFO/APEX/low-power features remain pending.
+
 Target release date; publication is pending. Final maintainer approval and
 publication evidence are tracked in the [release record](docs/releases/v1.0.0.md).
 This major version adopts the accepted [v1 source contract](docs/v1-api-contract.md).

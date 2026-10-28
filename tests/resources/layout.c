@@ -5,6 +5,7 @@
 #include <nsx/sensors/ina228.h>
 #include <nsx/sensors/mpu6050.h>
 #include <nsx/sensors/max86150.h>
+#include <nsx/sensors/icm42670.h>
 #include <nsx/sensors/icm45605.h>
 #include <nsx/sensors/tsl254x.h>
 #include <nsx/sensors/t5838.h>
@@ -14,6 +15,7 @@ SIZE(ledstick, ledstick_context_t);
 SIZE(ina228, ina228_context_t);
 SIZE(mpu6050, mpu6050_context_t);
 SIZE(max86150, max86150_context_t);
+SIZE(icm42670, icm42670_context_t);
 SIZE(icm45605, icm45605_context_t);
 SIZE(tsl254x, tsl254x_context_t);
 SIZE(t5838, t5838_context_t);

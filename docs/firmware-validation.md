@@ -31,7 +31,7 @@ the FreeRTOS sources match the SDK transport's CPU/FPU/ABI profile. The
 application calls the SDK CMSIS `SystemCoreClockUpdate()` before starting the
 scheduler, retaining the SDK-owned clock data rather than defining a replacement.
 
-Both modes validate configurations for all eight portable cores and call both
+Both modes validate configurations for all nine portable cores and call both
 NSX bindings. The fixture deliberately leaves controller configurations
 uninitialized: these binding attempts fail without sensor I/O. This is a final
 link fixture, not a deployable board/sensor example. Adapter function pointers
@@ -84,7 +84,7 @@ tests/configure_target_smoke.sh /path/to/app arm-none-eabi-gcc apollo510_evb \
 The fourth and fifth arguments are the unstripped executable and its matching
 linker map, relative to the script's fresh build directory. Both are required.
 The remaining arguments select the implementations that
-must be linked: `bme688`, `ledstick`, `ina228`, `mpu6050`, `max86150`, `icm45605`,
+must be linked: `bme688`, `ledstick`, `ina228`, `mpu6050`, `max86150`, `icm42670`, `icm45605`,
 `tsl254x`, `t5838`, `port_nsx_i2c`, and/or `port_nsx_spi`. Select the relevant adapter to check its
 binding function as well as the portable driver. The consumer must honor
 `NSX_SENSORS_ROOT`, `NSX_TOOLCHAIN`, and `NSX_BOARD` passed by the script.
@@ -138,6 +138,6 @@ revision, SDK, toolchain, board and scheduler mode alongside qualification resul
 
 CI's `tests/firmware_link_contract.sh` exercises the checker with actual Arm ELF
 files built from the production CMake targets. Its positive fixture references
-all eight portable cores; negative fixtures exercise same-named replacement
+all nine portable cores; negative fixtures exercise same-named replacement
 functions, discarded code, mismatched/missing maps, and invalid artifacts. It uses a synthetic entry point and `nosys` stubs: it is a test of the
 validation mechanism, not real NSX bare-metal/FreeRTOS firmware qualification.

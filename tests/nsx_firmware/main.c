@@ -5,6 +5,7 @@
 #include <nsx/sensors/ina228.h>
 #include <nsx/sensors/mpu6050.h>
 #include <nsx/sensors/max86150.h>
+#include <nsx/sensors/icm42670.h>
 #include <nsx/sensors/icm45605.h>
 #include <nsx/sensors/tsl254x.h>
 #include <nsx/sensors/t5838.h>
@@ -61,6 +62,8 @@ static void sensor_contract(void)
     result = mpu6050_validate_config(&mpu6050_config);
     max86150_config_t max86150_config = max86150_default_config();
     result = max86150_validate_config(&max86150_config);
+    icm42670_config_t icm42670_config = icm42670_default_config();
+    result = icm42670_validate_config(&icm42670_config);
     icm45605_config_t icm45605_config = icm45605_default_config();
     result = icm45605_validate_config(&icm45605_config);
     tsl254x_config_t tsl254x_config = tsl254x_default_config();

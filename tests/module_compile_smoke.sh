@@ -157,8 +157,8 @@ mkdir -p "$out_dir"
 
 # Select the NSX endpoint explicitly: other platform ports require their own
 # framework headers and are covered by separate integration gates.
-sources=("$repo_root"/src/icm45605/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/nsx.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/src/tsl254x/*.c "$repo_root"/src/t5838/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
-[ "${#sources[@]}" -eq 13 ] || fail "expected 13 translation units, found ${#sources[@]}"
+sources=("$repo_root"/src/icm42670/*.c "$repo_root"/src/icm45605/*.c "$repo_root"/src/common/*.c "$repo_root"/src/ports/nsx.c "$repo_root"/src/bme688/*.c "$repo_root"/src/ledstick/*.c "$repo_root"/src/ina228/*.c "$repo_root"/src/mpu6050/*.c "$repo_root"/src/max86150/*.c "$repo_root"/src/tsl254x/*.c "$repo_root"/src/t5838/*.c "$repo_root"/vendor/tdk-icm45605/*.c)
+[ "${#sources[@]}" -eq 14 ] || fail "expected 14 translation units, found ${#sources[@]}"
 
 for source in "${sources[@]}"; do
     echo "compiling $(basename "$source") [$toolchain/$soc/$soc_core]"
@@ -177,6 +177,7 @@ produced="$(find "$out_dir" -name '*.o' | wc -l | tr -d '[:blank:]')"
 
 # Compile the public adapter header as C++ against the same real SDK headers.
 cat > "$out_dir/port_header.cpp" <<'CPP'
+#include <nsx/sensors/icm42670.h>
 #include <nsx/sensors/icm45605.h>
 #include <nsx/sensors/port_nsx.h>
 #include <nsx/sensors/ina228.h>
