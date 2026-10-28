@@ -17,8 +17,8 @@ establish current release readiness or current downstream registry state.
 
 ## Current scope
 
-Eight portable C11 cores cover BME688, MAX86150, MPU6050, INA228, LED Stick,
-ICM-45605, TSL2540/TSL2541, and T5838 AAD control. Independently selected core
+Nine portable C11 cores cover BME688, MAX86150, MPU6050, INA228, LED Stick,
+ICM-45605, ICM-42670-P, TSL2540/TSL2541, and T5838 AAD control. Independently selected core
 targets and `nsx::sensor_common` form the `nsx::sensors` interface aggregate.
 The portable install export is `nsxSensorTargets`; NSX transport is linked
 separately as `nsx::sensor_port_nsx`. Zephyr selects the same core definitions,

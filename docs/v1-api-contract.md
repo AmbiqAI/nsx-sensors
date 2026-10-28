@@ -232,7 +232,7 @@ storage or concurrently controlling its physical device.
 ## Platform and release boundary
 
 Plain C/FreeRTOS applications use the same core APIs with application endpoints.
-The shared NSX port covers the seven I2C/SPI cores, not T5838 waveform generation.
+The shared NSX port covers the eight I2C/SPI cores, not T5838 waveform generation.
 Zephyr integration in PR #32 provides reusable synchronous I2C/SPI endpoints and
 a BME688 sensor wrapper only. Framework pressure is kPa while core pressure is
 Pa; wrapper fetch/get semantics, serialization and recovery must preserve the
