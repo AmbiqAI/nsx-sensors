@@ -12,13 +12,14 @@ Current drivers:
 | MPU6050 IMU | I2C | `include/nsx/sensors/mpu6050.h` |
 | INA228 power and current monitor | I2C | `include/nsx/sensors/ina228.h` |
 | SparkFun Qwiic LED Stick | I2C | `include/nsx/sensors/ledstick.h` |
+| TDK ICM-42670-P 6-axis IMU | I2C, SPI | `include/nsx/sensors/icm42670.h` |
 | TDK ICM-45605 6-axis IMU | SPI | `include/nsx/sensors/icm45605.h` |
 | ams OSRAM TSL2540 / TSL2541 light | I2C | `include/nsx/sensors/tsl254x.h` |
 | TDK T5838 microphone AAD control | THSEL one-wire; audio separate | `include/nsx/sensors/t5838.h` |
 
 The portable architecture is defined by [RFC 0001](docs/rfcs/0001-portable-sensor-driver-architecture.md)
 and the [v1 source contract](docs/v1-api-contract.md).
-All eight driver cores are portable. ICM-45605 retains the TDK basic
+All nine driver cores are portable. ICM-45605 retains the TDK basic
 implementation with per-device transport callbacks. The shared NSX port and [Zephyr I2C/SPI endpoints](docs/zephyr.md) are available,
 with a Zephyr BME688 temperature/pressure/humidity wrapper. Other Zephyr wrappers remain follow-up work. The v1 API is source-breaking relative to v0; migrate callers and recompile.
 Version metadata alone does not establish publication.
@@ -44,9 +45,9 @@ add_subdirectory(third_party/nsx-sensors)
 target_link_libraries(my_app PRIVATE nsx::sensor_bme688 nsx::sensor_ledstick nsx::sensor_ina228 nsx::sensor_mpu6050 nsx::sensor_max86150 nsx::sensor_icm45605)
 ```
 
-All eight portable drivers are enabled by default. Set `NSX_SENSOR_BME688=OFF`,
-`NSX_SENSOR_LEDSTICK=OFF`, `NSX_SENSOR_INA228=OFF`, `NSX_SENSOR_MPU6050=OFF`, `NSX_SENSOR_MAX86150=OFF`, `NSX_SENSOR_ICM45605=OFF`, `NSX_SENSOR_TSL254X=OFF`, or `NSX_SENSOR_T5838=OFF` to omit a driver. Installed consumers use
-`find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 ledstick ina228 mpu6050 max86150 icm45605 tsl254x t5838)` and the
+All nine portable drivers are enabled by default. Set `NSX_SENSOR_BME688=OFF`,
+`NSX_SENSOR_LEDSTICK=OFF`, `NSX_SENSOR_INA228=OFF`, `NSX_SENSOR_MPU6050=OFF`, `NSX_SENSOR_MAX86150=OFF`, `NSX_SENSOR_ICM42670=OFF`, `NSX_SENSOR_ICM45605=OFF`, `NSX_SENSOR_TSL254X=OFF`, or `NSX_SENSOR_T5838=OFF` to omit a driver. Installed consumers use
+`find_package(nsx_sensors CONFIG REQUIRED COMPONENTS bme688 ledstick ina228 mpu6050 max86150 icm42670 icm45605 tsl254x t5838)` and the
 same targets. The runnable [fake-HAL example](examples/baremetal/) exercises
 binding/probing and command writes without pretending to read physical sensors.
 
@@ -64,6 +65,7 @@ The transitional `NSX_SENSORS_LEGACY_NSX` option is removed. For NSX transport,
 link `nsx::sensor_port_nsx` explicitly; it defaults on when the enclosing build
 supplies `nsx::core`, `nsx::i2c`, and `nsx::spi`, or can be selected with
 `NSX_SENSOR_PORT_NSX`. See the [NSX port guide](docs/nsx-port.md).
+ICM-42670-P users should follow its [driver guide](docs/icm42670.md).
 ICM-45605 users should follow its [migration guide](docs/migration/icm45605.md).
 Existing apps remain pinned to v0 releases until deliberately migrated.
 

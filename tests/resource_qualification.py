@@ -18,7 +18,7 @@ from nsx_firmware_integration import SDK_REVISION
 from zephyr_integration import ZEPHYR_SHA, PROJECTS
 
 ROOT = Path(__file__).resolve().parents[1]
-DRIVERS = ('bme688', 'ledstick', 'ina228', 'mpu6050', 'max86150', 'icm45605', 'tsl254x', 't5838')
+DRIVERS = ('bme688', 'ledstick', 'ina228', 'mpu6050', 'max86150', 'icm42670', 'icm45605', 'tsl254x', 't5838')
 
 
 def parse_sizes(output):

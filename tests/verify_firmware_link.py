@@ -18,6 +18,7 @@ DRIVER_SYMBOLS = {
     "ina228": "ina228_validate_config",
     "mpu6050": "mpu6050_validate_config",
     "max86150": "max86150_validate_config",
+    "icm42670": "icm42670_validate_config",
     "icm45605": "icm45605_validate_config",
     "tsl254x": "tsl254x_validate_config",
     "t5838": "t5838_validate_config",

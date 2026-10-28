@@ -4,7 +4,7 @@
 
 Source-review baseline: merged PR #32, `f3b313a`; subsequent qualification is
 recorded in the readiness audit. Current release-candidate metadata is `1.0.0`;
-publication and maintainer release signoff remain separate. The eight portable cores and shared adapters are inventoried in
+publication and maintainer release signoff remain separate. The nine portable cores and shared adapters are inventoried in
 [CATALOG.md](CATALOG.md). The merged source contract is recorded in
 [docs/v1-api-contract.md](docs/v1-api-contract.md); it promises documented source
 compatibility after recompilation, not a stable binary ABI or context layout.
@@ -295,3 +295,23 @@ references are ams OSRAM DS000564 v2-00 (2022-12-05), DS000570 v2-00
 documents and explain variant, calibration and timing limits. Zephyr's TSL2540
 implementation was inspected for comparison; no source or empirical lux formula
 was incorporated. Existing TDK ICM vendor files and notices are unchanged.
+
+## Native ICM-42670-P core
+
+`include/nsx/sensors/icm42670.h` and `src/icm42670/icm42670.c` are native NSX
+code under the repository BSD-3-Clause license; no additional vendor sources
+are imported. Register definitions, data scaling and timing come from TDK
+DS-000451 revision 1.1 (2022-05-23), locally archived as
+`DS-000451-ICM-42670-P-v1.1.pdf`, SHA256
+`8716d8187abf2f89315d8cec92fa8fd39f48a71433c8a793e64caa9fee3cbb03`.
+The fetched mirror is <https://datasheet4u.com/pdf/1500002/ICM-42670-P.pdf>;
+this is the reviewed revision, not a claim about the latest manufacturer revision.
+
+The implementation was cross-checked against the BSD-3-Clause TDK core in
+<https://github.com/zephyrproject-rtos/hal_tdk/tree/330218a1f25cd58eab3b81eda7510e73525c2e76/icm42x7x>.
+Its `inv_imu_driver.c` serial-interface setup sets INTF_CONFIG0 bits 1:0 for
+shared SPI and cites AN-000352. This driver applies that same register setting
+only for SPI. Those bits are reserved in the reviewed datasheet; the reference
+implementation is the evidence for this exception, not an independently obtained
+copy of the application note. The native subset leaves FIFO bypassed and does
+not import the reference's FIFO/APEX initialization or indirect MREG machinery.

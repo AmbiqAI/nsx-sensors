@@ -10,7 +10,7 @@ and retained-symbol checks required by the opt-in consumer smoke script.
 
 ## V1 portable integration
 
-All eight driver cores have portable CMake targets and offline host tests. The
+All nine driver cores have portable CMake targets and offline host tests. The
 seven I2C/SPI cores share the NSX adapter; T5838 uses a caller-supplied THSEL
 waveform endpoint and the separate audio layer. [Zephyr integration](zephyr.md)
 provides selectable portable cores, reusable I2C/SPI endpoints and a BME688
@@ -155,7 +155,7 @@ The existing smoke levels are complemented by the explicit real SDK fixture:
 | `tests/vendor_compile_smoke.sh` | vendored TDK subset only, no NSX headers | any C compiler |
 | `tests/module_compile_smoke.sh` | all module sources against real NSX and AmbiqSuite headers | an `nsx-ambiq-sdk` checkout plus a cross toolchain |
 | `tests/configure_target_smoke.sh` | full NSX consumer configure, build, and link | an NSX consumer workspace plus a cross toolchain |
-| `tests/nsx_firmware_integration.py` | real apollo4p_evb bare-metal and FreeRTOS final links; all eight cores and both NSX bindings | exact pinned SDK plus Arm GNU/newlib |
+| `tests/nsx_firmware_integration.py` | real apollo4p_evb bare-metal and FreeRTOS final links; all nine cores and both NSX bindings | exact pinned SDK plus Arm GNU/newlib |
 
 Hosted CI checks out the exact qualified `nsx-ambiq-sdk v5.2.24` commit and
 compiles all 8 declared SoCs with Arm GNU using `-Wall -Wextra -Werror`. The

@@ -11,7 +11,7 @@ release preparation does not repin consumers.
 | `nsx-sensors` | `nsx-module.yaml` | `nsx::sensors` | `nsx-core`, `nsx-i2c`, `nsx-spi` |
 
 The dependencies above apply to NSX resolution. Portable cores and their
-`nsx::sensors` interface aggregate build without the SDK. All eight ordinary
+`nsx::sensors` interface aggregate build without the SDK. All nine ordinary
 CMake source options default ON; the aggregate includes only selected cores.
 
 | Core | Interface | Public header under `include/nsx/sensors/` | Target / option suffix / installed component |
@@ -21,6 +21,7 @@ CMake source options default ON; the aggregate includes only selected cores.
 | MPU6050 6-axis IMU | I2C | `mpu6050.h` | `nsx::sensor_mpu6050` / `MPU6050` / `mpu6050` |
 | INA228 power/current monitor | I2C | `ina228.h` | `nsx::sensor_ina228` / `INA228` / `ina228` |
 | Qwiic LED Stick | I2C | `ledstick.h` | `nsx::sensor_ledstick` / `LEDSTICK` / `ledstick` |
+| ICM-42670-P basic 6-axis IMU | I2C / 4-wire SPI | `icm42670.h` | `nsx::sensor_icm42670` / `ICM42670` / `icm42670` |
 | ICM-45605 basic 6-axis IMU | 4-wire SPI | `icm45605.h` | `nsx::sensor_icm45605` / `ICM45605` / `icm45605` |
 | TSL2540/TSL2541 raw visible/IR counts | I2C | `tsl254x.h` | `nsx::sensor_tsl254x` / `TSL254X` / `tsl254x` |
 | T5838 acoustic activity control | Timed CLK/THSEL waveform | `t5838.h` | `nsx::sensor_t5838` / `T5838` / `t5838` |

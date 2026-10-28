@@ -222,7 +222,7 @@ def main() -> int:
         native = runner.build("native", "native_sim/native/64")
         result = runner.run(native / "zephyr/zephyr.exe", timeout=60)
         print(result)
-        if "PROJECT EXECUTION SUCCESSFUL" not in result or "pass = 4, fail = 0, skip = 0, total = 4" not in result:
+        if "PROJECT EXECUTION SUCCESSFUL" not in result or "pass = 5, fail = 0, skip = 0, total = 5" not in result:
             raise RuntimeError("native ztest success summary missing")
         arm = runner.build("arm", "qemu_cortex_m3", cross)
         firmware = arm / "zephyr/zephyr.elf"
@@ -231,7 +231,7 @@ def main() -> int:
         runner.env["PATH"] = str(Path(cross).parent) + os.pathsep + runner.env["PATH"]
         # Reuse the ELF32/EM_ARM/code-symbol/archive-provenance verifier.
         runner.run(workspace / "venv/bin/python", ROOT / "tests/verify_firmware_link.py",
-                   firmware, "--map", link_map, "bme688")
+                   firmware, "--map", link_map, "bme688", "icm42670")
         symbols = runner.run(cross + "nm", "--defined-only", "--format=posix", firmware)
         functions = {
             fields[0]: int(fields[2], 16)
@@ -257,7 +257,7 @@ def main() -> int:
             raise RuntimeError("wrapper fetch code does not originate in its allocated archive member")
         runner.build("t5838", "native_sim/native/64", app="zephyr_t5838")
         (runner.evidence / "result.json").write_text(json.dumps({
-            "native": "4 tests passed", "arm": "qemu_cortex_m3 linked (not executed)",
+            "native": "5 tests passed", "arm": "qemu_cortex_m3 linked (not executed)",
             "t5838": "native_sim control-only build, I2C/SPI disabled", "hardware": "not tested",
             "arm_elf_sha256": hashlib.sha256((arm / "zephyr/zephyr.elf").read_bytes()).hexdigest(),
         }, indent=2) + "\n")

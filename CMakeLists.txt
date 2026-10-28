@@ -11,6 +11,7 @@ option(NSX_SENSOR_MAX86150 "Build portable MAX86150" ON)
 option(NSX_SENSOR_MPU6050 "Build portable MPU6050" ON)
 option(NSX_SENSOR_INA228 "Build portable INA228" ON)
 option(NSX_SENSOR_LEDSTICK "Build portable LED Stick" ON)
+option(NSX_SENSOR_ICM42670 "Build portable ICM-42670-P basic driver" ON)
 option(NSX_SENSOR_ICM45605 "Build portable ICM-45605 basic SPI driver" ON)
 # Only the transport adapter needs SDK targets. Every driver core and the
 # selected-driver aggregate can build and install without NSX.
@@ -72,6 +73,13 @@ if(NSX_SENSOR_MAX86150)
     target_link_libraries(nsx_sensor_max86150 PUBLIC nsx_sensor_common)
     list(APPEND nsx_portable_targets nsx_sensor_max86150)
 endif()
+if(NSX_SENSOR_ICM42670)
+    add_library(nsx_sensor_icm42670 STATIC src/icm42670/icm42670.c)
+    add_library(nsx::sensor_icm42670 ALIAS nsx_sensor_icm42670)
+    set_target_properties(nsx_sensor_icm42670 PROPERTIES EXPORT_NAME sensor_icm42670)
+    target_link_libraries(nsx_sensor_icm42670 PUBLIC nsx_sensor_common)
+    list(APPEND nsx_portable_targets nsx_sensor_icm42670)
+endif()
 if(NSX_SENSOR_ICM45605)
     # Explicit, licensed TDK basic subset; context callback patch in PROVENANCE.md.
     add_library(nsx_sensor_icm45605 STATIC src/icm45605/icm45605.c
@@ -112,7 +120,7 @@ install(TARGETS ${nsx_portable_targets} EXPORT nsxSensorTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES include/nsx/sensors/status.h include/nsx/sensors/bus.h
     include/nsx/sensors/runtime.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
-foreach(driver bme688 ledstick ina228 mpu6050 max86150 icm45605 tsl254x t5838)
+foreach(driver bme688 ledstick ina228 mpu6050 max86150 icm42670 icm45605 tsl254x t5838)
     if(TARGET nsx_sensor_${driver})
         install(FILES include/nsx/sensors/${driver}.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors)
     endif()
