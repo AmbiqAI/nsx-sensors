@@ -231,7 +231,7 @@ def main() -> int:
         runner.env["PATH"] = str(Path(cross).parent) + os.pathsep + runner.env["PATH"]
         # Reuse the ELF32/EM_ARM/code-symbol/archive-provenance verifier.
         runner.run(workspace / "venv/bin/python", ROOT / "tests/verify_firmware_link.py",
-                   firmware, "--map", link_map, "bme688")
+                   firmware, "--map", link_map, "bme688", "icm42670")
         symbols = runner.run(cross + "nm", "--defined-only", "--format=posix", firmware)
         functions = {
             fields[0]: int(fields[2], 16)
