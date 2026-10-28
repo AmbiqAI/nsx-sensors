@@ -1,6 +1,6 @@
 # v1 RFC readiness audit
 
-Current merged snapshot: `c7707fa6accc58b0f4eb796a4aaf331d45f25144` (PR #34),
+Audited merged snapshot: `c7707fa6accc58b0f4eb796a4aaf331d45f25144` (PR #34),
 2026-10-27. This refresh reconciles merged qualification PR #33 (`29c6315`) and
 simulation PR #34 with the earlier audit. It is not a new full-source audit.
 

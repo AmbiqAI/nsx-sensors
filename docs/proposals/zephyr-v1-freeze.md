@@ -1,6 +1,9 @@
 # Zephyr integration and v1 source-contract freeze proposal
 
-Status: implementation proposal; final merge approval remains separate.
+Status: implemented by [PR #32](https://github.com/AmbiqAI/nsx-sensors/pull/32).
+Historical acceptance scope; see the [resulting guidance](../v1-api-contract.md) for supported
+use or release prerequisites. Original scope and authorization limits below apply
+to that proposal, not subsequent work.
 Baseline: PR #31 merged on main (`149cb78`). No release/tag/version bump is included.
 
 ## Intended outcome

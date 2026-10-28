@@ -1,5 +1,10 @@
 # Bounded sensor behavior regression qualification
 
+Status: implemented by [PR #34](https://github.com/AmbiqAI/nsx-sensors/pull/34).
+Historical acceptance scope; see the [resulting guidance](../sensor-simulation.md) for supported
+use or release prerequisites. Original scope and authorization limits below apply
+to that proposal, not subsequent work.
+
 ## Problem and scope
 
 Hardware is unavailable. Strengthen the existing host tests without treating

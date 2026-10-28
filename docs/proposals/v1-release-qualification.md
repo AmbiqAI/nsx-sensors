@@ -1,6 +1,11 @@
 # v1 release qualification and regression protection
 
-Status: proposal for implementation/review. Baseline: merged PR32, f3b313a.
+Status: implemented by [PR #33](https://github.com/AmbiqAI/nsx-sensors/pull/33).
+Historical acceptance scope; see the [resulting guidance](../release-validation.md) for supported
+use or release prerequisites. Original scope and authorization limits below apply
+to that proposal, not subsequent work.
+
+Original baseline: merged PR32, f3b313a.
 No release, version bump, registry repin, hardware flashing or sensor-driver
 behavior change is included.
 
