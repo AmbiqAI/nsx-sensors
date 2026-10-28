@@ -16,6 +16,11 @@ on:
         default: false
         type: boolean
 
+# Keep approval and publication for one version in the same serial queue.
+concurrency:
+  group: immutable-release-${{ inputs.version }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -102,6 +107,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+          RETRY_EXISTING_TAG: ${{ inputs.retry_existing_tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -116,6 +122,11 @@ jobs:
             exit 1
           fi
           if git ls-remote --exit-code origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            # Another publisher may have created the tag since validation.
+            if [[ "$RETRY_EXISTING_TAG" != "true" ]]; then
+              echo "Tag appeared after validation; an explicit retry is required." >&2
+              exit 1
+            fi
             git fetch --no-tags origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
             test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"
           else

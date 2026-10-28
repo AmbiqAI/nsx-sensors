@@ -92,6 +92,9 @@ merging this policy does not configure GitHub or prove these settings are active
   pull requests. Explicit job permissions remain the authority for tasks such as
   release publication.
 
+Workflow-level concurrency serializes runs for the same version without cancelling
+an in-progress run. GitHub may replace an older pending run with a newer one;
+redispatch an intended request if it was cancelled while pending.
 The publication job waits on `release` after validation. The approver checks the
 version, exact SHA, CI, provenance and release checklist before approving. The
 job rechecks CI and fetched main after approval before any tag write. If main
@@ -112,7 +115,8 @@ for both main workflows to pass; historical green attempts do not qualify.
 For an interrupted publication, first inspect the run, tag target, release and
 assets. Use `retry_existing_tag=true` only when the existing tag still targets
 current main and the requested version matches. The retry needs fresh environment
-approval and the same exact-SHA checks. Never move/delete the tag. If main has
+approval and the same exact-SHA checks. Publication checks the retry option again
+if a tag appeared after validation; it cannot silently adopt another run's tag. Never move/delete the tag. If main has
 advanced or published content needs correction, stop and obtain a separately
 reviewed recovery decision; prefer a new version for changed content.
 
