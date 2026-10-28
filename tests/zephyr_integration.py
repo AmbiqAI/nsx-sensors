@@ -222,7 +222,7 @@ def main() -> int:
         native = runner.build("native", "native_sim/native/64")
         result = runner.run(native / "zephyr/zephyr.exe", timeout=60)
         print(result)
-        if "PROJECT EXECUTION SUCCESSFUL" not in result or "pass = 4, fail = 0, skip = 0, total = 4" not in result:
+        if "PROJECT EXECUTION SUCCESSFUL" not in result or "pass = 5, fail = 0, skip = 0, total = 5" not in result:
             raise RuntimeError("native ztest success summary missing")
         arm = runner.build("arm", "qemu_cortex_m3", cross)
         firmware = arm / "zephyr/zephyr.elf"
@@ -257,7 +257,7 @@ def main() -> int:
             raise RuntimeError("wrapper fetch code does not originate in its allocated archive member")
         runner.build("t5838", "native_sim/native/64", app="zephyr_t5838")
         (runner.evidence / "result.json").write_text(json.dumps({
-            "native": "4 tests passed", "arm": "qemu_cortex_m3 linked (not executed)",
+            "native": "5 tests passed", "arm": "qemu_cortex_m3 linked (not executed)",
             "t5838": "native_sim control-only build, I2C/SPI disabled", "hardware": "not tested",
             "arm_elf_sha256": hashlib.sha256((arm / "zephyr/zephyr.elf").read_bytes()).hexdigest(),
         }, indent=2) + "\n")

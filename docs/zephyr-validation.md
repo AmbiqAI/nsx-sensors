@@ -56,7 +56,7 @@ final result. Builds use fresh CMake configuration on each run.
 The native `native_sim/native/64` application compiles all nine selectable
 cores and their public headers through the external module's Kconfig/CMake
 integration, including ICM-45605's transitive vendor header dependency. It runs
-four ztests against actual Zephyr kernel/device/I2C/SPI/sensor APIs, the real
+five ztests against actual Zephyr kernel/device/I2C/SPI/sensor APIs, the real
 NSX adapter and BME688 core/wrapper. Only controller hardware is replaced:
 
 - I2C repeated START/final STOP, reads, invalid requests rejected before I/O,
