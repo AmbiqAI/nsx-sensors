@@ -457,6 +457,73 @@ class ReleaseAutomationTests(unittest.TestCase):
             self.assertEqual(lines, ['rev-parse HEAD',
                 'gate scripts/release_gate.py --repository test/sensors --sha ' + 'a' * 40])
 
+    def test_publication_requires_release_environment(self) -> None:
+        validate, publish = self.release.split('\n  publish:', 1)
+        self.assertNotRegex(validate, r"(?m)^    environment:")
+        self.assertRegex(publish, r"(?m)^    environment: release$")
+        self.assertIn('    needs: validate\n', publish)
+        self.assertIn('concurrency:\n  group: immutable-release-${{ inputs.version }}\n'
+                      '  cancel-in-progress: false\n', self.release)
+        self.assertIn('RETRY_EXISTING_TAG: ${{ inputs.retry_existing_tag }}', publish)
+
+    def test_publication_rechecks_main_after_approval_and_ci(self) -> None:
+        publish = self.release.split('\n  publish:', 1)[1]
+        step = publish.split('- name: Create the annotated tag', 1)[1].split('\n      - name:', 1)[0]
+        script = textwrap.dedent(step.split('        run: |\n', 1)[1])
+        # Execute the actual shell: stale or unreadable main must stop before
+        # tag lookup or mutation, while a matching main permits new publication.
+        for scenario in ('advanced', 'fetch_failed', 'ref_failed', 'matching',
+                         'existing_unapproved', 'existing_retry'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as tmp:
+                directory = Path(tmp)
+                (directory / 'git').write_text(
+                    '#!/bin/sh\necho "git $*" >> "$TRACE"\n'
+                    'case "$1" in\n'
+                    '  rev-parse)\n'
+                    '    if [ "$2" = origin/main ]; then\n'
+                    '      [ "$SCENARIO" = ref_failed ] && exit 1\n'
+                    '      if [ "$SCENARIO" = advanced ]; then echo other; exit 0; fi\n'
+                    '    fi\n'
+                    '    echo "$RELEASE_SHA" ;;\n'
+                    '  fetch) [ "$SCENARIO" != fetch_failed ] ;;\n'
+                    '  ls-remote) case "$SCENARIO" in existing_*) exit 0 ;; esac; exit 2 ;;\n'
+                    'esac\n')
+                (directory / 'python3').write_text(
+                    '#!/bin/sh\necho "gate $*" >> "$TRACE"\nexit 0\n')
+                for name in ('git', 'python3'):
+                    (directory / name).chmod(0o755)
+                env = dict(os.environ, PATH=tmp + os.pathsep + os.environ['PATH'],
+                           TRACE=str(directory / 'trace'), RELEASE_SHA='a' * 40,
+                           RELEASE_TAG='v1.0.0', GITHUB_REPOSITORY='test/sensors',
+                           SCENARIO=scenario,
+                           RETRY_EXISTING_TAG='true' if scenario == 'existing_retry' else 'false')
+                result = subprocess.run(['bash', '-c', script], env=env,
+                                        capture_output=True, timeout=10)
+                lines = (directory / 'trace').read_text().splitlines()
+                self.assertEqual(lines[:3], [
+                    'git rev-parse HEAD',
+                    'gate scripts/release_gate.py --repository test/sensors --sha ' + 'a' * 40,
+                    'git fetch --no-tags origin main:refs/remotes/origin/main'])
+                if scenario == 'matching':
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn('git tag -a v1.0.0 -m Release v1.0.0 ' + 'a' * 40, lines)
+                    self.assertEqual(lines[-1], 'git push origin v1.0.0')
+                elif scenario == 'existing_retry':
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn('git fetch --no-tags origin refs/tags/v1.0.0:refs/tags/v1.0.0', lines)
+                    self.assertEqual(lines[-1], 'git rev-parse refs/tags/v1.0.0^{commit}')
+                    self.assertFalse(any(line.startswith(('git tag', 'git push')) for line in lines))
+                elif scenario == 'existing_unapproved':
+                    # Tag creation between validation and approval cannot silently
+                    # authorize an asset retry, even if its commit matches.
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(b'an explicit retry is required', result.stderr)
+                    self.assertEqual(lines[-1], 'git ls-remote --exit-code origin refs/tags/v1.0.0')
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(any(line.startswith(('git ls-remote', 'git tag', 'git push'))
+                                         for line in lines), lines)
+
     def test_release_creates_an_immutable_annotated_tag_with_checksum(self) -> None:
         self.assertIn("git tag -a", self.release)
         self.assertIn("git archive --format=tar.gz", self.release)

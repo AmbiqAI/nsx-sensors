@@ -16,6 +16,11 @@ on:
         default: false
         type: boolean
 
+# Keep approval and publication for one version in the same serial queue.
+concurrency:
+  group: immutable-release-${{ inputs.version }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -87,6 +92,7 @@ jobs:
     name: Publish immutable annotated tag and archive
     timeout-minutes: 40
     needs: validate
+    environment: release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -101,6 +107,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+          RETRY_EXISTING_TAG: ${{ inputs.retry_existing_tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -108,7 +115,18 @@ jobs:
           # Validation may have queued this job before a newer CI rerun started.
           # Recheck for both new tags and existing-tag asset retries.
           python3 scripts/release_gate.py --repository "$GITHUB_REPOSITORY" --sha "$RELEASE_SHA"
+          # Environment approval and CI waiting can outlive the validated main.
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if [[ "$(git rev-parse origin/main)" != "$RELEASE_SHA" ]]; then
+            echo "Main advanced while release was waiting; dispatch and validate a new candidate." >&2
+            exit 1
+          fi
           if git ls-remote --exit-code origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            # Another publisher may have created the tag since validation.
+            if [[ "$RETRY_EXISTING_TAG" != "true" ]]; then
+              echo "Tag appeared after validation; an explicit retry is required." >&2
+              exit 1
+            fi
             git fetch --no-tags origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
             test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"
           else
