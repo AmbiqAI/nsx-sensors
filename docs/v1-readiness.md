@@ -33,9 +33,11 @@ revisions must not be relabeled as current evidence.
 
 All cores use caller-owned state and explicit lifecycle/configuration. Bus-based
 cores share synchronous bus/runtime descriptors: combined transfers require
-repeated START on I2C or continuous CS on SPI. Failed output reads preserve
-caller storage; each device documents consuming reads, partial mutations and
-recovery. Applications serialize whole device operations; ports own bus locking.
+repeated START on I2C or continuous CS on SPI. Failed scalar/sample reads preserve
+caller storage. Batch/FIFO APIs can publish completed frames before a later error
+and report that progress through their counts; each device documents consuming
+reads, partial mutations and recovery. Applications serialize whole device
+operations; ports own bus locking.
 No heap allocation, scheduler or global device instance is required by the cores.
 T5838 uses its separate timed control endpoint, not a register bus.
 
