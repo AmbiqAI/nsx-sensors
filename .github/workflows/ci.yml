@@ -16,6 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
+      - name: Checkout pinned NSX metadata validator
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AmbiqAI/neuralspotx
+          ref: 2b72ffc71f90df792825645ac9c9647f296ca019
+          path: .deps/neuralspotx
+          persist-credentials: false
+
+      - name: Validate module using the NSX consumer schema
+        run: |
+          python3 -m venv "$RUNNER_TEMP/nsx-validator"
+          "$RUNNER_TEMP/nsx-validator/bin/pip" install ./.deps/neuralspotx
+          "$RUNNER_TEMP/nsx-validator/bin/python" tests/nsx_metadata_contract.py
+
       - name: Run release foundation contract tests
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
