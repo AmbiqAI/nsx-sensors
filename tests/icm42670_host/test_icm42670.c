@@ -17,7 +17,7 @@ static void defaults(model_t *m)
 {
     memset(m->reg, 0, sizeof(m->reg));
     m->reg[1] = 4; m->reg[0x20] = 6; m->reg[0x21] = 6;
-    m->reg[0x23] = 0x31; m->reg[0x24] = 1;
+    m->reg[0x23] = 0x31; m->reg[0x24] = 0x41;
     m->reg[0x28] = 1; m->reg[0x2b] = 0x10;
     m->reg[0x35] = 0x30; m->reg[0x36] = 0x4d;
     m->reg[0x3a] = m->suppress_reset ? 0 : 0x10; m->reg[0x75] = 0x67;
@@ -86,7 +86,7 @@ static void happy_path(bool spi)
     icm42670_config_t config = icm42670_default_config();
     assert(icm42670_init(&ctx, &config) == NSX_SENSOR_OK);
     assert(m.reg[0x21] == 0x49 && m.reg[0x20] == 0x49);
-    assert(m.reg[0x23] == 0x34 && m.reg[0x24] == 4);
+    assert(m.reg[0x23] == 0x34 && m.reg[0x24] == 0x44);
     assert(m.reg[0x35] == (spi ? 0x33 : 0x30));
     assert(m.reg[0x36] == 0x41 && m.reg[0x2b] == 0 && m.reg[6] == 3);
     assert(m.reg[0x28] == 1 && !m.running);
