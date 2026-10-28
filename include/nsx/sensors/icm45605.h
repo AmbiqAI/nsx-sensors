@@ -6,7 +6,7 @@
 #include <nsx/sensors/bus.h>
 #include <nsx/sensors/runtime.h>
 /* Typed implementation storage; supplied by the target, not an application API. */
-#include <inv_imu_driver.h>
+#include <nsx/sensors/detail/icm45605_types.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -44,7 +44,7 @@ typedef struct { float accel_g[3], gyro_dps[3]; } icm45605_bias_t;
 typedef struct {
     nsx_sensor_bus_t bus;
     nsx_sensor_runtime_t runtime;
-    inv_imu_device_t _device;
+    nsx_icm45605_tdk_device_t _device;
     icm45605_config_t _config;
     icm45605_bias_t _bias;
     nsx_sensor_status_t _io_status;

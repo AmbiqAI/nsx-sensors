@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include <nsx/sensors/icm45605.h>
+/* Explicit private access for the transport fault-injection test. */
+#include "../../vendor/tdk-icm45605/inv_imu_transport.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -156,7 +158,7 @@ static void test_failures(void)
     }
     init_fake(&c,&f,false); f.fail_at=f.calls+1;
     uint8_t indirect=0xa5;
-    assert(inv_imu_read_reg(&c._device,0xa583,1,&indirect)!=0 && indirect==0);
+    assert(nsx_icm45605_tdk_read_reg(&c._device,0xa583,1,&indirect)!=0 && indirect==0);
     bind_fake(&c,&f,false); f.stuck_reset=true;
     assert(icm45605_init(&c,&cfg)==NSX_SENSOR_E_DEVICE && !c._initialized && f.time<10000);
     init_fake(&c,&f,false); unsigned before=f.calls;

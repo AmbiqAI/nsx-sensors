@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include <nsx/sensors/icm45605.h>
+#include "inv_imu_driver.h"
 #include <math.h>
 #include <stddef.h>
 #include <string.h>
 /* TDK casts the device address to its first transport member. */
-_Static_assert(offsetof(inv_imu_device_t, transport)==0, "TDK transport must be first");
-_Static_assert(sizeof(inv_imu_sensor_data_t)==14, "UI sample must be 14 bytes");
+_Static_assert(offsetof(nsx_icm45605_tdk_device_t, transport)==0, "TDK transport must be first");
+_Static_assert(sizeof(nsx_icm45605_tdk_sensor_data_t)==14, "UI sample must be 14 bytes");
 static nsx_sensor_status_t ready(const icm45605_context_t *c)
 {
     if (!c) return NSX_SENSOR_E_ARGUMENT;
@@ -84,30 +85,30 @@ nsx_sensor_status_t icm45605_probe(icm45605_context_t *c, uint8_t *identity)
     if (!c || !identity) return NSX_SENSOR_E_ARGUMENT;
     if (!c->_bound) return NSX_SENSOR_E_STATE;
     begin(c); uint8_t id=0;
-    nsx_sensor_status_t s=result(c,inv_imu_get_who_am_i(&c->_device,&id));
+    nsx_sensor_status_t s=result(c,nsx_icm45605_tdk_get_who_am_i(&c->_device,&id));
     if (s!=NSX_SENSOR_OK) return s;
     if (id!=INV_IMU_WHOAMI) return NSX_SENSOR_E_DEVICE;
     *identity=id; return NSX_SENSOR_OK;
 }
 static int interrupts(icm45605_context_t *c, bool enable)
 {
-    const inv_imu_int_pin_config_t pin={INTX_CONFIG2_INTX_POLARITY_HIGH,
+    const nsx_icm45605_tdk_int_pin_config_t pin={INTX_CONFIG2_INTX_POLARITY_HIGH,
         INTX_CONFIG2_INTX_MODE_PULSE,INTX_CONFIG2_INTX_DRIVE_PP};
-    int r=inv_imu_set_pin_config_int(&c->_device,INV_IMU_INT2,&pin);
+    int r=nsx_icm45605_tdk_set_pin_config_int(&c->_device,INV_IMU_INT2,&pin);
     if (r) return r;
-    inv_imu_int_state_t flags={0}; flags.INV_UI_DRDY=enable;
-    return inv_imu_set_config_int(&c->_device,INV_IMU_INT2,&flags);
+    nsx_icm45605_tdk_int_state_t flags={0}; flags.INV_UI_DRDY=enable;
+    return nsx_icm45605_tdk_set_config_int(&c->_device,INV_IMU_INT2,&flags);
 }
 static nsx_sensor_status_t configure(icm45605_context_t *c, const icm45605_config_t *v)
 {
     begin(c); int r;
 #define APPLY(call) do { r=(call); if (r) return mutation(c,r); } while (0)
-    APPLY(inv_imu_set_accel_fsr(&c->_device,(accel_config0_accel_ui_fs_sel_t)v->accel_range));
-    APPLY(inv_imu_set_gyro_fsr(&c->_device,(gyro_config0_gyro_ui_fs_sel_t)v->gyro_range));
-    APPLY(inv_imu_set_accel_frequency(&c->_device,(accel_config0_accel_odr_t)v->odr));
-    APPLY(inv_imu_set_gyro_frequency(&c->_device,(gyro_config0_gyro_odr_t)v->odr));
-    APPLY(inv_imu_set_accel_ln_bw(&c->_device,(ipreg_sys2_reg_131_accel_ui_lpfbw_t)v->accel_filter));
-    APPLY(inv_imu_set_gyro_ln_bw(&c->_device,(ipreg_sys1_reg_172_gyro_ui_lpfbw_sel_t)v->gyro_filter));
+    APPLY(nsx_icm45605_tdk_set_accel_fsr(&c->_device,(accel_config0_accel_ui_fs_sel_t)v->accel_range));
+    APPLY(nsx_icm45605_tdk_set_gyro_fsr(&c->_device,(gyro_config0_gyro_ui_fs_sel_t)v->gyro_range));
+    APPLY(nsx_icm45605_tdk_set_accel_frequency(&c->_device,(accel_config0_accel_odr_t)v->odr));
+    APPLY(nsx_icm45605_tdk_set_gyro_frequency(&c->_device,(gyro_config0_gyro_odr_t)v->odr));
+    APPLY(nsx_icm45605_tdk_set_accel_ln_bw(&c->_device,(ipreg_sys2_reg_131_accel_ui_lpfbw_t)v->accel_filter));
+    APPLY(nsx_icm45605_tdk_set_gyro_ln_bw(&c->_device,(ipreg_sys1_reg_172_gyro_ui_lpfbw_sel_t)v->gyro_filter));
     APPLY(interrupts(c,v->drdy_interrupt));
 #undef APPLY
     c->_config=*v; return NSX_SENSOR_OK;
@@ -122,7 +123,7 @@ nsx_sensor_status_t icm45605_init(icm45605_context_t *c, const icm45605_config_t
     c->_initialized=false; c->_running=false;
     c->runtime.delay_us(c->runtime.user,1000); /* Power-on register access. */
     uint8_t id; s=icm45605_probe(c,&id); if (s!=NSX_SENSOR_OK) return s;
-    begin(c); s=mutation(c,inv_imu_soft_reset(&c->_device)); if (s!=NSX_SENSOR_OK) return s;
+    begin(c); s=mutation(c,nsx_icm45605_tdk_soft_reset(&c->_device)); if (s!=NSX_SENSOR_OK) return s;
     s=configure(c,&copy); if (s!=NSX_SENSOR_OK) return s;
     memset(&c->_bias,0,sizeof(c->_bias)); c->_initialized=true;
     return NSX_SENSOR_OK;
@@ -143,10 +144,10 @@ nsx_sensor_status_t icm45605_set_##name(icm45605_context_t *c, type value) \
   begin(c); s=mutation(c,vendor_fn(&c->_device,(vendor_type)value)); \
   if (s==NSX_SENSOR_OK) c->_config=copy; \
   return s; }
-SETTER(accel_range,accel_range,icm45605_accel_range_t,accel_config0_accel_ui_fs_sel_t,inv_imu_set_accel_fsr)
-SETTER(gyro_range,gyro_range,icm45605_gyro_range_t,gyro_config0_gyro_ui_fs_sel_t,inv_imu_set_gyro_fsr)
-SETTER(accel_filter,accel_filter,icm45605_filter_t,ipreg_sys2_reg_131_accel_ui_lpfbw_t,inv_imu_set_accel_ln_bw)
-SETTER(gyro_filter,gyro_filter,icm45605_filter_t,ipreg_sys1_reg_172_gyro_ui_lpfbw_sel_t,inv_imu_set_gyro_ln_bw)
+SETTER(accel_range,accel_range,icm45605_accel_range_t,accel_config0_accel_ui_fs_sel_t,nsx_icm45605_tdk_set_accel_fsr)
+SETTER(gyro_range,gyro_range,icm45605_gyro_range_t,gyro_config0_gyro_ui_fs_sel_t,nsx_icm45605_tdk_set_gyro_fsr)
+SETTER(accel_filter,accel_filter,icm45605_filter_t,ipreg_sys2_reg_131_accel_ui_lpfbw_t,nsx_icm45605_tdk_set_accel_ln_bw)
+SETTER(gyro_filter,gyro_filter,icm45605_filter_t,ipreg_sys1_reg_172_gyro_ui_lpfbw_sel_t,nsx_icm45605_tdk_set_gyro_ln_bw)
 #undef SETTER
 nsx_sensor_status_t icm45605_set_odr(icm45605_context_t *c, icm45605_odr_t value)
 {
@@ -154,8 +155,8 @@ nsx_sensor_status_t icm45605_set_odr(icm45605_context_t *c, icm45605_odr_t value
     icm45605_config_t copy=c->_config; copy.odr=value;
     s=icm45605_validate_config(&copy); if (s!=NSX_SENSOR_OK) return s;
     if (c->_running) return NSX_SENSOR_E_STATE;
-    begin(c); int r=inv_imu_set_accel_frequency(&c->_device,(accel_config0_accel_odr_t)value);
-    if (!r) r=inv_imu_set_gyro_frequency(&c->_device,(gyro_config0_gyro_odr_t)value);
+    begin(c); int r=nsx_icm45605_tdk_set_accel_frequency(&c->_device,(accel_config0_accel_odr_t)value);
+    if (!r) r=nsx_icm45605_tdk_set_gyro_frequency(&c->_device,(gyro_config0_gyro_odr_t)value);
     s=mutation(c,r); if (s==NSX_SENSOR_OK) c->_config=copy; return s;
 }
 nsx_sensor_status_t icm45605_set_drdy_interrupt(icm45605_context_t *c, bool enable)
@@ -169,8 +170,8 @@ static nsx_sensor_status_t power(icm45605_context_t *c, bool on)
 {
     nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s;
     if (c->_running==on) return NSX_SENSOR_OK;
-    begin(c); int r=inv_imu_set_accel_mode(&c->_device,on?PWR_MGMT0_ACCEL_MODE_LN:PWR_MGMT0_ACCEL_MODE_OFF);
-    if (!r) r=inv_imu_set_gyro_mode(&c->_device,on?PWR_MGMT0_GYRO_MODE_LN:PWR_MGMT0_GYRO_MODE_OFF);
+    begin(c); int r=nsx_icm45605_tdk_set_accel_mode(&c->_device,on?PWR_MGMT0_ACCEL_MODE_LN:PWR_MGMT0_ACCEL_MODE_OFF);
+    if (!r) r=nsx_icm45605_tdk_set_gyro_mode(&c->_device,on?PWR_MGMT0_GYRO_MODE_LN:PWR_MGMT0_GYRO_MODE_OFF);
     s=mutation(c,r); if (s!=NSX_SENSOR_OK) return s;
     if (on) {
         /* Vendor startup bound plus one slowest supported output period. */
@@ -185,8 +186,8 @@ nsx_sensor_status_t icm45605_read_raw(icm45605_context_t *c, icm45605_raw_sample
     if (!out) return NSX_SENSOR_E_ARGUMENT;
     nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s;
     if (!c->_running) return NSX_SENSOR_E_STATE;
-    begin(c); inv_imu_sensor_data_t raw={0};
-    s=result(c,inv_imu_get_register_data(&c->_device,&raw)); if (s!=NSX_SENSOR_OK) return s;
+    begin(c); nsx_icm45605_tdk_sensor_data_t raw={0};
+    s=result(c,nsx_icm45605_tdk_get_register_data(&c->_device,&raw)); if (s!=NSX_SENSOR_OK) return s;
     icm45605_raw_sample_t v={0};
     for (unsigned i=0;i<3;++i) { v.accel[i]=raw.accel_data[i]; v.gyro[i]=raw.gyro_data[i]; }
     v.temperature=raw.temp_data; *out=v; return NSX_SENSOR_OK;
@@ -213,11 +214,11 @@ nsx_sensor_status_t icm45605_read_data_ready(icm45605_context_t *c, bool *out)
     nsx_sensor_status_t s=ready(c); if (s!=NSX_SENSOR_OK) return s;
     /* The hardware enable gates the status flag as well as the pin. */
     if (!c->_config.drdy_interrupt) return NSX_SENSOR_E_STATE;
-    begin(c); inv_imu_int_state_t flags={0};
-    s=result(c,inv_imu_get_int_status(&c->_device,INV_IMU_INT1,&flags));
+    begin(c); nsx_icm45605_tdk_int_state_t flags={0};
+    s=result(c,nsx_icm45605_tdk_get_int_status(&c->_device,INV_IMU_INT1,&flags));
     if (s==NSX_SENSOR_OK && flags.INV_RESET_DONE) s=NSX_SENSOR_E_DEVICE;
     if (s==NSX_SENSOR_OK)
-        s=result(c,inv_imu_get_int_status(&c->_device,INV_IMU_INT2,&flags));
+        s=result(c,nsx_icm45605_tdk_get_int_status(&c->_device,INV_IMU_INT2,&flags));
     if (s!=NSX_SENSOR_OK) { c->_initialized=false; c->_running=false; return s; }
     *out=flags.INV_UI_DRDY!=0; return NSX_SENSOR_OK;
 }

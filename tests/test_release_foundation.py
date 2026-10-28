@@ -311,9 +311,9 @@ class PublicApiTests(unittest.TestCase):
         header = (ROOT / "include/nsx/sensors/icm45605.h").read_text()
         self.assertIn("address-stable context", header)
         self.assertIn("Not ISR-safe", header)
-        self.assertIn("inv_imu_device_t _device", header)
+        self.assertIn("nsx_icm45605_tdk_device_t _device", header)
         source = (SRC / "icm45605/icm45605.c").read_text()
-        self.assertNotIn("static inv_imu_device_t", source)
+        self.assertNotIn("static nsx_icm45605_tdk_device_t", source)
         self.assertNotIn("icm45605_handle_interrupt(void)", source)
 
 

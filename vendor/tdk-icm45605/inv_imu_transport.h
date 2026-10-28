@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <nsx/sensors/detail/icm45605_types.h>
 
 /** @brief Function pointer to read register(s).
  *  @param[in] reg   Register address to be read.
@@ -37,7 +38,7 @@ extern "C" {
  *  @param[in] len   Number of byte to be read.
  *  @return          0 on success, negative value on error.
  */
-typedef int (*inv_imu_read_reg_t)(void *user, uint8_t reg, uint8_t *buf, uint32_t len);
+
 
 /** @brief Function pointer to write register(s).
  *  @param[in] reg  Register address to be written.
@@ -45,7 +46,7 @@ typedef int (*inv_imu_read_reg_t)(void *user, uint8_t reg, uint8_t *buf, uint32_
  *  @param[in] len  Number of byte to be written.
  *  @return         0 on success, negative value on error.
  */
-typedef int (*inv_imu_write_reg_t)(void *user, uint8_t reg, const uint8_t *buf, uint32_t len);
+
 
 /* Available serial interface type. */
 #define UI_I2C  0 /**< identifies I2C interface. */
@@ -56,22 +57,10 @@ typedef int (*inv_imu_write_reg_t)(void *user, uint8_t reg, const uint8_t *buf, 
  *  @deprecated Kept for retrocompatibility. Replaced with `uint32_t` type
  *              in `inv_imu_transport_t` struct.
  */
-typedef uint32_t inv_imu_serif_type_t;
+typedef uint32_t nsx_icm45605_tdk_serif_type_t;
 
 /** @brief Structure dedicated to transport layer transport interface. */
-typedef struct {
-	/* NSX local patch: caller-owned instance passed to every callback. */
-	void *user;
-	/* Serial interface variables (should be initialized by application) */
-	inv_imu_read_reg_t  read_reg; /**< Function pointer to read register(s). */
-	inv_imu_write_reg_t write_reg; /**< Function pointer to write register(s). */
-	uint32_t            serif_type; /**< Serial interface type. */
 
-	/** @brief Callback to sleep function.
-	 *  @param[in] us  Time to sleep in microseconds.
-	 */
-	void (*sleep_us)(void *user, uint32_t us);
-} inv_imu_transport_t;
 
 /** @brief Reads data from a register on IMU.
  *  @param[in] t     Pointer to transport (as void * so it can be called from any module).
@@ -80,7 +69,7 @@ typedef struct {
  *  @param[out] buf  Output data from the register.
  *  @return          0 on success, negative value on error.
  */
-int inv_imu_read_reg(void *t, uint32_t reg, uint32_t len, uint8_t *buf);
+int nsx_icm45605_tdk_read_reg(void *t, uint32_t reg, uint32_t len, uint8_t *buf);
 
 /** @brief Writes data to a register on IMU.
  *  @param[in] t    Pointer to transport (as void * so it can be called from any module).
@@ -89,7 +78,7 @@ int inv_imu_read_reg(void *t, uint32_t reg, uint32_t len, uint8_t *buf);
  *  @param[in] buf  Input data to write.
  *  @return         0 on success, negative value on error.
  */
-int inv_imu_write_reg(void *t, uint32_t reg, uint32_t len, const uint8_t *buf);
+int nsx_icm45605_tdk_write_reg(void *t, uint32_t reg, uint32_t len, const uint8_t *buf);
 
 /** @brief Reads data from SRAM on IMU.
  *  @param[in] t     Pointer to transport (as void * so it can be called from any module). 
@@ -98,7 +87,7 @@ int inv_imu_write_reg(void *t, uint32_t reg, uint32_t len, const uint8_t *buf);
  *  @param[out] buf  Output data from the register.
  *  @return          0 on success, negative value on error.
  */
-int inv_imu_read_sram(void *t, uint32_t addr, uint32_t len, uint8_t *buf);
+int nsx_icm45605_tdk_read_sram(void *t, uint32_t addr, uint32_t len, uint8_t *buf);
 
 /** @brief Writes data to SRAM on IMU.
  *  @param[in] t     Pointer to transport (as void * so it can be called from any module).
@@ -107,7 +96,7 @@ int inv_imu_read_sram(void *t, uint32_t addr, uint32_t len, uint8_t *buf);
  *  @param[in] buf   Input data to write.
  *  @return          0 on success, negative value on error.
  */
-int inv_imu_write_sram(void *t, uint32_t addr, uint32_t len, const uint8_t *buf);
+int nsx_icm45605_tdk_write_sram(void *t, uint32_t addr, uint32_t len, const uint8_t *buf);
 
 #ifdef __cplusplus
 }

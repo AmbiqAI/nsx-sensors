@@ -56,7 +56,7 @@ for source in "${sources[@]}"; do
         -Wextra \
         -Wno-unused-parameter \
         -Werror \
-        -I "$vendor_dir" \
+        -I "$vendor_dir" -I "$repo_root/include" \
         "$source" \
         -o "$out_dir/$(basename "${source%.c}").o"
 done
@@ -80,7 +80,7 @@ for header in "$vendor_dir"/*.h; do
         -Wextra \
         -Wno-unused-parameter \
         -Werror \
-        -I "$vendor_dir" \
+        -I "$vendor_dir" -I "$repo_root/include" \
         "$out_dir/header_check.c" \
         -o "$out_dir/header_check.o"
 done

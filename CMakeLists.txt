@@ -80,20 +80,11 @@ if(NSX_SENSOR_ICM45605)
     add_library(nsx::sensor_icm45605 ALIAS nsx_sensor_icm45605)
     set_target_properties(nsx_sensor_icm45605 PROPERTIES EXPORT_NAME sensor_icm45605)
     target_link_libraries(nsx_sensor_icm45605 PUBLIC nsx_sensor_common)
-    # Typed caller-owned vendor storage is part of the context layout, not an
-    # application-facing vendor API. Ship the headers and notices together.
-    target_include_directories(nsx_sensor_icm45605 PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/vendor/tdk-icm45605>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors/detail/tdk-icm45605>)
-    install(FILES
-        vendor/tdk-icm45605/inv_imu.h
-        vendor/tdk-icm45605/inv_imu_defs.h
-        vendor/tdk-icm45605/inv_imu_driver.h
-        vendor/tdk-icm45605/inv_imu_transport.h
-        vendor/tdk-icm45605/inv_imu_regmap_le.h
-        vendor/tdk-icm45605/inv_imu_regmap_be.h
-        vendor/tdk-icm45605/inv_imu_version.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors/detail/tdk-icm45605)
+    # Generic TDK headers are private; only device-specific typed storage is public.
+    target_include_directories(nsx_sensor_icm45605 PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/vendor/tdk-icm45605)
+    install(FILES include/nsx/sensors/detail/icm45605_types.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/sensors/detail)
     list(APPEND nsx_portable_targets nsx_sensor_icm45605)
 endif()
 if(NSX_SENSOR_TSL254X)
