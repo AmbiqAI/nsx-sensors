@@ -22,6 +22,12 @@ config NSX_SENSOR_MPU6050
 	bool "MPU6050 portable core"
 config NSX_SENSOR_MAX86150
 	bool "MAX86150 portable core"
+config NSX_SENSOR_ICM42670
+    bool "ICM-42670-P portable basic core"
+    default y
+    help
+      Low-noise accel/gyro/temperature via the portable bus API. No FIFO/APEX.
+
 config NSX_SENSOR_ICM45605
 	bool "ICM-45605 portable core"
 	help
