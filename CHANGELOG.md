@@ -15,6 +15,9 @@ layout and binary ABI are not stable contracts.
 
 ### Shared integration and qualification
 
+- Isolate ICM-45605 vendor symbols and headers so another TDK driver can coexist;
+  retain caller-owned typed storage and the public NSX API.
+
 - Use one production CMake target/source definition for NSX, standalone CMake
   (including application-provided FreeRTOS endpoints) and Zephyr.
 - Provide shared NSX and Zephyr synchronous I2C/SPI endpoints, plus a Zephyr

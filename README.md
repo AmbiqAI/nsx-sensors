@@ -97,7 +97,8 @@ release. See `docs/compatibility.md` before relying on any device.
 ## Licensing
 
 Ambiq-authored code in `include/nsx/sensors/` and `src/` is BSD-3-Clause; see
-`LICENSE`. `vendor/tdk-icm45605/` is third-party TDK InvenSense code
+`LICENSE`. `vendor/tdk-icm45605/` and the derived typed-storage header
+`include/nsx/sensors/detail/icm45605_types.h` are third-party TDK InvenSense code
 redistributed under its own permissive terms and is **not** relicensed. See
 `NOTICE` and `PROVENANCE.md`. The native BME688 compensation/calibration/heater
 math is adapted from Bosch Sensortec BME68x Sensor API v4.4.8 under its

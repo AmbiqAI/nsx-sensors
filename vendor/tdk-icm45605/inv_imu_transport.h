@@ -32,21 +32,7 @@ extern "C" {
 #include <stdint.h>
 #include <nsx/sensors/detail/icm45605_types.h>
 
-/** @brief Function pointer to read register(s).
- *  @param[in] reg   Register address to be read.
- *  @param[out] buf  Output data from the register.
- *  @param[in] len   Number of byte to be read.
- *  @return          0 on success, negative value on error.
- */
-
-
-/** @brief Function pointer to write register(s).
- *  @param[in] reg  Register address to be written.
- *  @param[in] buf  Input data to write.
- *  @param[in] len  Number of byte to be written.
- *  @return         0 on success, negative value on error.
- */
-
+/* Callback and transport types come from the shared device-specific header. */
 
 /* Available serial interface type. */
 #define UI_I2C  0 /**< identifies I2C interface. */
@@ -58,8 +44,6 @@ extern "C" {
  *              in `inv_imu_transport_t` struct.
  */
 typedef uint32_t nsx_icm45605_tdk_serif_type_t;
-
-/** @brief Structure dedicated to transport layer transport interface. */
 
 
 /** @brief Reads data from a register on IMU.

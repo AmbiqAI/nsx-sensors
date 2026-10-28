@@ -20,6 +20,9 @@
 #ifndef NSX_SENSORS_DETAIL_ICM45605_TYPES_H
 #define NSX_SENSORS_DETAIL_ICM45605_TYPES_H
 #include <stdint.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef int (*nsx_icm45605_tdk_read_reg_t)(void *user, uint8_t reg, uint8_t *buf, uint32_t len);
 
 typedef int (*nsx_icm45605_tdk_write_reg_t)(void *user, uint8_t reg, const uint8_t *buf, uint32_t len);
@@ -58,4 +61,7 @@ typedef struct {
 	uint64_t adv_var[6];
 
 } nsx_icm45605_tdk_device_t;
+#ifdef __cplusplus
+}
+#endif
 #endif

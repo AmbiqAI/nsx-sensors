@@ -23,6 +23,22 @@ cmake -S "$root/examples/baremetal" -B "$out/nested" -DNSX_SENSORS_SOURCE="$root
 cmake --build "$out/nested" --parallel
 "$out/nested/sensor_example"
 "$out/nested/sensor_cpp"
+# Foreign TDK-like headers and symbols must coexist in either include order,
+# both from the source tree and a relocated installation (C and C++).
+for mode in source installed; do
+    if [[ "$mode" == source ]]; then
+        isolation_arg="-DNSX_SENSORS_SOURCE=$root"
+    else
+        isolation_arg="-DCMAKE_PREFIX_PATH=$out/relocated"
+    fi
+    cmake -S "$root/tests/vendor_isolation" -B "$out/isolation-$mode" "$isolation_arg"
+    cmake --build "$out/isolation-$mode" --parallel
+    ctest --test-dir "$out/isolation-$mode" --output-on-failure
+done
+if nm -g --defined-only "$out/build/libnsx_sensor_icm45605.a" | grep -Eq ' [A-Z] inv_imu_'; then
+    echo "generic TDK symbols escaped from ICM-45605" >&2
+    exit 1
+fi
 for driver in BME688 LEDSTICK INA228 MPU6050 MAX86150 ICM45605 TSL254X T5838 NONE; do
     bme=OFF; led=OFF; ina=OFF; mpu=OFF; max=OFF; icm=OFF; tsl=OFF; mic=OFF
     if [[ "$driver" == BME688 ]]; then bme=ON; fi
