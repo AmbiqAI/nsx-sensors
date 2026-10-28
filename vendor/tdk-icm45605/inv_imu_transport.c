@@ -22,41 +22,41 @@
 /* Static function definition */
 
 /* For Direct access REGisters */
-static int write_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, const uint8_t *buf);
-static int read_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, uint8_t *buf);
+static int write_dreg(nsx_icm45605_tdk_transport_t *t, uint8_t reg, uint32_t len, const uint8_t *buf);
+static int read_dreg(nsx_icm45605_tdk_transport_t *t, uint8_t reg, uint32_t len, uint8_t *buf);
 
 /* For Mclk REGisters */
 static int check_out_of_bounds_mreg(uint32_t reg, uint32_t len);
-static int write_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, const uint8_t *buf);
-static int read_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, uint8_t *buf);
+static int write_mreg(nsx_icm45605_tdk_transport_t *t, uint32_t reg, uint32_t len, const uint8_t *buf);
+static int read_mreg(nsx_icm45605_tdk_transport_t *t, uint32_t reg, uint32_t len, uint8_t *buf);
 
-int inv_imu_read_reg(void *t, uint32_t reg, uint32_t len, uint8_t *buf)
+int nsx_icm45605_tdk_read_reg(void *t, uint32_t reg, uint32_t len, uint8_t *buf)
 {
-	inv_imu_transport_t *tr = (inv_imu_transport_t *)t;
+	nsx_icm45605_tdk_transport_t *tr = (nsx_icm45605_tdk_transport_t *)t;
 	if (reg > 0xFF)
 		return read_mreg(tr, reg & 0xFFFF, len, buf);
 	else
 		return read_dreg(tr, reg, len, buf);
 }
 
-int inv_imu_write_reg(void *t, uint32_t reg, uint32_t len, const uint8_t *buf)
+int nsx_icm45605_tdk_write_reg(void *t, uint32_t reg, uint32_t len, const uint8_t *buf)
 {
-	inv_imu_transport_t *tr = (inv_imu_transport_t *)t;
+	nsx_icm45605_tdk_transport_t *tr = (nsx_icm45605_tdk_transport_t *)t;
 	if (reg > 0xFF)
 		return write_mreg(tr, reg, len, buf);
 	else
 		return write_dreg(tr, reg, len, buf);
 }
 
-int inv_imu_read_sram(void *t, uint32_t addr, uint32_t len, uint8_t *buf)
+int nsx_icm45605_tdk_read_sram(void *t, uint32_t addr, uint32_t len, uint8_t *buf)
 {
-	inv_imu_transport_t *tr = (inv_imu_transport_t *)t;
+	nsx_icm45605_tdk_transport_t *tr = (nsx_icm45605_tdk_transport_t *)t;
 	return read_mreg(tr, addr, len, buf);
 }
 
-int inv_imu_write_sram(void *t, uint32_t addr, uint32_t len, const uint8_t *buf)
+int nsx_icm45605_tdk_write_sram(void *t, uint32_t addr, uint32_t len, const uint8_t *buf)
 {
-	inv_imu_transport_t *tr = (inv_imu_transport_t *)t;
+	nsx_icm45605_tdk_transport_t *tr = (nsx_icm45605_tdk_transport_t *)t;
 	return write_mreg(tr, addr, len, buf);
 }
 
@@ -64,7 +64,7 @@ int inv_imu_write_sram(void *t, uint32_t addr, uint32_t len, const uint8_t *buf)
  * Static functions implementation 
  */
 
-static int read_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, uint8_t *buf)
+static int read_dreg(nsx_icm45605_tdk_transport_t *t, uint8_t reg, uint32_t len, uint8_t *buf)
 {
 	if (t->read_reg(t->user, reg, buf, len) != 0)
 		return INV_IMU_ERROR_TRANSPORT;
@@ -72,7 +72,7 @@ static int read_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, uint8_t 
 	return INV_IMU_OK;
 }
 
-static int write_dreg(inv_imu_transport_t *t, uint8_t reg, uint32_t len, const uint8_t *buf)
+static int write_dreg(nsx_icm45605_tdk_transport_t *t, uint8_t reg, uint32_t len, const uint8_t *buf)
 {
 	if (t->write_reg(t->user, reg, buf, len) != 0)
 		return INV_IMU_ERROR_TRANSPORT;
@@ -106,7 +106,7 @@ static int check_out_of_bounds_mreg(uint32_t reg, uint32_t len)
 	return INV_IMU_OK;
 }
 
-static int read_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, uint8_t *buf)
+static int read_mreg(nsx_icm45605_tdk_transport_t *t, uint32_t reg, uint32_t len, uint8_t *buf)
 {
 	int     status = INV_IMU_OK;
 	uint8_t data[2];
@@ -136,7 +136,7 @@ static int read_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, uint8_t
 	return status;
 }
 
-static int write_mreg(inv_imu_transport_t *t, uint32_t reg, uint32_t len, const uint8_t *buf)
+static int write_mreg(nsx_icm45605_tdk_transport_t *t, uint32_t reg, uint32_t len, const uint8_t *buf)
 {
 	int     status = INV_IMU_OK;
 	uint8_t data[3];

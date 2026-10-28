@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Standalone compile smoke for the vendored TDK ICM-45605 eMD subset.
 #
-# The vendored subset must be self-contained: it must not need NSX, AmbiqSuite,
+# The subset requires only its shared, device-specific C storage header.
+# It must not need NSX runtime, AmbiqSuite,
 # CMSIS, or CMSIS-DSP headers, and it must compile warning-clean as C11. Warnings
 # are errors here, so a future vendor intake that introduces one fails instead of
 # passing green. This proves the vendoring boundary is honest. It proves nothing
@@ -56,7 +57,7 @@ for source in "${sources[@]}"; do
         -Wextra \
         -Wno-unused-parameter \
         -Werror \
-        -I "$vendor_dir" \
+        -I "$vendor_dir" -I "$repo_root/include" \
         "$source" \
         -o "$out_dir/$(basename "${source%.c}").o"
 done
@@ -80,7 +81,7 @@ for header in "$vendor_dir"/*.h; do
         -Wextra \
         -Wno-unused-parameter \
         -Werror \
-        -I "$vendor_dir" \
+        -I "$vendor_dir" -I "$repo_root/include" \
         "$out_dir/header_check.c" \
         -o "$out_dir/header_check.o"
 done

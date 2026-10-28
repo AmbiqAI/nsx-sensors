@@ -192,9 +192,18 @@ The v1 portable ICM-45605 migration adds these narrow local patches:
 - `inv_imu_driver.c`: propagate the pointer through `inv_imu_sleep_us`; initialize
   the interrupt configuration struct so unused/reserved bits are deterministic.
 
+The vendor-isolation patch additionally prefixes C identifiers beginning with
+`inv_imu_` as `nsx_icm45605_tdk_` in the retained implementation and declarations.
+It moves the unchanged callback, transport and device structure definitions to
+`include/nsx/sensors/detail/icm45605_types.h`, with the original InvenSense
+notice retained. That shared header is the actual type definition used by both
+the NSX context and vendor core; no duplicate layout or aliasing cast is used.
+Generic TDK headers are private build inputs and are no longer installed or
+exported on consumer include paths. Upstream filenames and version guards stay
+private; no public macro aliases rename another driver's API.
+
 No register map, scaling constant, vendor version string or license header was
-changed. The remaining files are unchanged from the documented intake except
-for the original include-prefix adjustment. The application wrapper suppresses
+changed. Timing remains per-device through the earlier callback patch. The application wrapper suppresses
 later physical transfers after a transport failure and initializes read buffers
 because the retained vendor implementation can continue after errors.
 

@@ -54,3 +54,6 @@ vendor/tdk-icm45605/
 This repository does not vendor NSX, AmbiqSuite, CMSIS, or CMSIS-DSP sources.
 Those are supplied by separate dependencies and consumers must retain the
 notices those projects ship.
+
+The derived include/nsx/sensors/detail/icm45605_types.h storage definitions
+retain the same InvenSense terms as vendor/tdk-icm45605/.

@@ -96,13 +96,13 @@ typedef struct {
 	int16_t accel_data[3];
 	int16_t gyro_data[3];
 	int16_t temp_data;
-} inv_imu_sensor_data_t;
+} nsx_icm45605_tdk_sensor_data_t;
 
 /** Interrupt number */
 typedef enum {
 	INV_IMU_INT1,
 	INV_IMU_INT2,
-} inv_imu_int_num_t;
+} nsx_icm45605_tdk_int_num_t;
 
 /** Describe the content of the FIFO header */
 typedef union {
@@ -238,7 +238,7 @@ typedef struct {
 	intx_config2_intx_polarity_t int_polarity;
 	intx_config2_intx_mode_t     int_mode;
 	intx_config2_intx_drive_t    int_drive;
-} inv_imu_int_pin_config_t;
+} nsx_icm45605_tdk_int_pin_config_t;
 
 /*
  * ACCEL_CONFIG0
