@@ -64,3 +64,58 @@ commit. Never delete or move a published tag; publish a new version instead.
 No historical green run, local host run or source-freeze approval substitutes
 for exact-release-commit CI and maintainer review. No electrical qualification
 is implied by publication automation.
+
+## Repository controls and release approval
+
+The required configuration below is separate from the workflow source. Track
+application and read-back evidence in [issue #5](https://github.com/AmbiqAI/nsx-sensors/issues/5);
+merging this policy does not configure GitHub or prove these settings are active.
+
+- Keep main's PR review, deletion and force-push protection. A separate active
+  `main-required-ci` branch ruleset requires every job in
+  `scripts/release_gate.py::REQUIRED_JOBS`, from the GitHub Actions app, with
+  branches up to date before merging and no bypass actors. Separating this rule
+  allows the existing administrator review bypass without bypassing required CI.
+  A job rename must update the gate and repository rule together.
+- An active `immutable-release-tags` tag ruleset matches `refs/tags/v*`, forbids
+  updates and deletions, and has no bypass actors. Creation remains allowed so
+  the release workflow can create a new tag; this rule does not restrict who can
+  create tags or freeze GitHub release assets. Only the manual workflow is the
+  supported publication path.
+- The `release` environment requires approval by `apage224`, permits that user to
+  approve their own dispatch, and disables administrator protection-rule bypass.
+  Its custom deployment policy allows only the **branch** `main`, not tags.
+  This is an explicit maintainer approval gate, not independent two-person review.
+  No environment secrets are needed; the publication job explicitly requests
+  `contents: write` and `actions: read`.
+- Default workflow token permissions are read-only, and workflows cannot approve
+  pull requests. Explicit job permissions remain the authority for tasks such as
+  release publication.
+
+The publication job waits on `release` after validation. The approver checks the
+version, exact SHA, CI, provenance and release checklist before approving. The
+job rechecks CI and fetched main after approval before any tag write. If main
+advanced while waiting, dispatch a new candidate and validate it again. GitHub
+reads and tag creation are not an atomic operation; serialize release work and
+avoid merging new changes during final approval/publication.
+
+### Bypass and retry discipline
+
+An administrator may use the existing main review bypass only after recording
+explicit maintainer merge approval and completed reviews; the separate CI rule
+still applies. Never disable required checks or tag protections to force a
+release. Repository administrators can edit settings, so record and review any
+control change in issue #5 and read it back after application.
+
+For a transient CI failure, rerun the failed workflow on the same SHA and wait
+for both main workflows to pass; historical green attempts do not qualify.
+For an interrupted publication, first inspect the run, tag target, release and
+assets. Use `retry_existing_tag=true` only when the existing tag still targets
+current main and the requested version matches. The retry needs fresh environment
+approval and the same exact-SHA checks. Never move/delete the tag. If main has
+advanced or published content needs correction, stop and obtain a separately
+reviewed recovery decision; prefer a new version for changed content.
+
+After settings changes, verify effective main rules, tag rules and bypass lists,
+the environment's reviewer/branch policy, and workflow defaults through GitHub's
+read APIs. Do not dispatch a real publication just to test the settings.
