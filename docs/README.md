@@ -13,14 +13,17 @@ host test does not establish release publication or hardware qualification.
 | Framework integration | [CMake](cmake-integration.md), [NSX](nsx-port.md), [Zephyr](zephyr.md) |
 | Device-specific use | [BME688](bme688.md), [TSL254x](tsl254x.md), [T5838](t5838.md) |
 | Migration from v0 | [Portable foundation](migration/portable-foundation.md), [API cleanup](migration/api-cleanup.md); device guides are linked from the [root README](../README.md#usage) |
-| Validation procedures and limits | [Release](release-validation.md), [NSX firmware](firmware-validation.md), [Zephyr](zephyr-validation.md), [simulation](sensor-simulation.md), [hardware](hardware-validation.md) |
+| Validation procedures and limits | [Release](release-validation.md), [NSX firmware](firmware-validation.md), [Zephyr](zephyr-validation.md), [simulation](sensor-simulation.md) |
 | Release process and ownership | [Release policy](../RELEASE.md), [owners](../OWNERS.md), [provenance](../PROVENANCE.md) |
 
-## Decisions and bounded records
+## Decisions, bounded records and future work
 
 - [RFC 0001](rfcs/0001-portable-sensor-driver-architecture.md) records the accepted
   architectural decision. The linked source contract and public headers define
   supported API use; proposal sketches are not a second API specification.
+- [Hardware validation plan](hardware-validation.md) is pending future-work
+  planning, including inventory and first-campaign assumptions. Reconcile those
+  assumptions before execution; the plan is not completed hardware evidence.
 - [v1 readiness audit](v1-readiness.md) and
   [technical migration review](migration/release-review.md) retain their stated
   baselines. They are historical evidence, not continuously renewed audits.
