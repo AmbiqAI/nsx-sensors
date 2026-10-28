@@ -3,10 +3,11 @@
 All notable changes to `nsx-sensors` are documented here. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-10-28
 
-Release candidate: publication and maintainer signoff are pending. This major
-version adopts the accepted [v1 source contract](docs/v1-api-contract.md).
+Target release date; publication is pending. Final maintainer approval and
+publication evidence are tracked in the [release record](docs/releases/v1.0.0.md).
+This major version adopts the accepted [v1 source contract](docs/v1-api-contract.md).
 It breaks v0 source compatibility: migrate headers, target selection, context
 lifetimes and lifecycle calls using [the migration guide](docs/migration/api-cleanup.md)
 and per-device guides. Recompile applications and libraries together; context
@@ -22,7 +23,9 @@ layout and binary ABI are not stable contracts.
 - Verify actual NSX bare-metal/FreeRTOS and Zephyr firmware links, retained
   implementation provenance, installed C/C++ consumers and shared CPU/FPU/ABI.
 - Require exact-main-commit CI and Zephyr jobs before immutable publication,
-  including a publication-side recheck and negative gate tests.
+  protected-environment approval, a post-approval main recheck, serialized
+  same-version runs and explicit retry authorization. Protect required CI and
+  version-tag updates/deletions with repository rulesets.
 - Record context/scratch, linked footprint and individual compiler stack frames
   with pinned clean framework dependencies. These are not runtime stack bounds.
 - Add bounded sensor models, before/after-effect failure recovery, nine compiling
