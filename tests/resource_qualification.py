@@ -18,6 +18,8 @@ from nsx_firmware_integration import SDK_REVISION
 from zephyr_integration import ZEPHYR_SHA, PROJECTS
 
 ROOT = Path(__file__).resolve().parents[1]
+# Explicit reviewed production snapshot; changing this pin requires new evidence.
+PRODUCTION_BASELINE = 'fdabd7756068dd2f8586d610c4489236d41b4883'
 DRIVERS = ('bme688', 'ledstick', 'ina228', 'mpu6050', 'max86150', 'icm42670', 'icm45605', 'tsl254x', 't5838')
 
 
@@ -92,7 +94,7 @@ def main():
               'zephyr_revision': dependencies['zephyr']['revision'],
               'links': {}, 'layouts': {}, 'framework_links': {}, 'adapter_objects': {},
               'scope': 'Static all-API retention links; no startup, contexts, adapters, heap or runtime stack in portable ELF.',
-              'production_baseline': 'f3b313a',
+              'production_baseline': PRODUCTION_BASELINE,
               'working_tree_status': run(['git', 'status', '--porcelain']),
               'input_sha256': {}}
     for directory in ('src', 'include', 'vendor', 'cmake', 'tests/resources'):
@@ -102,7 +104,7 @@ def main():
     for relative in ('CMakeLists.txt', 'tests/resource_qualification.py', 'tests/nsx_firmware_integration.py',
                      'tests/zephyr_integration.py', 'zephyr/CMakeLists.txt'):
         report['input_sha256'][relative] = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
-    report['production_diff_from_baseline'] = run(['git', 'diff', 'f3b313a', '--',
+    report['production_diff_from_baseline'] = run(['git', 'diff', PRODUCTION_BASELINE, '--',
         'src', 'include', 'vendor', 'cmake', 'CMakeLists.txt', 'zephyr'])
     if report['production_diff_from_baseline']:
         raise RuntimeError('Production inputs differ from qualification baseline')
