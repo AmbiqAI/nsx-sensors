@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "source_revision": "0a2dbb612027c85d9b4a40791f19c1cc393ce74c",
+  "compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 15.2.Rel1 (Build arm-15.86)) 15.2.1 20251203",
+  "sdk_revision": "40b893d859672caf0b17b0e51db351a77b423e56",
+  "external_inputs": {
+    "sdk": {
+      "path": "/home/adamp/Ambiq/neuralspotx/nsx-sdk-i2c-combined",
+      "revision": "40b893d859672caf0b17b0e51db351a77b423e56",
+      "status": ""
+    },
+    "zephyr": {
+      "path": "/home/adamp/Ambiq/neuralspotx/tmp/zephyr-v1/zephyr",
+      "revision": "684c9e8f32e4373a21098559f748f06915f950c9",
+      "status": ""
+    },
+    "cmsis": {
+      "path": "/home/adamp/Ambiq/neuralspotx/tmp/zephyr-v1/modules/hal/cmsis",
+      "revision": "512cc7e895e8491696b61f7ba8066b4a182569b8",
+      "status": ""
+    },
+    "cmsis_6": {
+      "path": "/home/adamp/Ambiq/neuralspotx/tmp/zephyr-v1/modules/hal/cmsis_6",
+      "revision": "30a859f44ef8ab4dc8f84b03ed586fd16ccf9d74",
+      "status": ""
+    }
+  },
+  "zephyr_revision": "684c9e8f32e4373a21098559f748f06915f950c9",
+  "links": {
+    "baseline": {
+      "text": 4,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 4,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "159f9f93c4dee1d1b74231007f4dd5004132a8d091c9c388886dbe8a2f145f43",
+      "incremental_flash_from_baseline": 0
+    },
+    "bme688": {
+      "text": 3830,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 3830,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "108f16a2c56a7da8d783c2b5fd51d7f4a5dbba2b0e1c122de24c7168436cf5c2",
+      "incremental_flash_from_baseline": 3826
+    },
+    "ledstick": {
+      "text": 808,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 808,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "ba3c00b1be5e5ca79a8c41e9a6b37e9de49285a982f38b50b9ac53285969f186",
+      "incremental_flash_from_baseline": 804
+    },
+    "ina228": {
+      "text": 6468,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 6468,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "4f59136bd10ce70cb0b9dbdd6dcbd3a997c5d0150c6f0adb07bec1c2c5bc12e7",
+      "incremental_flash_from_baseline": 6464
+    },
+    "mpu6050": {
+      "text": 6941,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 6941,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "3edf32d16b00c85a7e69bff574f53ab484d2f445f845a93cd44017c03a4915cb",
+      "incremental_flash_from_baseline": 6937
+    },
+    "max86150": {
+      "text": 4396,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 4396,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "e80afab21f07a57e3bd67ce607d4bd5370254466489a88a485fe9633bbad1af0",
+      "incremental_flash_from_baseline": 4392
+    },
+    "icm42670": {
+      "text": 1850,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 1850,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "9c6a4f5ea661492e61909a8445281438ef37a581418c30182cc19843969e57fe",
+      "incremental_flash_from_baseline": 1846
+    },
+    "icm45605": {
+      "text": 8152,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 8152,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "61f5fb797e83dd269446aa0c317cdf7c3de7d3f477b9efd2e5d1fd95e6ccbef8",
+      "incremental_flash_from_baseline": 8148
+    },
+    "tsl254x": {
+      "text": 1500,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 1500,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "6279ece9fdfea9d37f02e81d9e54e58e0c437701ffd8092ccd6aab557034bc3b",
+      "incremental_flash_from_baseline": 1496
+    },
+    "t5838": {
+      "text": 1325,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 1325,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "7683da0f458f1da141b71090ac4649eec2a1798fde4d4f0cd7b96beed88756e0",
+      "incremental_flash_from_baseline": 1321
+    },
+    "aggregate": {
+      "text": 30892,
+      "data": 0,
+      "bss": 0,
+      "flash_text_plus_data": 30892,
+      "static_ram_data_plus_bss": 0,
+      "elf_sha256": "5cfef4cf9b5b81bfca188b61dce367220f25e4c09f86e5b16375b604e16c01ce",
+      "incremental_flash_from_baseline": 30888
+    }
+  },
+  "layouts": {
+    "portable": {
+      "bme688": 88,
+      "bus": 20,
+      "icm42670": 44,
+      "icm45605": 144,
+      "ina228": 36,
+      "ledstick": 24,
+      "max86150": 64,
+      "mpu6050": 48,
+      "runtime": 12,
+      "t5838": 28,
+      "tsl254x": 44
+    },
+    "nsx": {
+      "bme688": 88,
+      "bus": 20,
+      "icm42670": 44,
+      "icm45605": 144,
+      "ina228": 36,
+      "ledstick": 24,
+      "max86150": 64,
+      "mpu6050": 48,
+      "nsx_adapter": 308,
+      "nsx_scratch": 256,
+      "runtime": 12,
+      "t5838": 28,
+      "tsl254x": 44
+    },
+    "zephyr": {
+      "bme688": 88,
+      "bus": 20,
+      "icm42670": 44,
+      "icm45605": 144,
+      "ina228": 36,
+      "ledstick": 24,
+      "max86150": 64,
+      "mpu6050": 48,
+      "runtime": 12,
+      "t5838": 28,
+      "tsl254x": 44,
+      "zephyr_adapter": 1060,
+      "zephyr_rx": 512,
+      "zephyr_tx": 512
+    }
+  },
+  "framework_links": {
+    "nsx": {
+      "text": 54736,
+      "data": 752,
+      "bss": 392464
+    },
+    "zephyr": {
+      "text": 44160,
+      "data": 200,
+      "bss": 30162
+    }
+  },
+  "adapter_objects": {
+    "nsx": {
+      "text": 564,
+      "data": 0,
+      "bss": 0
+    },
+    "zephyr": {
+      "text": 750,
+      "data": 0,
+      "bss": 0
+    }
+  },
+  "scope": "Static all-API retention links; no startup, contexts, adapters, heap or runtime stack in portable ELF.",
+  "production_baseline": "fdabd7756068dd2f8586d610c4489236d41b4883",
+  "working_tree_status": "",
+  "input_sha256": {
+    "src/bme688/bme688.c": "ea2be689d08167d526f433c667ab6c60b7596d7ccbdfa2dee1a0e7ec1e279eb0",
+    "src/bme688/compensation.c": "58040e699cad720aa6e9a4c495633e017b306f7c701210f11db0adfa1c395cc3",
+    "src/bme688/private.h": "fd5d00ea37c208ef2623957b41987eb4c7a2a9c1c7a1f650e32ded712b9ad9e3",
+    "src/common/bus.c": "d32933ebf30aee282378ecdb75b90bdd7d13fd3b9eafa7eec79d4d3fbba768e0",
+    "src/icm42670/icm42670.c": "4125e2252f27efa71ebfeb2a59e8e2f1fda8d9303e1380ecef8a6dec0e9328fa",
+    "src/icm45605/icm45605.c": "f81d261a8a86273bf7a3b1697875dd2520d6cb09d12d6d85900560b6084c7172",
+    "src/ina228/ina228.c": "8e9b0871a62f2e1555d7f3da34f0c0fc7f29fb3262739749af719988cac97ab4",
+    "src/ledstick/ledstick.c": "a6c7d67e386b608444baf0d480f719cc27b2dab910e8bb945b5292fa467f301b",
+    "src/max86150/max86150.c": "3acecbbb9ef8b8d3c3e6123661424657e1e484a24b578601601a4f4147f7132b",
+    "src/mpu6050/mpu6050.c": "c105a2b0d696e651b367c8bd5414e56f40fc9ee95e0d9f75e08b3ab7609ba9e8",
+    "src/ports/nsx.c": "e8dd6305502f0b733b16a5537169b4fb9dad6be802d978bdc65f9a2115d57f8f",
+    "src/ports/zephyr.c": "0598c599bc950617cbb0c7c6c2e356b301057b509c05a0a51b13dcfd5cd657ef",
+    "src/t5838/t5838.c": "f9c265f09df80374a5b1f47cd98f63fa2a8770e383ae3dd5d391d29473c042b9",
+    "src/tsl254x/tsl254x.c": "e5174e50473d09bf779a9cca0395b7553026720422d797e029d977b78c2f4f3b",
+    "include/nsx/sensors/bme688.h": "d929f876d6cd750fa77025e42652233ce4dfc8989970fb3bfb31574c71e758b9",
+    "include/nsx/sensors/bus.h": "a062c368cd130faf35a6a09f69e6eeeeb2f2ce04fcc1d3628ef84b0a884e0d2e",
+    "include/nsx/sensors/detail/icm45605_types.h": "d5d78cefe9750241d8e59d08e67068e800988ac9118c409d8341063a9bcf3ede",
+    "include/nsx/sensors/icm42670.h": "da5da8831a985088b7c94a9a10e7d11bfe1900e9d2a69bb9026191d75ba29254",
+    "include/nsx/sensors/icm45605.h": "15c4ab36d8762b5c99417bd34ac68c1f171fecc84ac2ad904eb1744700b29346",
+    "include/nsx/sensors/ina228.h": "5cee821ec35845d8741d63501ab93af47fb5e56b7c67141db1af0c3a1ce2b695",
+    "include/nsx/sensors/ledstick.h": "8eda1cd1ebf9d9240eaf6e171f54f1c817cd7122a6a08ead512bdb2b1670005d",
+    "include/nsx/sensors/max86150.h": "fa4d6314ddba122baf0857f3cfa213e06ffccd01f69cfcf65a28a3a4a844a69b",
+    "include/nsx/sensors/mpu6050.h": "adda3bb1dbc107aa889501795131b6e41aa5deebe7313867f112e6d1a38f5482",
+    "include/nsx/sensors/port_nsx.h": "61aac033b97913552ded10ae0e67e2ae3ed3e4c96b80f782822b773d0cffe4c4",
+    "include/nsx/sensors/port_zephyr.h": "9a57aeddfa1f9a4e7bd65248005493ed008f7ff65fa9ff565cc4557021eb999b",
+    "include/nsx/sensors/runtime.h": "5425a0b989877bd422bdf187b51430077a494917da82c3117b5f3020ebd1684a",
+    "include/nsx/sensors/status.h": "0f1444ca321e0035ce11a0d49a01ea4e2ff4e650eb01d3b7772bc3918df30231",
+    "include/nsx/sensors/t5838.h": "ae5c2a57f75e195aa89292e757a433a1e14b98a330cb5db6c637b904323cd7d0",
+    "include/nsx/sensors/tsl254x.h": "480895eb0732afbf8dc91a2f93ff8e82f54421546fbea99e6d6f2d680351c584",
+    "vendor/tdk-icm45605/inv_imu.h": "601969637a34ef81dcdee4ef56c0d5c000d591d867df2b797b1bd572acf9307e",
+    "vendor/tdk-icm45605/inv_imu_defs.h": "b9c0635ec1318353fe001f4577154ddfa656678dcfbfe78f11e9445ff44a6486",
+    "vendor/tdk-icm45605/inv_imu_driver.c": "9fd6a10ba497df124d4c40b4ff9547e5177821aea3640997b0d7050b592feb42",
+    "vendor/tdk-icm45605/inv_imu_driver.h": "0cb610c11bd2e06de818a62e7e8351b21c53ee2921b133b29007ad09e6a92764",
+    "vendor/tdk-icm45605/inv_imu_regmap_be.h": "eb48aa837742235933a085352ed2056edf97a355a50d52c5a1316ab13fe18b0e",
+    "vendor/tdk-icm45605/inv_imu_regmap_le.h": "f76d63af8b2b4ca0ed60d5f4a6178405be150bc7d1f27042b11ca20707426748",
+    "vendor/tdk-icm45605/inv_imu_transport.c": "71e854cb1393772a1b8bc944be9d220f78977f9456f08e2959850aebd79ac8aa",
+    "vendor/tdk-icm45605/inv_imu_transport.h": "b6b9024bed87a3a78f233ef01fab1870908883325cd2ec82da0a593f033ce7af",
+    "vendor/tdk-icm45605/inv_imu_version.h": "f3884bcd8c8999f05b60baadfe15f4ec743539b5a49810d9f1551b61b09b9639",
+    "cmake/compile_context.cmake": "870bdf28b1d0c714f84355605a694e62bfb0a9c968da1c3c7f1c013dd3daeea9",
+    "cmake/nsx_sensorsConfig.cmake.in": "98a20b825af836226821f2c28ada3175f422befc9bda804c1cec701ba3371cd7",
+    "tests/resources/CMakeLists.txt": "606203e962a8ab4fe5385a3a017727a2b21a030d61876248d5ee848290d761da",
+    "tests/resources/layout.c": "6a240565f3e3e06a872bbe7c2e6ea2cca022d2303f8b821d2934bc3d2747fb52",
+    "tests/resources/main.c": "aadd325b7e06456168166f7697b914e9601d1f2ab5b30fa4113af2c535b39cf7",
+    "CMakeLists.txt": "b57c06e558065069c51ba37594ac592b644a2e20a500518276d775cef1449963",
+    "tests/resource_qualification.py": "5abc4f03168726952fc42668b5bac9afded0b26c92195fdcce5c510ee96427be",
+    "tests/nsx_firmware_integration.py": "152e30d625cfd71a0f52e5b3ceec4f716db4ce5d7ec487c6f239bab37766a102",
+    "tests/zephyr_integration.py": "7c9fbf9d3f51df48f291a8b69485d577c6af1b967e137b4d3881ef6ba43d00fc",
+    "zephyr/CMakeLists.txt": "cf24ce324822953f6cb01670581856bb4e4a51fbcc04c9b94c70b169e8b21782"
+  },
+  "production_diff_from_baseline": "",
+  "raw_archive_sha256": "36e36f25eb4039c66f17fbaa67b7aa4ba4140f7c015d7ddffa2cd9b0403e7e93"
+}

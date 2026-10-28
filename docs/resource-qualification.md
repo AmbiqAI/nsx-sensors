@@ -1,23 +1,29 @@
-# Resource qualification: eight cores and transport adapters
+# Resource qualification: nine cores and transport adapters
 
-This dated measurement covers the original eight-core baseline. ICM-42670-P was
-added later and is not included in the tables/artifacts below; the measurement
-tool now selects it for future candidate runs.
-
-Measured 2026-10-27 using Arm GNU Toolchain 15.2.Rel1, GCC 15.2.1
+Measured 2026-10-28 using Arm GNU Toolchain 15.2.Rel1, GCC 15.2.1
 20251203. This is static build evidence, not a hardware measurement or a runtime
-stack high-water guarantee. Production sources match `f3b313a`; the report records
-the observed checkout HEAD, uncommitted-file status and SHA-256 input manifest.
-The run used clean source revision `12609fe15d97c8fdccecbe19df3348282e0d982d`.
-The resulting evidence is committed separately; it does not qualify a future
-release SHA automatically.
+stack high-water guarantee. Production sources match merged PR #41,
+`fdabd7756068dd2f8586d610c4489236d41b4883`. The run used clean source revision
+`0a2dbb612027c85d9b4a40791f19c1cc393ce74c`, which changes only the measurement
+runner's explicit production baseline. The report records HEAD, clean status,
+the full baseline and SHA-256 input manifest. This evidence does not
+qualify a future release SHA automatically.
 
-[Machine-readable results](resources/2026-10-27-arm-gcc15.json) and
-[raw evidence archive](resources/2026-10-27-arm-gcc15-raw.tar.gz) preserve commands,
-compile databases, linker maps, symbol sizes and GCC `.su` stack reports. The JSON
-contains the archive checksum. Full ELF files remain in the fresh build directory;
-the JSON records the portable ELF hashes. No original integration evidence or
-provisioned checkout was overwritten.
+[Machine-readable results](resources/2026-10-28-nine-core-arm-gcc15.json) and
+[raw evidence archive](resources/2026-10-28-nine-core-arm-gcc15-raw.tar.gz) preserve
+commands, compile databases, linker maps, symbol sizes and GCC `.su` stack
+reports. The JSON contains the archive checksum and portable ELF hashes; full
+ELFs remain in the fresh build directory. Original [eight-core results](resources/2026-10-27-arm-gcc15.json)
+and their [archive](resources/2026-10-27-arm-gcc15-raw.tar.gz) remain unchanged.
+The [prior guide](https://github.com/AmbiqAI/nsx-sensors/blob/fdabd7756068dd2f8586d610c4489236d41b4883/docs/resource-qualification.md)
+explains that historical baseline.
+
+All eight existing core context sizes and standalone linked flash sizes match
+the prior measurement, including ICM-45605 after TDK symbol/header isolation.
+Both adapter layouts and object sizes also match. The new ICM-42670-P context
+is 44 bytes, its standalone complete-API link is 1850 bytes, and the combined
+nine-core link grows by 1606 bytes. These are measurements under the profiles
+below, not a behavior-equivalence or hardware regression claim.
 
 ## Reproduce without downloads or hardware
 
@@ -37,7 +43,7 @@ revision. The local git object must be available (use a clone with the relevant
 history); these commands do not fetch dependencies. From a repository checkout:
 
 ```sh
-git worktree add --detach /tmp/nsx-resource-source 12609fe15d97c8fdccecbe19df3348282e0d982d
+git worktree add --detach /tmp/nsx-resource-source 0a2dbb612027c85d9b4a40791f19c1cc393ce74c
 cd /tmp/nsx-resource-source
 python3 tests/resource_qualification.py \
   --output /tmp/nsx-resource-new-run \
@@ -48,8 +54,7 @@ python3 -m unittest discover -s tests -p 'test_resource_qualification.py'
 ```
 
 The source worktree and output paths must not already exist. The runner refuses
-production changes relative to its qualification baseline, including the later
-v1 CMake version bump. Running it directly from a newer release checkout is not
+production changes relative to its explicit full-SHA qualification baseline. Running it directly from a newer release checkout is not
 reproduction of this archived report. Qualification of a changed source baseline
 requires a separately reviewed measurement; do not remove the guard or relabel
 these results.
@@ -79,10 +84,11 @@ not the footprint of a typical application's selected call graph.
 | INA228 | 36 | 6468 | 6464 | `ina228_init` 56 |
 | MPU6050 | 48 | 6941 | 6937 | `mpu6050_calibrate` 128 |
 | MAX86150 | 64 | 4396 | 4392 | `read_fifo` 176 |
+| ICM42670-P | 44 | 1850 | 1846 | `icm42670_bind` 72 |
 | ICM45605 | 144 | 8152 | 8148 | `icm45605_calibrate` 192 |
 | TSL254x | 44 | 1500 | 1496 | `tsl254x_init` 64 |
 | T5838 | 28 | 1325 | 1321 | `t5838_encode_write` 88 |
-| All eight | 476 (one of each) | 29286 | 29282 | No additive stack total |
+| All nine | 520 (one of each) | 30892 | 30888 | No additive stack total |
 
 Flash is GNU `size` text + data, static linked RAM is data + bss. Every portable
 link above has **zero static linked RAM**: caller-owned contexts are deliberately
@@ -92,7 +98,7 @@ objects and transport endpoints. The bus descriptor is 20 bytes and runtime
 callback descriptor 12 bytes; these are already embedded in contexts where
 applicable and must not be added twice.
 
-The individual increments sum to 33388 bytes, versus 29282 for the combined
+The individual increments sum to 35234 bytes, versus 30888 for the combined
 increment. They are **not additive**: common bus code, libc memcpy/memset and
 compiler arithmetic helpers are shared. Each link pulls only required runtime
 library members, outside `--whole-archive`; maps expose the exact libgcc/libc
@@ -105,7 +111,7 @@ the empty fixture, not marginal additions to an existing application.
 
 Layout probes reuse actual production consumer compile commands, without running
 target code. Cortex-M4 NSX uses the Apollo4p EVB SDK ABI with `-Os`; Zephyr uses
-`qemu_cortex_m3`, Thumb/AAPCS soft float, `-Os` and its configured ABI. All eight
+`qemu_cortex_m3`, Thumb/AAPCS soft float, `-Os` and its configured ABI. All nine
 core layouts happen to match in these two profiles; this is not an ABI guarantee
 for other compilers or options.
 
@@ -121,8 +127,8 @@ configuration objects, Zephyr SPI DT specs, locks and controller/kernel storage
 are additional external lifetime requirements.
 
 The fresh NSX bare-metal integration fixture links to text/data/bss
-**53112 / 752 / 392464** bytes; the Zephyr test fixture links to
-**43908 / 180 / 30142** bytes. These are whole-fixture GNU `size` values, not
+**54736 / 752 / 392464** bytes; the Zephyr test fixture links to
+**44160 / 200 / 30162** bytes. These are whole-fixture GNU `size` values, not
 sensor attribution or directly comparable board-memory budgets. In particular,
 NSX's board linker reservations dominate bss; Zephyr includes its kernel, test
 runner and configured stacks. They must not be subtracted from one another to
@@ -133,12 +139,12 @@ infer adapter cost. Matching maps and the Zephyr `.config` are in the raw archiv
 The table reports the largest **individual compiler frame**, not a maximum call
 chain. Every compiled source's `.su` record is preserved, including TDK vendor
 code, NSX SDK source and Zephyr source. Vendor maxima in the portable profile are
-48 bytes (`inv_imu_soft_reset`) and 32 bytes (`write_mreg`, transport). Missing
+48 bytes (`nsx_icm45605_tdk_soft_reset`) and 32 bytes (`write_mreg`, transport). Missing
 prebuilt library frames are not treated as zero.
 
 A concrete source call path needing a combined budget is
 `icm45605_calibrate` → `icm45605_read_raw` →
-`inv_imu_get_register_data` → `inv_imu_read_reg` → the vendor read callback →
+`nsx_icm45605_tdk_get_register_data` → `nsx_icm45605_tdk_read_reg` → the vendor read callback →
 ICM `read_reg` → `nsx_sensor_bus_transfer` → endpoint `transfer`.
 The portable frames at these named functions are respectively 192, 48, 24, 16,
 48 and 8 bytes before the selected endpoint. The direct-register vendor helper
