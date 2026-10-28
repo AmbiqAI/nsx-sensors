@@ -1,3 +1,10 @@
+# v1.0.0 release candidate preparation
+
+Status: implemented by [PR #35](https://github.com/AmbiqAI/nsx-sensors/pull/35).
+Historical acceptance scope; see the [resulting guidance](../releases/v1.0.0.md) for supported
+use or release prerequisites. Original scope and authorization limits below apply
+to that proposal, not subsequent work.
+
 Prepare the v1.0.0 software release candidate from merged audit baseline `c0276068a6b2dee8ae0adaa6d1d2c7f9dc86e26f`.
 
 Acceptance:

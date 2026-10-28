@@ -1,6 +1,9 @@
 # NSX sensor firmware integration acceptance proposal
 
-Status: proposed implementation scope; merge requires final review and user approval.
+Status: implemented by [PR #31](https://github.com/AmbiqAI/nsx-sensors/pull/31).
+Historical acceptance scope; see the [resulting guidance](../firmware-validation.md) for supported
+use or release prerequisites. Original scope and authorization limits below apply
+to that proposal, not subsequent work.
 
 ## Problem
 
