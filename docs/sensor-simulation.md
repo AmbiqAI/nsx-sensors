@@ -83,15 +83,15 @@ not authoritative when it conflicts with the device reference or accepted API.
 ```sh
 # Existing complete portable build matrix, including ASan/UBSan.
 tests/portable_build.sh
-# Nine compiling negative controls across eight cores; fresh output path required.
+# Ten compiling negative controls across nine cores; fresh output path required.
 python3 tests/sensor_mutations.py --output /tmp/sensor-mutations-run
 # Optional actual legacy comparison, with pinned history available locally.
 python3 tests/sensor_legacy_compare.py --output /tmp/sensor-legacy-run
 ```
 
 The mutation runner copies sources to a temporary directory, uses production
-CMake targets, runs all eight clean controls, builds/runs each single mutant,
-restores and rechecks its clean control, and finishes with all eight controls.
+CMake targets, runs all nine clean controls, builds/runs each single mutant,
+restores and rechecks its clean control, and finishes with all nine controls.
 It leaves the checkout untouched. Missing/nonunique edit anchors, compile errors,
 timeouts or failures without assertion/CHECK diagnostics fail the campaign; they
 do not count as detected defects. JSON records source revision, working-tree
@@ -104,3 +104,9 @@ emulator is introduced. Electrical I2C repeated-START/SPI framing, actual THSEL
 pulse timing, real reset/settling durations, physical accuracy and platform
 scheduling still require bench qualification. Hardware remains a later additive
 check; software tests should stay useful when hardware becomes available.
+
+The ICM-42670-P case restores the original 1 ms post-reset wait. A running
+reinitialization followed immediately by start must fail the model's datasheet
+>20 ms gyro off-to-on assertion; the fixed 21 ms wait passes. The model records
+power-off caused by reset as well as an explicit stop. This is a host timing
+contract, not a measured electrical timing claim.
